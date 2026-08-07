@@ -87,7 +87,15 @@
   function renderMap(data, bookingUrl) {
     const columns = Math.max(1, Number(data.totalColumns) || 1);
     const counts = data.counts || {};
-    const maxGridWidth = Math.min(760, Math.max(220, columns * 34));
+    const isLargeHall = columns > 24;
+    const fittedGridWidth = Math.min(760, Math.max(220, columns * 34));
+    const largeSeatSize = 18;
+    const largeGap = 2;
+    const largeGridWidth = columns * largeSeatSize + Math.max(0, columns - 1) * largeGap;
+    const canvasWidth = isLargeHall ? largeGridWidth + 48 : fittedGridWidth + 48;
+    const gridStyle = isLargeHall
+      ? `grid-template-columns:repeat(${columns}, ${largeSeatSize}px); width:${largeGridWidth}px; max-width:none`
+      : `grid-template-columns:repeat(${columns}, minmax(0, 1fr)); max-width:${fittedGridWidth}px`;
 
     return `
       <div class="mcl-seatmap-heading">
@@ -100,22 +108,29 @@
 
       ${renderLegend()}
 
-      <div class="mcl-seatmap-stage" style="--mcl-seat-columns:${columns}; --mcl-grid-max:${maxGridWidth}px">
-        <div class="mcl-seat-screen">${escapeHtml(data.screenLabel || "銀幕")}</div>
+      ${isLargeHall ? `<p class="mcl-seatmap-scroll-hint">大型影廳 · 左右滑動查看完整座位</p>` : ""}
 
-        <div class="mcl-seat-rows">
-          ${(data.rows || []).map(row => `
-            <div class="mcl-seat-row">
-              <span class="mcl-seat-row-name">${escapeHtml(row.name)}</span>
-              <div
-                class="mcl-seat-grid"
-                style="grid-template-columns:repeat(${columns}, minmax(0, 1fr)); max-width:${maxGridWidth}px"
-              >
-                ${(row.seats || []).map(renderSeat).join("")}
+      <div class="mcl-seatmap-stage ${isLargeHall ? "is-scrollable" : ""}">
+        <div
+          class="mcl-seat-canvas ${isLargeHall ? "is-large" : ""}"
+          style="--mcl-grid-max:${fittedGridWidth}px; --mcl-canvas-width:${canvasWidth}px"
+        >
+          <div class="mcl-seat-screen">${escapeHtml(data.screenLabel || "銀幕")}</div>
+
+          <div class="mcl-seat-rows">
+            ${(data.rows || []).map(row => `
+              <div class="mcl-seat-row">
+                <span class="mcl-seat-row-name">${escapeHtml(row.name)}</span>
+                <div
+                  class="mcl-seat-grid ${isLargeHall ? "is-large" : ""}"
+                  style="${gridStyle}"
+                >
+                  ${(row.seats || []).map(renderSeat).join("")}
+                </div>
+                <span class="mcl-seat-row-name">${escapeHtml(row.name)}</span>
               </div>
-              <span class="mcl-seat-row-name">${escapeHtml(row.name)}</span>
-            </div>
-          `).join("")}
+            `).join("")}
+          </div>
         </div>
       </div>
 
