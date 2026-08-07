@@ -1,1 +1,5 @@
-
+{
+  "name": "hk-cinema-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-06"
+}
