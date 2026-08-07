@@ -350,6 +350,7 @@ footer {
       repeat(5, minmax(0, 1fr));
   }
 }
+
 .movie-poster {
   position: relative;
   overflow: hidden;
@@ -402,6 +403,44 @@ footer {
 
 .movie-meta {
   font-size: 11px !important;
+}
+
+.movie-badges {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  left: 10px;
+
+  display: flex;
+  gap: 6px;
+}
+
+.movie-badge {
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 26px;
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: rgba(23, 25, 29, 0.86);
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+
+  box-shadow:
+    0 4px 12px rgba(20, 25, 30, 0.18);
+}
+
+.movie-badge.presale {
+  background: rgba(30, 116, 73, 0.92);
+}
+
+.movie-badge.coming {
+  background: rgba(23, 25, 29, 0.86);
 }
 
 .status-card[data-status="ready"]
