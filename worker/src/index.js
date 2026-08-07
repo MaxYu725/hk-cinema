@@ -3,6 +3,10 @@ import {
   getBroadwayUpcoming
 } from "./providers/broadway.js";
 
+import {
+  getBroadwayMovieShows
+} from "./providers/broadway-shows.js";
+
 const json = (
   data,
   status = 200,
@@ -12,14 +16,10 @@ const json = (
     JSON.stringify(data, null, 2),
     {
       status,
-
       headers: {
         "content-type":
           "application/json; charset=utf-8",
-
-        "access-control-allow-origin":
-          "*",
-
+        "access-control-allow-origin": "*",
         ...extraHeaders
       }
     }
@@ -27,46 +27,30 @@ const json = (
 
 export default {
   async fetch(request) {
-    const url =
-      new URL(request.url);
+    const url = new URL(request.url);
 
     if (url.pathname === "/health") {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "2B",
-        time:
-          new Date().toISOString()
+        phase: "3A",
+        time: new Date().toISOString()
       });
     }
 
-    if (
-      url.pathname ===
-      "/api/broadway/movies"
-    ) {
+    if (url.pathname === "/api/broadway/movies") {
       try {
-        const result =
-          await getBroadwayMovies();
+        const result = await getBroadwayMovies();
 
         return json(
           {
             ok: true,
-
-            data:
-              result.movies,
-
+            data: result.movies,
             meta: {
-              provider:
-                "broadway",
-
-              count:
-                result.movies.length,
-
-              source:
-                result.source,
-
-              updatedAt:
-                new Date().toISOString()
+              provider: "broadway",
+              count: result.movies.length,
+              source: result.source,
+              updatedAt: new Date().toISOString()
             }
           },
           200,
@@ -79,11 +63,8 @@ export default {
         return json(
           {
             ok: false,
-
             error: {
-              code:
-                "BROADWAY_PARSE_ERROR",
-
+              code: "BROADWAY_PARSE_ERROR",
               message:
                 error instanceof Error
                   ? error.message
@@ -95,36 +76,20 @@ export default {
       }
     }
 
-    if (
-      url.pathname ===
-      "/api/broadway/upcoming"
-    ) {
+    if (url.pathname === "/api/broadway/upcoming") {
       try {
-        const result =
-          await getBroadwayUpcoming();
+        const result = await getBroadwayUpcoming();
 
         return json(
           {
             ok: true,
-
-            data:
-              result.movies,
-
+            data: result.movies,
             meta: {
-              provider:
-                "broadway",
-
-              type:
-                "coming-soon",
-
-              count:
-                result.movies.length,
-
-              source:
-                result.source,
-
-              updatedAt:
-                new Date().toISOString()
+              provider: "broadway",
+              type: "coming-soon",
+              count: result.movies.length,
+              source: result.source,
+              updatedAt: new Date().toISOString()
             }
           },
           200,
@@ -137,11 +102,100 @@ export default {
         return json(
           {
             ok: false,
+            error: {
+              code: "BROADWAY_UPCOMING_PARSE_ERROR",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : String(error)
+            }
+          },
+          502
+        );
+      }
+    }
 
+    const showMatch = url.pathname.match(
+      /^\/api\/broadway\/movies\/([^/]+)\/shows$/
+    );
+
+    if (showMatch) {
+      const movieId =
+        decodeURIComponent(showMatch[1]);
+
+      const date =
+        url.searchParams.get("date");
+
+      if (
+        date &&
+        !/^\d{4}-\d{2}-\d{2}$/.test(date)
+      ) {
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_DATE",
+              message:
+                "date must use YYYY-MM-DD"
+            }
+          },
+          400
+        );
+      }
+
+      try {
+        const result =
+          await getBroadwayMovieShows(
+            movieId,
+            date
+          );
+
+        if (!result) {
+          return json(
+            {
+              ok: false,
+              error: {
+                code: "MOVIE_NOT_FOUND",
+                message:
+                  "Broadway movie not found"
+              }
+            },
+            404
+          );
+        }
+
+        return json(
+          {
+            ok: true,
+            data: {
+              movie: result.movie,
+              availableDates:
+                result.availableDates,
+              selectedDate:
+                result.selectedDate,
+              sessions:
+                result.sessions
+            },
+            meta: {
+              provider: "broadway",
+              source: result.source,
+              updatedAt:
+                new Date().toISOString()
+            }
+          },
+          200,
+          {
+            "cache-control":
+              "public, max-age=60"
+          }
+        );
+      } catch (error) {
+        return json(
+          {
+            ok: false,
             error: {
               code:
-                "BROADWAY_UPCOMING_PARSE_ERROR",
-
+                "BROADWAY_SHOWS_PARSE_ERROR",
               message:
                 error instanceof Error
                   ? error.message
@@ -156,11 +210,9 @@ export default {
     return json(
       {
         ok: false,
-
         error: {
           code: "NOT_FOUND",
-          message:
-            "Endpoint not found"
+          message: "Endpoint not found"
         }
       },
       404
