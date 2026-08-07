@@ -1,4 +1,6 @@
 (() => {
+  let refreshInFlight = false;
+
   function setCardState(card, status, title, text) {
     card.dataset.status = status;
 
@@ -48,12 +50,42 @@
     );
   }
 
+  function catalogueSummary(catalogue) {
+    return `現正上映 ${catalogue.now.length} 部 · 即將上映 ${catalogue.coming.length} 部 · 特別節目 ${catalogue.festival.length} 部`;
+  }
+
+  function formatCacheAge(ageMs) {
+    if (!Number.isFinite(ageMs) || ageMs < 0) {
+      return "上次成功資料";
+    }
+
+    const minutes = Math.floor(ageMs / 60000);
+
+    if (minutes < 1) {
+      return "剛才的資料";
+    }
+
+    if (minutes < 60) {
+      return `${minutes} 分鐘前資料`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    return `${hours} 小時前資料`;
+  }
+
   async function loadMCLStatus() {
+    if (refreshInFlight) {
+      return;
+    }
+
+    refreshInFlight = true;
+
     const card = ensureCard();
     const provider =
       window.HKCinemaProviders?.mcl;
 
     if (!provider) {
+      refreshInFlight = false;
       setCardState(
         card,
         "error",
@@ -63,9 +95,30 @@
       return;
     }
 
+    const cached =
+      provider.getCachedCatalogue?.() || null;
+
+    if (cached) {
+      publishCatalogue(cached);
+
+      setCardState(
+        card,
+        "loading",
+        "MCL 已載入 · 更新中",
+        `${catalogueSummary(cached)} · ${formatCacheAge(cached.meta?.cacheAgeMs)}`
+      );
+    } else {
+      setCardState(
+        card,
+        "loading",
+        "MCL 連接中",
+        "正在取得 MCL 最新電影資料；失敗時會自動重試一次。"
+      );
+    }
+
     try {
       const catalogue =
-        await provider.getCatalogue();
+        await provider.refreshCatalogue();
 
       publishCatalogue(catalogue);
 
@@ -73,20 +126,36 @@
         card,
         "ready",
         "MCL 已連接",
-        `現正上映 ${catalogue.now.length} 部 · 即將上映 ${catalogue.coming.length} 部 · 特別節目 ${catalogue.festival.length} 部`
+        catalogueSummary(catalogue)
       );
     } catch (error) {
-      const message =
-        error?.name === "AbortError"
-          ? "MCL 連線逾時；Broadway 功能不受影響。"
-          : `瀏覽器直連失敗：${error instanceof Error ? error.message : String(error)}`;
+      if (cached) {
+        const reason =
+          error?.name === "AbortError"
+            ? "MCL 更新逾時"
+            : "MCL 暫時未能更新";
 
-      setCardState(
-        card,
-        "error",
-        "MCL 暫時無法連接",
-        message
-      );
+        setCardState(
+          card,
+          "loading",
+          "MCL 使用快取資料",
+          `${catalogueSummary(cached)} · ${reason}，稍後可再更新`
+        );
+      } else {
+        const message =
+          error?.name === "AbortError"
+            ? "MCL 兩次連線均逾時；Broadway 功能不受影響。"
+            : `瀏覽器直連失敗：${error instanceof Error ? error.message : String(error)}`;
+
+        setCardState(
+          card,
+          "error",
+          "MCL 暫時無法連接",
+          message
+        );
+      }
+    } finally {
+      refreshInFlight = false;
     }
   }
 
@@ -99,4 +168,8 @@
   } else {
     loadMCLStatus();
   }
+
+  document
+    .querySelector("#refreshButton")
+    ?.addEventListener("click", loadMCLStatus);
 })();
