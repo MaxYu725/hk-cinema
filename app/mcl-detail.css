@@ -1,0 +1,39 @@
+.provider-mcl[data-mcl-open] {
+  cursor: pointer;
+}
+
+.provider-mcl[data-mcl-open]:active {
+  transform: translateY(1px);
+}
+
+.mcl-ticket-prices {
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  line-height: 1.45;
+}
+
+.mcl-showtime-card .showtime-side {
+  min-width: 92px;
+}
+
+.mcl-session-note {
+  margin: 18px 4px 0;
+  color: #737983;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mcl-fallback-link {
+  display: inline-flex;
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .mcl-ticket-prices {
+    max-width: 220px;
+  }
+
+  .mcl-showtime-card .showtime-side {
+    min-width: 80px;
+  }
+}
