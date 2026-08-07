@@ -11,6 +11,10 @@ import {
   getBroadwaySeatMap
 } from "./providers/broadway-seats.js";
 
+import {
+  getMCLTicketing
+} from "./providers/mcl-ticketing.js";
+
 const json = (
   data,
   status = 200,
@@ -37,7 +41,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "3B",
+        phase: "4B",
         time: new Date().toISOString()
       });
     }
@@ -247,6 +251,80 @@ export default {
             error: {
               code:
                 "BROADWAY_SEATMAP_PARSE_ERROR",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : String(error)
+            }
+          },
+          502
+        );
+      }
+    }
+
+    if (url.pathname === "/api/mcl/ticketing") {
+      const movieSetId =
+        url.searchParams.get("movieSetId");
+
+      const date =
+        url.searchParams.get("date");
+
+      if (!movieSetId || !/^\d+$/.test(movieSetId)) {
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_MCL_MOVIE_ID",
+              message: "movieSetId must be numeric"
+            }
+          },
+          400
+        );
+      }
+
+      if (
+        date &&
+        !/^\d{4}-\d{2}-\d{2}$/.test(date)
+      ) {
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_DATE",
+              message: "date must use YYYY-MM-DD"
+            }
+          },
+          400
+        );
+      }
+
+      try {
+        const result =
+          await getMCLTicketing(movieSetId, date);
+
+        return json(
+          {
+            ok: true,
+            data: result,
+            meta: {
+              provider: "mcl",
+              movieSetId: String(movieSetId),
+              source: result.source,
+              updatedAt: new Date().toISOString()
+            }
+          },
+          200,
+          {
+            "cache-control":
+              "public, max-age=60"
+          }
+        );
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "MCL_TICKETING_ERROR",
               message:
                 error instanceof Error
                   ? error.message
