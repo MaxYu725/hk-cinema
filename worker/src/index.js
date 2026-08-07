@@ -1,5 +1,6 @@
 import {
-  getBroadwayMovies
+  getBroadwayMovies,
+  getBroadwayUpcoming
 } from "./providers/broadway.js";
 
 const json = (
@@ -33,7 +34,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "2A",
+        phase: "2B",
         time:
           new Date().toISOString()
       });
@@ -82,6 +83,64 @@ export default {
             error: {
               code:
                 "BROADWAY_PARSE_ERROR",
+
+              message:
+                error instanceof Error
+                  ? error.message
+                  : String(error)
+            }
+          },
+          502
+        );
+      }
+    }
+
+    if (
+      url.pathname ===
+      "/api/broadway/upcoming"
+    ) {
+      try {
+        const result =
+          await getBroadwayUpcoming();
+
+        return json(
+          {
+            ok: true,
+
+            data:
+              result.movies,
+
+            meta: {
+              provider:
+                "broadway",
+
+              type:
+                "coming-soon",
+
+              count:
+                result.movies.length,
+
+              source:
+                result.source,
+
+              updatedAt:
+                new Date().toISOString()
+            }
+          },
+          200,
+          {
+            "cache-control":
+              "public, max-age=1800"
+          }
+        );
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+
+            error: {
+              code:
+                "BROADWAY_UPCOMING_PARSE_ERROR",
 
               message:
                 error instanceof Error
