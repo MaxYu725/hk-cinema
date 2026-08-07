@@ -30,13 +30,15 @@ function toNumber(value, fallback = null) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function compactStatus(value) {
+  return String(value || "")
+    .replace(/[\s_-]+/g, "")
+    .toLowerCase();
+}
+
 function normalizeStatus(status, seatStyle = "") {
-  const value = String(status || "")
-    .replace(/[\s_-]+/g, "")
-    .toLowerCase();
-  const style = String(seatStyle || "")
-    .replace(/[\s_-]+/g, "")
-    .toLowerCase();
+  const value = compactStatus(status);
+  const style = compactStatus(seatStyle);
   const sofa = style.includes("sofa");
 
   switch (value) {
@@ -101,9 +103,11 @@ function findSeatName(cellHtml, statusAttrs) {
 
   if (direct) return direct;
 
-  const labelMatch = cellHtml.match(/<label\b([^>]*)>/i);
-  if (labelMatch) {
-    return firstAttr(labelMatch[1], [
+  const labelPattern = /<label\b([^>]*)>/gi;
+  let labelMatch;
+
+  while ((labelMatch = labelPattern.exec(cellHtml)) !== null) {
+    const value = firstAttr(labelMatch[1], [
       "seatNum",
       "seatnum",
       "seat-number",
@@ -113,6 +117,7 @@ function findSeatName(cellHtml, statusAttrs) {
       "for",
       "id"
     ]);
+    if (value) return value;
   }
 
   return null;
@@ -127,12 +132,31 @@ function textContent(html) {
   );
 }
 
-function buildSeatFromCell(tdAttrs, cellHtml, rowName, displayCell, areaIndex) {
+function parseCell(tdAttrs, cellHtml, rowName, cellIndex, areaIndex) {
   const statusAttrs = findStatusTag(cellHtml);
-  if (!statusAttrs) return null;
+
+  if (!statusAttrs) {
+    if (/rowLabel/i.test(cellHtml)) {
+      return {
+        type: "label",
+        text: textContent(cellHtml) || rowName || "",
+        cellIndex
+      };
+    }
+
+    return {
+      type: "blank",
+      cellIndex
+    };
+  }
 
   const seatNum = findSeatName(cellHtml, statusAttrs);
-  if (!seatNum) return null;
+  if (!seatNum) {
+    return {
+      type: "blank",
+      cellIndex
+    };
+  }
 
   const upstreamStatus = firstAttr(statusAttrs, [
     "status",
@@ -174,27 +198,53 @@ function buildSeatFromCell(tdAttrs, cellHtml, rowName, displayCell, areaIndex) {
   const inferredRowName = String(seatNum).match(/^([^0-9]+)/)?.[1] || null;
   const resolvedRowName = explicitRowName || rowName || inferredRowName || "";
   const status = normalizeStatus(upstreamStatus, seatStyle);
+  const rawStatus = compactStatus(upstreamStatus);
 
-  return {
+  const seat = {
     id: String(seatNum),
     seatNum: String(seatNum),
     rowName: resolvedRowName,
     row: toNumber(rawRow),
     column: toNumber(rawColumn),
-    displayCell,
+    displayCell: cellIndex,
     areaIndex,
     area: firstAttr(statusAttrs, ["area", "data-area"]),
     areaCode: firstAttr(statusAttrs, ["areaCode", "areacode", "data-area-code"]),
     seatStyle: seatStyle || null,
     status,
     upstreamStatus,
-    span: status === "sofa-available" || status === "sofa-sold" ? 2 : 1
+    visualSpan:
+      rawStatus === "sofaavailable" || rawStatus === "sofasold"
+        ? 2
+        : 1
+  };
+
+  return {
+    type: "seat",
+    cellIndex,
+    seat
   };
 }
 
+function areaSignature(area) {
+  return area.rows
+    .map(row =>
+      `${row.name}:${row.cells
+        .map(cell =>
+          cell.type === "seat"
+            ? `${cell.seat.seatNum}:${cell.seat.upstreamStatus}`
+            : cell.type === "label"
+              ? `L:${cell.text}`
+              : "_"
+        )
+        .join(",")}`
+    )
+    .join("|");
+}
+
 function parseAreas(html) {
-  const areas = [];
-  const allSeats = [];
+  const parsedAreas = [];
+  const seenAreaSignatures = new Set();
   const tablePattern = /<table\b([^>]*)>([\s\S]*?)<\/table>/gi;
   let tableMatch;
 
@@ -206,9 +256,7 @@ function parseAreas(html) {
       continue;
     }
 
-    const areaIndex = areas.length;
-    const areaRows = [];
-    const areaSeats = [];
+    const rows = [];
     let cellColumns = 0;
     const rowPattern = /<tr\b([^>]*)>([\s\S]*?)<\/tr>/gi;
     let rowMatch;
@@ -223,8 +271,8 @@ function parseAreas(html) {
       if (!tdMatches.length) continue;
 
       cellColumns = Math.max(cellColumns, tdMatches.length);
-
       let rowName = attr(rowAttrs, "row-name") || "";
+
       if (!rowName) {
         for (const td of tdMatches) {
           if (/rowLabel/i.test(td[2])) {
@@ -237,46 +285,108 @@ function parseAreas(html) {
         }
       }
 
-      const rowSeats = [];
-
-      tdMatches.forEach((td, index) => {
-        const seat = buildSeatFromCell(
+      const cells = tdMatches.map((td, index) =>
+        parseCell(
           td[1],
           td[2],
           rowName,
           index + 1,
-          areaIndex
-        );
+          parsedAreas.length
+        )
+      );
 
-        if (!seat) return;
-        rowSeats.push(seat);
-        areaSeats.push(seat);
-        allSeats.push(seat);
-      });
+      const hasSeat = cells.some(cell => cell.type === "seat");
+      const hasLabel = cells.some(
+        cell => cell.type === "label" && cell.text
+      );
 
-      if (rowName || rowSeats.length) {
-        areaRows.push({
+      if (hasSeat || hasLabel) {
+        rows.push({
           name: rowName,
           cellCount: tdMatches.length,
-          seats: rowSeats
+          cells
         });
       }
     }
 
-    if (!areaSeats.length) continue;
+    if (!rows.some(row => row.cells.some(cell => cell.type === "seat"))) {
+      continue;
+    }
 
-    areas.push({
-      index: areaIndex,
+    const area = {
+      index: parsedAreas.length,
       className,
       ratioLeft: toNumber(attr(tableAttrs, "RatioLeft"), 0),
       ratioTop: toNumber(attr(tableAttrs, "RatioTop"), 0),
       cellColumns,
-      rows: areaRows,
-      seatCount: areaSeats.length
-    });
+      rows
+    };
+
+    const signature = areaSignature(area);
+    if (seenAreaSignatures.has(signature)) {
+      continue;
+    }
+
+    seenAreaSignatures.add(signature);
+    parsedAreas.push(area);
   }
 
-  return { areas, seats: allSeats };
+  const seenSeatIds = new Set();
+  const seats = [];
+  const areas = [];
+
+  for (const sourceArea of parsedAreas) {
+    const area = {
+      ...sourceArea,
+      index: areas.length,
+      rows: []
+    };
+    let areaSeatCount = 0;
+
+    for (const sourceRow of sourceArea.rows) {
+      const cells = sourceRow.cells.map(cell => {
+        if (cell.type !== "seat") return cell;
+
+        const key = String(cell.seat.seatNum).toUpperCase();
+        if (seenSeatIds.has(key)) {
+          return {
+            type: "blank",
+            cellIndex: cell.cellIndex
+          };
+        }
+
+        seenSeatIds.add(key);
+        const seat = {
+          ...cell.seat,
+          areaIndex: area.index
+        };
+        seats.push(seat);
+        areaSeatCount += 1;
+
+        return {
+          ...cell,
+          seat
+        };
+      });
+
+      if (
+        cells.some(cell => cell.type === "seat") ||
+        cells.some(cell => cell.type === "label" && cell.text)
+      ) {
+        area.rows.push({
+          ...sourceRow,
+          cells
+        });
+      }
+    }
+
+    if (areaSeatCount) {
+      area.seatCount = areaSeatCount;
+      areas.push(area);
+    }
+  }
+
+  return { areas, seats };
 }
 
 function parseSeatPlan(html, cinemaCode, sessionId) {
@@ -339,22 +449,16 @@ function parseSeatPlan(html, cinemaCode, sessionId) {
     provider: "mcl",
     cinemaCode: String(cinemaCode),
     sessionId: String(sessionId),
-    layoutVersion: 2,
+    layoutVersion: 3,
     totalColumns,
     areas,
-    rows: areas.flatMap(area =>
-      area.rows.map(row => ({
-        ...row,
-        areaIndex: area.index
-      }))
-    ),
     seats,
     counts,
     screenLabel: "銀幕",
     source: {
       provider: "mcl",
       endpoint: SEAT_BASE,
-      parser: "official-table-v2",
+      parser: "official-table-v3",
       updatedAt: new Date().toISOString()
     }
   };
