@@ -9,7 +9,7 @@
   }
 
   function cacheKey(movieSetId, date) {
-    return `hkcinema:mcl-webapi-ticketing:${movieSetId}:${date || "default"}:v2`;
+    return `hkcinema:mcl-webapi-ticketing:${movieSetId}:${date || "default"}:v3`;
   }
 
   function readCache(movieSetId, date) {
@@ -20,6 +20,7 @@
 
       const cached = JSON.parse(text);
       const age = Date.now() - Number(cached?.savedAt);
+
       if (
         !Number.isFinite(age) ||
         age < 0 ||
@@ -43,7 +44,7 @@
         JSON.stringify({ savedAt: Date.now(), data })
       );
     } catch {
-      // Storage can be unavailable in restricted browser contexts.
+      // Ignore storage failures.
     }
   }
 
@@ -99,6 +100,10 @@
     }
   }
 
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
   function currentHongKongParts() {
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Hong_Kong",
@@ -115,12 +120,8 @@
     };
   }
 
-  function pad2(value) {
-    return String(value).padStart(2, "0");
-  }
-
   function normalizeDate(value) {
-    const text = String(value || "").trim();
+    const text = String(value ?? "").trim();
     if (!text) return null;
 
     const iso = text.match(/(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
@@ -128,7 +129,7 @@
       return `${iso[1]}-${pad2(iso[2])}-${pad2(iso[3])}`;
     }
 
-    const chinese = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+    const chinese = text.match(/(?:星期[一二三四五六日天],?\s*)?(\d{1,2})月\s*(\d{1,2})日/);
     if (chinese) {
       const now = currentHongKongParts();
       return `${now.year}-${pad2(chinese[1])}-${pad2(chinese[2])}`;
@@ -151,7 +152,7 @@
   }
 
   function normalizeTime(value) {
-    const text = String(value || "").trim().toUpperCase();
+    const text = String(value ?? "").trim().toUpperCase();
     if (!text) return null;
 
     const twelve = text.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
@@ -161,7 +162,7 @@
       return `${pad2(hour)}:${twelve[2]}`;
     }
 
-    const twentyFour = text.match(/(?:^|\D)([01]?\d|2[0-3]):([0-5]\d)(?:\D|$)/);
+    const twentyFour = text.match(/(?:^|T|\D)([01]?\d|2[0-3]):([0-5]\d)(?:\D|$)/);
     if (twentyFour) {
       return `${pad2(twentyFour[1])}:${twentyFour[2]}`;
     }
@@ -169,56 +170,14 @@
     return null;
   }
 
+  function normalizeCinemaId(value) {
+    const text = String(value ?? "").trim();
+    if (!/^\d{1,4}$/.test(text)) return null;
+    return text.length <= 3 ? text.padStart(3, "0") : text;
+  }
+
   function parseHtml(text) {
     return new DOMParser().parseFromString(String(text || ""), "text/html");
-  }
-
-  function closestAttr(node, names) {
-    let current = node;
-    let depth = 0;
-
-    while (current && current.nodeType === 1 && depth < 8) {
-      for (const name of names) {
-        const value = current.getAttribute?.(name);
-        if (value) return value;
-      }
-      current = current.parentElement;
-      depth++;
-    }
-
-    return null;
-  }
-
-  function closestCinemaName(node) {
-    let current = node;
-    let depth = 0;
-
-    while (current && current.nodeType === 1 && depth < 7) {
-      const direct =
-        current.getAttribute?.("data-cinema-name") ||
-        current.querySelector?.(".cinema-name, .cinema, [data-cinema-name], h2, h3, h4")?.textContent;
-
-      const cleaned = String(direct || "").replace(/\s+/g, " ").trim();
-      if (cleaned && cleaned.length <= 100 && !/^\d{1,2}:\d{2}/.test(cleaned)) {
-        return cleaned;
-      }
-
-      current = current.parentElement;
-      depth++;
-    }
-
-    return null;
-  }
-
-  function hrefParams(node) {
-    const href = node.getAttribute?.("href");
-    if (!href) return null;
-
-    try {
-      return new URL(href, SITE_BASE).searchParams;
-    } catch {
-      return null;
-    }
   }
 
   function mergeSession(existing, next) {
@@ -236,156 +195,273 @@
           ...(existing.cinema?.name || {}),
           ...(next.cinema?.name || {})
         }
+      },
+      house: {
+        ...(existing.house || {}),
+        ...(next.house || {})
       }
     };
   }
 
-  function parseSessionDocuments(texts) {
-    const sessions = new Map();
-    const dateSet = new Set();
+  function makeSession({ sessionId, cinemaId, date, time, cinemaName, versionName }) {
+    const sid = String(sessionId ?? "").trim();
+    if (!/^\d+$/.test(sid)) return null;
 
-    for (const text of texts.filter(Boolean)) {
-      const doc = parseHtml(text);
+    const ci = normalizeCinemaId(cinemaId);
 
-      doc.querySelectorAll("[data-day], [data-date], [data-value], option").forEach(node => {
-        for (const value of [
-          node.getAttribute?.("data-day"),
-          node.getAttribute?.("data-date"),
-          node.getAttribute?.("data-value"),
-          node.getAttribute?.("value"),
-          node.textContent
-        ]) {
-          const date = normalizeDate(value);
-          if (date) dateSet.add(date);
+    return {
+      id: `mcl:${sid}`,
+      provider: "mcl",
+      sourceId: sid,
+      date: normalizeDate(date),
+      time: normalizeTime(time),
+      cinema: {
+        id: ci,
+        name: {
+          zh: cinemaName ? String(cinemaName).replace(/\s+/g, " ").trim() : null,
+          en: null
         }
+      },
+      house: { id: null, name: null },
+      format: null,
+      language: null,
+      versionName: versionName ? String(versionName).trim() : null,
+      displayVersion: null,
+      price: {
+        display: null,
+        adult: null,
+        student: null,
+        child: null,
+        senior: null
+      },
+      seatSummary: {
+        available: null,
+        total: null,
+        held: null,
+        unavailable: null,
+        occupiedPercent: null
+      },
+      bookingUrl: ci
+        ? `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(ci)}&si=${encodeURIComponent(sid)}`
+        : null
+    };
+  }
+
+  function pickObjectValue(object, keys) {
+    for (const key of keys) {
+      if (object[key] !== undefined && object[key] !== null && object[key] !== "") {
+        return object[key];
+      }
+    }
+    return null;
+  }
+
+  function collectStructured(value, sessions, dates, context = {}, depth = 0, seen = new Set()) {
+    if (depth > 14 || value === null || value === undefined) return;
+
+    if (typeof value === "string") {
+      const date = normalizeDate(value);
+      if (date) dates.add(date);
+
+      if (/[<][a-z!/]/i.test(value) || /(?:si|sessionid)=\d+/i.test(value)) {
+        collectHtml(value, sessions, dates, context);
+      }
+      return;
+    }
+
+    if (typeof value !== "object") return;
+    if (seen.has(value)) return;
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      value.forEach(item => collectStructured(item, sessions, dates, context, depth + 1, seen));
+      return;
+    }
+
+    const lower = {};
+    Object.entries(value).forEach(([key, item]) => {
+      lower[String(key).toLowerCase()] = item;
+    });
+
+    const nextContext = {
+      cinemaId:
+        pickObjectValue(lower, ["cinemacodeid", "cinemacode", "cinemaid", "ci"]) ?? context.cinemaId,
+      cinemaName:
+        pickObjectValue(lower, ["cinemaname", "cinema", "cn", "name"]) ?? context.cinemaName,
+      date:
+        pickObjectValue(lower, ["businessday", "sessiondate", "showdate", "date", "day", "dn"]) ?? context.date,
+      versionName:
+        pickObjectValue(lower, ["displayversion", "versionname", "version", "vn"]) ?? context.versionName
+    };
+
+    const explicitSessionId = pickObjectValue(lower, [
+      "sessionid",
+      "filmsessionid",
+      "filmsession",
+      "session_id",
+      "sid",
+      "si"
+    ]);
+
+    const timeValue = pickObjectValue(lower, [
+      "sessiondatetime",
+      "showtime",
+      "sessiontime",
+      "starttime",
+      "time",
+      "st"
+    ]);
+
+    let sessionId = explicitSessionId;
+
+    if (sessionId == null && timeValue != null) {
+      const genericId = pickObjectValue(lower, ["id"]);
+      if (/^\d+$/.test(String(genericId ?? ""))) {
+        sessionId = genericId;
+      }
+    }
+
+    if (sessionId != null) {
+      const candidate = makeSession({
+        sessionId,
+        cinemaId: nextContext.cinemaId,
+        date: pickObjectValue(lower, ["sessiondatetime", "businessday", "sessiondate", "showdate", "date", "day", "dn"]) ?? nextContext.date,
+        time: timeValue,
+        cinemaName: nextContext.cinemaName,
+        versionName: nextContext.versionName
       });
 
-      const selector = [
-        "a[href*='si=']",
-        "a[href*='MCLSelectSeat']",
-        ".session-bubble",
-        "[data-id][data-time]",
-        "[data-session-id]",
-        "[data-sessionid]"
-      ].join(",");
+      if (candidate && (candidate.time || candidate.cinema.id || candidate.date)) {
+        sessions.set(candidate.sourceId, mergeSession(sessions.get(candidate.sourceId), candidate));
+        if (candidate.date) dates.add(candidate.date);
+      }
+    }
 
-      doc.querySelectorAll(selector).forEach(node => {
-        const params = hrefParams(node);
-        const sessionId = String(
-          node.getAttribute("data-id") ||
-          node.getAttribute("data-session-id") ||
-          node.getAttribute("data-sessionid") ||
-          params?.get("si") ||
-          ""
-        ).trim();
+    Object.values(value).forEach(item =>
+      collectStructured(item, sessions, dates, nextContext, depth + 1, seen)
+    );
+  }
 
-        if (!/^\d+$/.test(sessionId)) return;
+  function collectHtml(text, sessions, dates, context = {}) {
+    const source = String(text || "");
+    if (!source.trim()) return;
 
-        const cinemaId = String(
-          params?.get("ci") ||
-          closestAttr(node, ["data-ci", "data-cinema-code", "data-cinemacode", "data-cinema-id"]) ||
-          ""
-        ).trim();
+    const doc = parseHtml(source);
 
-        const date = normalizeDate(
+    doc.querySelectorAll("[data-day], [data-date], option").forEach(node => {
+      [
+        node.getAttribute("data-day"),
+        node.getAttribute("data-date"),
+        node.getAttribute("value"),
+        node.textContent
+      ].forEach(value => {
+        const date = normalizeDate(value);
+        if (date) dates.add(date);
+      });
+    });
+
+    const selectors = [
+      "a[href*='si=']",
+      "a[href*='MCLSelectSeat']",
+      ".session-bubble",
+      "[data-id][data-time]",
+      "[data-session-id]",
+      "[data-sessionid]"
+    ].join(",");
+
+    doc.querySelectorAll(selectors).forEach(node => {
+      let params = null;
+      const href = node.getAttribute("href");
+
+      if (href) {
+        try {
+          params = new URL(href, SITE_BASE).searchParams;
+        } catch {
+          params = null;
+        }
+      }
+
+      const sessionId =
+        node.getAttribute("data-id") ||
+        node.getAttribute("data-session-id") ||
+        node.getAttribute("data-sessionid") ||
+        params?.get("si");
+
+      const cinemaId =
+        params?.get("ci") ||
+        node.getAttribute("data-ci") ||
+        node.getAttribute("data-cinema-code") ||
+        context.cinemaId;
+
+      const candidate = makeSession({
+        sessionId,
+        cinemaId,
+        date:
           node.getAttribute("data-day") ||
           node.getAttribute("data-date") ||
-          closestAttr(node, ["data-day", "data-date", "data-show-day"])
-        );
-
-        const time = normalizeTime(
+          context.date,
+        time:
           node.getAttribute("data-time") ||
           node.getAttribute("data-session-time") ||
-          node.textContent
-        );
-
-        if (date) dateSet.add(date);
-
-        const candidate = {
-          id: `mcl:${sessionId}`,
-          provider: "mcl",
-          sourceId: sessionId,
-          date,
-          time,
-          cinema: {
-            id: cinemaId || null,
-            name: {
-              zh: closestCinemaName(node) || null,
-              en: null
-            }
-          },
-          house: { id: null, name: null },
-          format: null,
-          language: null,
-          versionName: node.getAttribute("data-value") || null,
-          displayVersion: null,
-          price: {
-            display: null,
-            adult: null,
-            student: null,
-            child: null,
-            senior: null
-          },
-          seatSummary: {
-            available: null,
-            total: null,
-            held: null,
-            unavailable: null,
-            occupiedPercent: null
-          },
-          bookingUrl: cinemaId
-            ? `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(cinemaId)}&si=${encodeURIComponent(sessionId)}`
-            : null
-        };
-
-        sessions.set(sessionId, mergeSession(sessions.get(sessionId), candidate));
+          node.textContent,
+        cinemaName: context.cinemaName,
+        versionName: node.getAttribute("data-value") || context.versionName
       });
 
-      const tagPattern = /<[^>]+(?:data-id|data-session-id)=["'](\d+)["'][^>]*>/gi;
-      let match;
-      while ((match = tagPattern.exec(text)) !== null) {
-        const tag = match[0];
-        const sessionId = match[1];
-        const timeMatch = tag.match(/data-time=["']([^"']+)["']/i);
-        const dayMatch = tag.match(/data-day=["']([^"']+)["']/i);
-        const ciMatch = tag.match(/(?:[?&]ci=|data-ci=["'])(\d+)/i);
-        const date = normalizeDate(dayMatch?.[1]);
-        if (date) dateSet.add(date);
-
-        const candidate = {
-          id: `mcl:${sessionId}`,
-          provider: "mcl",
-          sourceId: sessionId,
-          date,
-          time: normalizeTime(timeMatch?.[1]),
-          cinema: {
-            id: ciMatch?.[1] || null,
-            name: { zh: null, en: null }
-          },
-          house: { id: null, name: null },
-          format: null,
-          language: null,
-          versionName: null,
-          displayVersion: null,
-          price: { display: null, adult: null, student: null, child: null, senior: null },
-          seatSummary: { available: null, total: null, held: null, unavailable: null, occupiedPercent: null },
-          bookingUrl: ciMatch?.[1]
-            ? `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(ciMatch[1])}&si=${encodeURIComponent(sessionId)}`
-            : null
-        };
-
-        sessions.set(sessionId, mergeSession(sessions.get(sessionId), candidate));
+      if (candidate) {
+        sessions.set(candidate.sourceId, mergeSession(sessions.get(candidate.sourceId), candidate));
+        if (candidate.date) dates.add(candidate.date);
       }
+    });
+
+    const tagPattern = /<[^>]*(?:data-id|data-session-id|data-sessionid)=["'](\d+)["'][^>]*>/gi;
+    let match;
+
+    while ((match = tagPattern.exec(source)) !== null) {
+      const tag = match[0];
+      const sessionId = match[1];
+      const timeMatch = tag.match(/data-(?:session-)?time=["']([^"']+)["']/i);
+      const dayMatch = tag.match(/data-(?:show-)?(?:day|date)=["']([^"']+)["']/i);
+      const ciMatch = tag.match(/(?:[?&]ci=|data-(?:ci|cinema-code)=["'])(\d+)/i);
+
+      const candidate = makeSession({
+        sessionId,
+        cinemaId: ciMatch?.[1] || context.cinemaId,
+        date: dayMatch?.[1] || context.date,
+        time: timeMatch?.[1],
+        cinemaName: context.cinemaName,
+        versionName: context.versionName
+      });
+
+      if (candidate) {
+        sessions.set(candidate.sourceId, mergeSession(sessions.get(candidate.sourceId), candidate));
+        if (candidate.date) dates.add(candidate.date);
+      }
+    }
+  }
+
+  function parseMCLResponses(texts) {
+    const sessions = new Map();
+    const dates = new Set();
+
+    for (const text of texts.filter(Boolean)) {
+      const json = safeJson(text);
+
+      if (json !== null) {
+        collectStructured(json, sessions, dates);
+      }
+
+      collectHtml(text, sessions, dates);
     }
 
     return {
       sessions: Array.from(sessions.values()),
-      availableDates: Array.from(dateSet).sort()
+      availableDates: Array.from(dates).sort()
     };
   }
 
   function collectCinemaMap(value, map = new Map(), depth = 0) {
-    if (depth > 8 || value == null) return map;
+    if (depth > 10 || value == null) return map;
 
     if (Array.isArray(value)) {
       value.forEach(item => collectCinemaMap(item, map, depth + 1));
@@ -394,17 +470,18 @@
 
     if (typeof value !== "object") return map;
 
-    const idKeys = ["id", "i", "ci", "CinemaCodeID", "CinemaCode", "code"];
-    const nameKeys = ["n", "cn", "CinemaName", "name", "Name"];
+    const entries = Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [String(key).toLowerCase(), item])
+    );
 
-    const id = idKeys.map(key => value[key]).find(item => item != null && item !== "");
-    const name = nameKeys.map(key => value[key]).find(item => typeof item === "string" && item.trim());
+    const id = pickObjectValue(entries, ["cinemacodeid", "cinemacode", "cinemaid", "ci", "id", "i", "code"]);
+    const name = pickObjectValue(entries, ["cinemaname", "name", "cn", "n"]);
 
-    if (id != null && name) {
-      const idText = String(id).trim();
-      if (/^\d{1,4}$/.test(idText)) {
-        map.set(idText.padStart(3, "0"), String(name).trim());
-        map.set(idText, String(name).trim());
+    if (id != null && typeof name === "string" && name.trim()) {
+      const normalized = normalizeCinemaId(id);
+      if (normalized) {
+        map.set(normalized, name.trim());
+        map.set(String(Number(normalized)), name.trim());
       }
     }
 
@@ -425,8 +502,9 @@
   function applyCinemaNames(sessions, cinemaMap) {
     return sessions.map(session => {
       const id = session.cinema?.id;
-      const mapped = id ? cinemaMap.get(id) || cinemaMap.get(String(Number(id))) : null;
-      const current = session.cinema?.name?.zh;
+      const mapped = id
+        ? cinemaMap.get(id) || cinemaMap.get(String(Number(id)))
+        : null;
 
       return {
         ...session,
@@ -434,7 +512,10 @@
           ...(session.cinema || {}),
           name: {
             ...(session.cinema?.name || {}),
-            zh: mapped || current || (id ? `MCL 戲院 ${id}` : "MCL 戲院")
+            zh:
+              mapped ||
+              session.cinema?.name?.zh ||
+              (id ? `MCL 戲院 ${id}` : "MCL 戲院")
           }
         }
       };
@@ -443,11 +524,13 @@
 
   function priceFromList(value) {
     const items = Array.isArray(value) ? value : [];
+
     const find = words => {
       const item = items.find(entry => {
         const name = String(entry?.n || entry?.name || "").toLowerCase();
         return words.some(word => name.includes(word));
       });
+
       const number = Number(item?.p ?? item?.price);
       return Number.isFinite(number) ? number : null;
     };
@@ -476,7 +559,10 @@
     const info = safeJson(infoText) || {};
     const prices = priceFromList(safeJson(priceText));
     const adult = prices.adult;
-    const languageParts = [info.l, info.s ? `字幕: ${info.s}` : null].filter(Boolean);
+    const languageParts = [
+      info.l,
+      info.s ? `字幕: ${info.s}` : null
+    ].filter(Boolean);
 
     return {
       ...session,
@@ -507,6 +593,7 @@
       while (true) {
         const index = nextIndex++;
         if (index >= items.length) return;
+
         try {
           results[index] = await mapper(items[index], index);
         } catch {
@@ -524,6 +611,7 @@
 
   async function getTicketing(movieSetId, selectedDate = null) {
     const id = String(movieSetId || "").replace(/^mcl:/, "");
+
     if (!/^\d+$/.test(id)) {
       throw new Error("Invalid MCL movie ID");
     }
@@ -532,27 +620,37 @@
     if (cached) return cached;
 
     const query = `l=1&t=s&id=${encodeURIComponent(id)}`;
+
     const [listResult, gridResult, daysResult, cinemaMap] = await Promise.all([
       fetchText(`${API_BASE}GetNowShowingList.aspx?${query}`).catch(error => ({ error })),
       fetchText(`${API_BASE}GetNowShowingGrid.aspx?${query}&m=i`).catch(error => ({ error })),
-      fetchText(`${API_BASE}GetShowDays.aspx?${query}`).catch(() => ""),
+      fetchText(`${API_BASE}GetShowDays.aspx?${query}`).catch(error => ({ error })),
       getCinemaMap()
     ]);
 
-    const texts = [listResult, gridResult, daysResult].filter(value => typeof value === "string");
+    const texts = [listResult, gridResult, daysResult]
+      .filter(value => typeof value === "string");
+
     if (!texts.length) {
-      const error = listResult?.error || gridResult?.error;
+      const error = listResult?.error || gridResult?.error || daysResult?.error;
       throw error || new Error("MCL 場次連線失敗");
     }
 
-    const parsed = parseSessionDocuments(texts);
+    const parsed = parseMCLResponses(texts);
     let allSessions = applyCinemaNames(parsed.sessions, cinemaMap);
     let availableDates = parsed.availableDates;
 
     if (!allSessions.length) {
-      throw new Error(
-        `MCL 場次格式未能識別（list=${typeof listResult === "string" ? listResult.length : 0}, grid=${typeof gridResult === "string" ? gridResult.length : 0}, days=${typeof daysResult === "string" ? daysResult.length : 0}）`
-      );
+      const previews = [
+        ["list", listResult],
+        ["grid", gridResult],
+        ["days", daysResult]
+      ]
+        .filter(([, value]) => typeof value === "string")
+        .map(([name, value]) => `${name}=${String(value).replace(/\s+/g, " ").slice(0, 220)}`)
+        .join(" | ");
+
+      throw new Error(`MCL 場次格式未能識別：${previews}`);
     }
 
     let resolvedDate =
@@ -564,8 +662,7 @@
       ? allSessions.filter(session => !session.date || session.date === resolvedDate)
       : allSessions;
 
-    const enrichTarget = selectedSessions.slice(0, 40);
-    selectedSessions = await mapLimit(enrichTarget, 6, enrichSession);
+    selectedSessions = await mapLimit(selectedSessions.slice(0, 40), 6, enrichSession);
 
     const enrichedDates = new Set(availableDates);
     selectedSessions.forEach(session => {
@@ -613,7 +710,7 @@
     if (!provider) return false;
 
     provider.getTicketing = getTicketing;
-    provider.ticketingTransport = "browser-direct-mclwebapi2";
+    provider.ticketingTransport = "browser-direct-mclwebapi2-v3";
     provider.ticketingApiBase = API_BASE;
     return true;
   }
