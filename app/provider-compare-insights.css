@@ -8,7 +8,7 @@
 
 .provider-compare-insight-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -21,6 +21,10 @@
 
 .provider-compare-insight.highlight {
   background: #edf7f2;
+}
+
+.provider-compare-insight.seat-insight {
+  background: #f2f5f8;
 }
 
 .provider-compare-insight span,
