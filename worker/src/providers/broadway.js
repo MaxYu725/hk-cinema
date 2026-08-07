@@ -143,6 +143,37 @@ function getHongKongDate() {
   ).format(new Date());
 }
 
+function addDays(dateString, days) {
+  const [year, month, day] =
+    dateString.split("-").map(Number);
+
+  const date =
+    new Date(Date.UTC(year, month - 1, day));
+
+  date.setUTCDate(
+    date.getUTCDate() + days
+  );
+
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
+function normalizeShowDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const text = String(value);
+
+  const match =
+    text.match(/\d{4}-\d{2}-\d{2}/);
+
+  return match
+    ? match[0]
+    : null;
+}
+
 function normalizeMovie(movie, activeMovieIds) {
   const titleLang =
     parseLang(movie.title_lang);
@@ -322,16 +353,37 @@ export async function getBroadwayMovies() {
     );
   }
 
-  const activeMovieIds =
-    new Set(
-      shows
-        .map((show) => show?.movie?.id)
-        .filter(
-          (id) =>
-            id !== null &&
-            id !== undefined
-        )
+const today =
+  getHongKongDate();
+
+const windowEnd =
+  addDays(today, 7);
+
+const currentShows =
+  shows.filter((show) => {
+    const showDate =
+      normalizeShowDate(show?.date);
+
+    if (!showDate) {
+      return false;
+    }
+
+    return (
+      showDate >= today &&
+      showDate <= windowEnd
     );
+  });
+
+const activeMovieIds =
+  new Set(
+    currentShows
+      .map((show) => show?.movie?.id)
+      .filter(
+        (id) =>
+          id !== null &&
+          id !== undefined
+      )
+  );
 
   const normalized =
     movies
@@ -360,11 +412,25 @@ export async function getBroadwayMovies() {
   return {
     movies: normalized,
 
-    source: {
-      provider: "broadway",
-      rawMovies: movies.length,
-      rawShows: shows.length,
-      activeMovies: normalized.length
-    }
+source: {
+  provider: "broadway",
+
+  rawMovies:
+    movies.length,
+
+  rawShows:
+    shows.length,
+
+  currentWindowShows:
+    currentShows.length,
+
+  activeMovies:
+    normalized.length,
+
+  dateWindow: {
+    from: today,
+    to: windowEnd
+  }
+}
   };
 }
