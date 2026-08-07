@@ -52,13 +52,15 @@
   }
 
   function item(card, index) {
-    const mcl = card.querySelector(".provider-compare-source.mcl");
-    const providerLabel = mcl ? "MCL" : "Broadway";
+    const isMcl = Boolean(card.querySelector(".provider-compare-source.mcl"));
+    const provider = isMcl ? "mcl" : "broadway";
+    const providerLabel = isMcl ? "MCL" : "Broadway";
     const time = card.querySelector(".provider-compare-show-time")?.textContent?.trim() || "--:--";
 
     return {
       card,
       index,
+      provider,
       providerLabel,
       time,
       timeMinutes: minutes(time),
@@ -131,20 +133,31 @@
       .replaceAll("'", "&#039;");
   }
 
+  function recommendationDetails(entry, includeProvider = true) {
+    const parts = [];
+    if (includeProvider) parts.push(entry.providerLabel);
+    parts.push(entry.time, entry.cinema);
+    return parts.map(escapeHtml).join(" · ");
+  }
+
   function cardHtml(label, entry, type) {
     if (!entry) {
-      return `<article class="provider-compare-recommendation ${type}"><span>${label}</span><strong>—</strong><small>目前資料不足</small></article>`;
+      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>—</strong><small>目前資料不足</small></article>`;
     }
 
     if (type === "saving") {
-      return `<article class="provider-compare-recommendation ${type}"><span>${label}</span><strong>$${escapeHtml(entry.price)}</strong><small>${escapeHtml(entry.providerLabel)} · ${escapeHtml(entry.time)} · ${escapeHtml(entry.cinema)}</small></article>`;
+      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>$${escapeHtml(entry.price)}</strong><small>${recommendationDetails(entry)} </small></article>`;
     }
 
     if (type === "seats") {
-      return `<article class="provider-compare-recommendation ${type}"><span>${label}</span><strong>${Math.round(entry.seats.ratio * 100)}% 可選</strong><small>${escapeHtml(entry.providerLabel)} · ${escapeHtml(entry.time)} · ${entry.seats.available}/${entry.seats.total}</small></article>`;
+      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.seats.ratio * 100)}% 可選</strong><small>${recommendationDetails(entry)} · ${entry.seats.available}/${entry.seats.total}</small></article>`;
     }
 
-    return `<article class="provider-compare-recommendation ${type}"><span>${label}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${escapeHtml(entry.providerLabel)} · ${escapeHtml(entry.time)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small></article>`;
+    if (type === "balanced") {
+      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small></article>`;
+    }
+
+    return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry, false)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small></article>`;
   }
 
   function render() {
@@ -163,6 +176,8 @@
     const saving = cheapest(entries);
     const roomy = roomiest(entries);
     const pick = balanced(entries);
+    const broadwayPick = balanced(entries.filter(entry => entry.provider === "broadway"));
+    const mclPick = balanced(entries.filter(entry => entry.provider === "mcl"));
 
     timeline.querySelectorAll(".is-balanced-pick").forEach(card => {
       card.classList.remove("is-balanced-pick");
@@ -175,11 +190,15 @@
         <small>按目前篩選結果計算</small>
       </div>
       <div class="provider-compare-recommendation-grid">
-        ${cardHtml("最慳場次", saving, "saving")}
-        ${cardHtml("座位最鬆動", roomy, "seats")}
-        ${cardHtml("平衡推薦", pick, "balanced")}
+        ${cardHtml("全院線最慳", saving, "saving")}
+        ${cardHtml("全院線座位最鬆", roomy, "seats")}
+        ${cardHtml("全院線平衡推薦", pick, "balanced")}
       </div>
-      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。只使用已有可靠票價、時間及座位比例的場次；MCL 座位 lazy loading 後會自動更新。這是排序參考，不代表所有觀眾的主觀最佳選擇。</p>
+      <div class="provider-compare-provider-picks">
+        ${cardHtml("Broadway 平衡推薦", broadwayPick, "provider broadway")}
+        ${cardHtml("MCL 平衡推薦", mclPick, "provider mcl")}
+      </div>
+      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。所有推薦均顯示時間及戲院名稱；Broadway 與 MCL 各自另列一個平衡推薦，避免跨院線比較只見單一院線。只使用已有可靠票價、時間及座位比例的場次；MCL 座位 lazy loading 後會自動更新。</p>
     `;
 
     let panel = section.querySelector("[data-provider-recommendations]");
