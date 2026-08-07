@@ -41,15 +41,28 @@ function setStatus(type, title, text) {
 }
 
 function getVisibleMovies() {
-  if (state.tab === "now") {
-    return state.movies.filter(
-      movie => movie.status === "now-showing"
+  const movies =
+    state.movies.filter(movie =>
+      state.tab === "now"
+        ? movie.status === "now-showing"
+        : movie.status === "presale"
     );
-  }
 
-  return state.movies.filter(
-    movie => movie.status === "presale"
-  );
+  return movies.sort((a, b) => {
+    const dateA =
+      a.releaseDate || "0000-00-00";
+
+    const dateB =
+      b.releaseDate || "0000-00-00";
+
+    // 現正上映：最新上映優先
+    if (state.tab === "now") {
+      return dateB.localeCompare(dateA);
+    }
+
+    // 預售：最近即將上映優先
+    return dateA.localeCompare(dateB);
+  });
 }
 
 function renderLoading() {
@@ -206,11 +219,21 @@ async function loadMovies() {
   state.loading = true;
   state.error = null;
 
-  setStatus(
-    "loading",
-    "正在更新",
-    "正在取得 Broadway 最新電影資料。"
-  );
+const nowCount =
+  state.movies.filter(
+    movie => movie.status === "now-showing"
+  ).length;
+
+const presaleCount =
+  state.movies.filter(
+    movie => movie.status === "presale"
+  ).length;
+
+setStatus(
+  "ready",
+  "Broadway 已連接",
+  `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部`
+);
 
   render();
 
