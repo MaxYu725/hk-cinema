@@ -48,14 +48,31 @@
       : catalogue.now || [];
   }
 
-  function providerBadges(labels) {
+  function findMCLMovie(sourceId) {
+    if (!catalogue) return null;
+
+    return [
+      ...(catalogue.now || []),
+      ...(catalogue.coming || []),
+      ...(catalogue.festival || [])
+    ].find(movie =>
+      String(movie.sourceId) === String(sourceId)
+    ) || null;
+  }
+
+  function providerBadges(labels, mclSourceId = null) {
     return `
       <div class="provider-badges">
         ${labels
-          .map(
-            label =>
-              `<span class="provider-badge provider-${label.toLowerCase()}">${escapeHtml(label)}</span>`
-          )
+          .map(label => {
+            const isMCL = label === "MCL";
+            const attrs =
+              isMCL && mclSourceId
+                ? ` data-mcl-open="${escapeHtml(mclSourceId)}" title="查看 MCL 場次"`
+                : "";
+
+            return `<span class="provider-badge provider-${label.toLowerCase()}"${attrs}>${escapeHtml(label)}</span>`;
+          })
           .join("")}
       </div>
     `;
@@ -96,9 +113,9 @@
         data-provider="mcl"
         data-source-id="${escapeHtml(movie.sourceId)}"
         data-booking-url="${escapeHtml(movie.bookingUrl || "") }"
-        role="link"
+        role="button"
         tabindex="0"
-        aria-label="在 MCL 查看 ${escapeHtml(title)}"
+        aria-label="查看 MCL ${escapeHtml(title)} 詳情及場次"
       >
         <div class="movie-poster">
           ${poster}
@@ -108,13 +125,17 @@
 
         <div class="movie-info">
           <h3>${escapeHtml(title)}</h3>
-          ${providerBadges(["MCL"])}
+          ${providerBadges(["MCL"], movie.sourceId)}
         </div>
       </article>
     `;
   }
 
-  function markMatchedCard(card) {
+  function markMatchedCard(card, mclMovie) {
+    if (!mclMovie) return;
+
+    card.dataset.mclSourceId = mclMovie.sourceId;
+
     if (
       card.querySelector(
         ".provider-badges[data-multi-provider]"
@@ -134,11 +155,28 @@
       document.createElement("div");
 
     wrapper.innerHTML =
-      providerBadges(["Broadway", "MCL"]);
+      providerBadges(
+        ["Broadway", "MCL"],
+        mclMovie.sourceId
+      );
 
     const badges = wrapper.firstElementChild;
     badges.dataset.multiProvider = "true";
     info.appendChild(badges);
+  }
+
+  function openMCL(sourceId) {
+    const movie = findMCLMovie(sourceId);
+
+    if (!movie) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("hkcinema:mcl-open", {
+        detail: { movie }
+      })
+    );
   }
 
   function applyCatalogue() {
@@ -146,7 +184,6 @@
       return;
     }
 
-    // Wait until the main Broadway renderer has completed.
     if (count.textContent.trim() === "—") {
       return;
     }
@@ -163,6 +200,10 @@
           ".provider-badges[data-multi-provider]"
         )
         .forEach(item => item.remove());
+
+      grid
+        .querySelectorAll("[data-mcl-source-id]")
+        .forEach(card => delete card.dataset.mclSourceId);
 
       const broadwayCards =
         Array.from(
@@ -198,7 +239,7 @@
         const matchingCard = byTitle.get(key);
 
         if (matchingCard) {
-          markMatchedCard(matchingCard);
+          markMatchedCard(matchingCard, movie);
           matched++;
           continue;
         }
@@ -255,6 +296,17 @@
   document.addEventListener(
     "click",
     event => {
+      const mclBadge =
+        event.target.closest("[data-mcl-open]");
+
+      if (mclBadge) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        openMCL(mclBadge.dataset.mclOpen);
+        return;
+      }
+
       const card =
         event.target.closest(".mcl-only-card");
 
@@ -265,16 +317,7 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-
-      const url = card.dataset.bookingUrl;
-
-      if (url) {
-        window.open(
-          url,
-          "_blank",
-          "noopener,noreferrer"
-        );
-      }
+      openMCL(card.dataset.sourceId);
     },
     true
   );
@@ -297,16 +340,7 @@
       }
 
       event.preventDefault();
-
-      const url = card.dataset.bookingUrl;
-
-      if (url) {
-        window.open(
-          url,
-          "_blank",
-          "noopener,noreferrer"
-        );
-      }
+      openMCL(card.dataset.sourceId);
     }
   );
 
