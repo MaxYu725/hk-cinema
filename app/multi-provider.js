@@ -169,14 +169,23 @@
     const movie = findMCLMovie(sourceId);
 
     if (!movie) {
-      return;
+      return false;
     }
 
+    const detail = window.HKCinemaMCLDetail;
+
+    if (detail?.open) {
+      return detail.open(movie) !== false;
+    }
+
+    // Backward-compatible fallback if the detail module has not loaded yet.
     window.dispatchEvent(
       new CustomEvent("hkcinema:mcl-open", {
         detail: { movie }
       })
     );
+
+    return true;
   }
 
   function applyCatalogue() {
