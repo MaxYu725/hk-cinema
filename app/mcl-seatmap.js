@@ -68,13 +68,16 @@
   }
 
   function renderSeat(seat) {
-    const number = String(seat.seatNum || "")
-      .replace(String(seat.rowName || ""), "") || seat.seatNum;
+    const rowName = String(seat.rowName || "");
+    const seatNum = String(seat.seatNum || "");
+    const number = rowName && seatNum.startsWith(rowName)
+      ? seatNum.slice(rowName.length) || seatNum
+      : seatNum;
 
     return `
       <span
         class="mcl-seat ${escapeHtml(seat.status)}"
-        style="grid-column:${Number(seat.column) || 1}"
+        style="grid-column:${Math.max(1, Number(seat.column) || 1)}"
         title="${escapeHtml(seat.seatNum)} · ${escapeHtml(statusLabel(seat.status))}"
         aria-label="${escapeHtml(seat.seatNum)} ${escapeHtml(statusLabel(seat.status))}"
       >${escapeHtml(number)}</span>
@@ -84,6 +87,7 @@
   function renderMap(data, bookingUrl) {
     const columns = Math.max(1, Number(data.totalColumns) || 1);
     const counts = data.counts || {};
+    const maxGridWidth = Math.min(760, Math.max(220, columns * 34));
 
     return `
       <div class="mcl-seatmap-heading">
@@ -96,7 +100,7 @@
 
       ${renderLegend()}
 
-      <div class="mcl-seatmap-scroll">
+      <div class="mcl-seatmap-stage" style="--mcl-seat-columns:${columns}; --mcl-grid-max:${maxGridWidth}px">
         <div class="mcl-seat-screen">${escapeHtml(data.screenLabel || "銀幕")}</div>
 
         <div class="mcl-seat-rows">
@@ -105,7 +109,7 @@
               <span class="mcl-seat-row-name">${escapeHtml(row.name)}</span>
               <div
                 class="mcl-seat-grid"
-                style="grid-template-columns:repeat(${columns}, 30px)"
+                style="grid-template-columns:repeat(${columns}, minmax(0, 1fr)); max-width:${maxGridWidth}px"
               >
                 ${(row.seats || []).map(renderSeat).join("")}
               </div>
@@ -181,6 +185,7 @@
       const data = await fetchSeatMap(params.sessionId, params.cinemaCode);
       panel.innerHTML = renderMap(data, params.bookingUrl);
       panel.dataset.ready = "true";
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (error) {
       panel.innerHTML = `
         <div class="mcl-seatmap-loading error">
