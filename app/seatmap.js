@@ -239,8 +239,13 @@
     }
   }
 
-  document.addEventListener("click", event => {
-    const pill = event.target.closest(".seat-pill");
+  function interceptSeatMapClick(event) {
+    const target =
+      event.target instanceof Element
+        ? event.target
+        : event.target?.parentElement;
+
+    const pill = target?.closest(".seat-pill");
 
     if (!pill) {
       return;
@@ -252,8 +257,24 @@
       return;
     }
 
+    // The seat pill is rendered inside Broadway's booking <a> element.
+    // Intercept in capture phase so mobile browsers never follow the link.
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
+
     openSeatMap(pill);
-  });
+  }
+
+  document.addEventListener(
+    "click",
+    interceptSeatMapClick,
+    true
+  );
+
+  document.addEventListener(
+    "auxclick",
+    interceptSeatMapClick,
+    true
+  );
 })();
