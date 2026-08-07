@@ -38,6 +38,16 @@
     return card;
   }
 
+  function publishCatalogue(catalogue) {
+    window.HKCinemaMCLCatalogue = catalogue;
+
+    window.dispatchEvent(
+      new CustomEvent("hkcinema:mcl-catalogue", {
+        detail: catalogue
+      })
+    );
+  }
+
   async function loadMCLStatus() {
     const card = ensureCard();
     const provider =
@@ -57,7 +67,7 @@
       const catalogue =
         await provider.getCatalogue();
 
-      window.HKCinemaMCLCatalogue = catalogue;
+      publishCatalogue(catalogue);
 
       setCardState(
         card,
