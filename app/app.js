@@ -268,11 +268,21 @@ setStatus(
     state.updatedAt =
       result.meta?.updatedAt || null;
 
-    setStatus(
-      "ready",
-      "Broadway 已連接",
-      `已取得 ${state.movies.length} 部有近期場次的電影。`
-    );
+const nowCount =
+  state.movies.filter(
+    movie => movie.status === "now-showing"
+  ).length;
+
+const presaleCount =
+  state.movies.filter(
+    movie => movie.status === "presale"
+  ).length;
+
+setStatus(
+  "ready",
+  "Broadway 已連接",
+  `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部`
+);
   } catch (error) {
     state.error =
       error instanceof Error
