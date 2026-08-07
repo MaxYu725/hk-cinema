@@ -54,9 +54,29 @@
 
 .provider-compare-recommendation {
   min-width: 0;
+  width: 100%;
   padding: 13px;
+  border: 0;
   border-radius: 16px;
   background: #f6f7f8;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+}
+
+.provider-compare-recommendation.is-clickable {
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.provider-compare-recommendation.is-clickable:active {
+  transform: scale(.985);
+}
+
+.provider-compare-recommendation.is-clickable:focus-visible {
+  outline: 3px solid rgba(38, 139, 91, .22);
+  outline-offset: 2px;
 }
 
 .provider-compare-recommendation.balanced {
@@ -74,7 +94,8 @@
 
 .provider-compare-recommendation span,
 .provider-compare-recommendation strong,
-.provider-compare-recommendation small {
+.provider-compare-recommendation small,
+.provider-compare-recommendation em {
   display: block;
 }
 
@@ -99,6 +120,18 @@
   overflow-wrap: anywhere;
 }
 
+.provider-compare-recommendation em {
+  margin-top: 8px;
+  color: #268b5b;
+  font-size: .6rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.provider-compare-recommendation.is-unavailable em {
+  display: none;
+}
+
 .provider-compare-recommendation-note {
   margin: 12px 0 0;
   padding-top: 11px;
@@ -110,6 +143,19 @@
 
 .provider-compare-show.is-balanced-pick {
   box-shadow: inset 0 0 0 2px #b7dec9;
+}
+
+.provider-compare-show.is-recommendation-jump {
+  box-shadow:
+    inset 0 0 0 3px #268b5b,
+    0 10px 26px rgba(38, 139, 91, .16);
+  transform: translateY(-1px);
+}
+
+@media (hover: hover) {
+  .provider-compare-recommendation.is-clickable:hover {
+    box-shadow: 0 8px 20px rgba(23, 25, 29, .08);
+  }
 }
 
 @media (max-width: 700px) {
