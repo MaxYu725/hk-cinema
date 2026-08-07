@@ -140,9 +140,8 @@
 }
 
 .mcl-seat-screen {
-  width: calc(100% - 8px);
   box-sizing: border-box;
-  margin: 0 auto 18px;
+  margin: 0 auto 14px;
   padding: 7px 12px;
   border-radius: 50% 50% 8px 8px / 100% 100% 8px 8px;
   background: #e9ebef;
@@ -154,7 +153,6 @@
 
 .mcl-seat-areas {
   position: relative;
-  width: 100%;
 }
 
 .mcl-seat-area {
@@ -164,44 +162,51 @@
 .mcl-seat-area-row {
   display: grid;
   align-items: center;
-  position: relative;
 }
 
-.mcl-seat-row-label {
-  align-self: center;
-  justify-self: center;
+.mcl-seat-cell {
+  width: var(--mcl-cell-size, 20px);
+  height: var(--mcl-cell-size, 20px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.mcl-seat-cell.blank {
+  visibility: hidden;
+}
+
+.mcl-seat-cell.label {
   color: #8b919a;
-  font-size: .67rem;
+  font-size: clamp(.42rem, 1.7vw, .66rem);
   font-weight: 700;
   line-height: 1;
-  z-index: 1;
-}
-
-.mcl-seat-row-label.left,
-.mcl-seat-row-label.right {
-  pointer-events: none;
 }
 
 .mcl-seat {
   width: calc(var(--mcl-cell-size, 20px) - 3px);
-  height: calc(var(--mcl-cell-size, 20px) - 5px);
+  height: calc(var(--mcl-cell-size, 20px) - 3px);
   box-sizing: border-box;
-  align-self: center;
-  justify-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid #4b5159;
   border-radius: 5px 5px 4px 4px;
-  font-size: clamp(.44rem, 1.6vw, .66rem);
+  font-size: clamp(.42rem, 1.6vw, .62rem);
   font-weight: 700;
   line-height: 1;
+  position: relative;
+  z-index: 1;
 }
 
-.mcl-seat.sofa-available,
-.mcl-seat.sofa-sold {
-  width: calc((var(--mcl-cell-size, 20px) * 2) - 2px);
+.mcl-seat.wide {
+  width: calc((var(--mcl-cell-size, 20px) * 2) - 3px);
+  z-index: 2;
 }
 
 .mcl-seatmap-footer {
@@ -276,12 +281,12 @@
   }
 
   .mcl-seat-screen {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     font-size: .72rem;
   }
 
   .mcl-seat {
-    font-size: clamp(.42rem, 1.9vw, .58rem);
+    font-size: clamp(.4rem, 1.9vw, .56rem);
   }
 
   .mcl-seatmap-footer {
