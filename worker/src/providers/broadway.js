@@ -1,6 +1,9 @@
 const TICKETING_URL =
   "https://www.cinema.com.hk/hk/movie/ticketing";
 
+const UPCOMING_URL =
+  "https://www.cinema.com.hk/hk/movie/upcoming";
+
 const MEDIA_BASE =
   "https://media.grabticks.com";
 
@@ -38,7 +41,6 @@ function makePosterUrl(filename) {
     return `${MEDIA_BASE}/${filename}`;
   }
 
-  // Broadway / GrabTix high-resolution image variant
   return (
     `${MEDIA_BASE}/` +
     filename.slice(0, dot) +
@@ -215,10 +217,8 @@ function normalizeMovie(movie, activeMovieIds) {
 
   return {
     id: `broadway:${movie.id}`,
-
     provider: "broadway",
     sourceId: String(movie.id),
-
     movieKey: null,
 
     title: {
@@ -298,9 +298,9 @@ function normalizeMovie(movie, activeMovieIds) {
   };
 }
 
-export async function getBroadwayMovies() {
+async function fetchBroadwayPage(url, label) {
   const response =
-    await fetch(TICKETING_URL, {
+    await fetch(url, {
       method: "GET",
 
       headers: {
@@ -319,7 +319,7 @@ export async function getBroadwayMovies() {
 
   if (!response.ok) {
     throw new Error(
-      `Broadway returned HTTP ${response.status}`
+      `${label} returned HTTP ${response.status}`
     );
   }
 
@@ -331,9 +331,19 @@ export async function getBroadwayMovies() {
 
   if (!payload) {
     throw new Error(
-      "Broadway Next.js payload not found"
+      `${label} Next.js payload not found`
     );
   }
+
+  return payload;
+}
+
+export async function getBroadwayMovies() {
+  const payload =
+    await fetchBroadwayPage(
+      TICKETING_URL,
+      "Broadway"
+    );
 
   const movies =
     extractArray(payload, "movies");
@@ -353,37 +363,37 @@ export async function getBroadwayMovies() {
     );
   }
 
-const today =
-  getHongKongDate();
+  const today =
+    getHongKongDate();
 
-const windowEnd =
-  addDays(today, 7);
+  const windowEnd =
+    addDays(today, 7);
 
-const currentShows =
-  shows.filter((show) => {
-    const showDate =
-      normalizeShowDate(show?.date);
+  const currentShows =
+    shows.filter((show) => {
+      const showDate =
+        normalizeShowDate(show?.date);
 
-    if (!showDate) {
-      return false;
-    }
+      if (!showDate) {
+        return false;
+      }
 
-    return (
-      showDate >= today &&
-      showDate <= windowEnd
+      return (
+        showDate >= today &&
+        showDate <= windowEnd
+      );
+    });
+
+  const activeMovieIds =
+    new Set(
+      currentShows
+        .map((show) => show?.movie?.id)
+        .filter(
+          (id) =>
+            id !== null &&
+            id !== undefined
+        )
     );
-  });
-
-const activeMovieIds =
-  new Set(
-    currentShows
-      .map((show) => show?.movie?.id)
-      .filter(
-        (id) =>
-          id !== null &&
-          id !== undefined
-      )
-  );
 
   const normalized =
     movies
@@ -412,25 +422,86 @@ const activeMovieIds =
   return {
     movies: normalized,
 
-source: {
-  provider: "broadway",
+    source: {
+      provider: "broadway",
+      rawMovies: movies.length,
+      rawShows: shows.length,
+      currentWindowShows: currentShows.length,
+      activeMovies: normalized.length,
 
-  rawMovies:
-    movies.length,
-
-  rawShows:
-    shows.length,
-
-  currentWindowShows:
-    currentShows.length,
-
-  activeMovies:
-    normalized.length,
-
-  dateWindow: {
-    from: today,
-    to: windowEnd
-  }
+      dateWindow: {
+        from: today,
+        to: windowEnd
+      }
+    }
+  };
 }
+
+export async function getBroadwayUpcoming() {
+  const payload =
+    await fetchBroadwayPage(
+      UPCOMING_URL,
+      "Broadway upcoming"
+    );
+
+  const movies =
+    extractArray(payload, "movies");
+
+  if (!Array.isArray(movies)) {
+    throw new Error(
+      "Broadway upcoming movies array not found"
+    );
+  }
+
+  const today =
+    getHongKongDate();
+
+  const normalized =
+    movies
+      .filter((movie) => {
+        if (!movie || movie.active === false) {
+          return false;
+        }
+
+        if (!movie.openingDate) {
+          return true;
+        }
+
+        return (
+          movie.openingDate.slice(0, 10) >= today
+        );
+      })
+      .map((movie) => {
+        const item =
+          normalizeMovie(
+            movie,
+            new Set()
+          );
+
+        return {
+          ...item,
+          status: "coming-soon"
+        };
+      })
+      .sort((a, b) => {
+        const dateA =
+          a.releaseDate || "9999-12-31";
+
+        const dateB =
+          b.releaseDate || "9999-12-31";
+
+        return dateA.localeCompare(dateB);
+      });
+
+  return {
+    movies: normalized,
+
+    source: {
+      provider: "broadway",
+      page: "upcoming",
+      rawMovies: movies.length,
+      upcomingMovies: normalized.length,
+      from: today
+    }
   };
 }
