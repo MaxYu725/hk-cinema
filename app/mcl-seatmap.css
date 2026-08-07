@@ -21,11 +21,10 @@
   gap: 16px;
 }
 
-.mcl-seatmap-heading {
-  min-width: 0;
-}
-
-.mcl-seatmap-heading > div {
+.mcl-seatmap-heading,
+.mcl-seatmap-heading > div,
+.mcl-seatmap-footer,
+.mcl-seatmap-footer p {
   min-width: 0;
 }
 
@@ -80,7 +79,7 @@
 
 .mcl-seat-dot.available,
 .mcl-seat.available {
-  background: #ffffff;
+  background: #fff;
   border-color: #3b4149;
 }
 
@@ -113,7 +112,6 @@
 }
 
 .mcl-seatmap-scroll-hint {
-  display: none;
   margin: -2px 0 10px;
   color: #8a9099;
   font-size: .72rem;
@@ -136,21 +134,15 @@
 }
 
 .mcl-seatmap-canvas {
-  width: 100%;
-  min-width: 0;
-}
-
-.mcl-seatmap-canvas.is-large {
-  width: var(--mcl-canvas-width);
-  min-width: var(--mcl-canvas-width);
-  padding: 0 2px;
   box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0 4px;
 }
 
 .mcl-seat-screen {
-  width: min(100%, var(--mcl-grid-max, 760px));
+  width: calc(100% - 8px);
   box-sizing: border-box;
-  margin: 0 auto 22px;
+  margin: 0 auto 18px;
   padding: 7px 12px;
   border-radius: 50% 50% 8px 8px / 100% 100% 8px 8px;
   background: #e9ebef;
@@ -160,77 +152,59 @@
   letter-spacing: .15em;
 }
 
-.mcl-seatmap-canvas.is-large .mcl-seat-screen {
-  width: calc(100% - 48px);
-  max-width: none;
-}
-
-.mcl-seat-rows {
+.mcl-seat-areas {
+  position: relative;
   width: 100%;
-  min-width: 0;
 }
 
-.mcl-seat-row {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 6px 0;
+.mcl-seat-area {
+  position: absolute;
 }
 
-.mcl-seat-row-name {
-  width: 22px;
-  flex: 0 0 22px;
-  text-align: center;
-  color: #8b919a;
-  font-size: .72rem;
-  font-weight: 700;
-}
-
-.mcl-seat-grid {
-  min-width: 0;
-  width: var(--mcl-grid-max, 760px);
-  max-width: calc(100% - 56px) !important;
-  flex: 1 1 auto;
+.mcl-seat-area-row {
   display: grid;
-  gap: clamp(1px, .6vw, 4px);
+  align-items: center;
+  position: relative;
 }
 
-.mcl-seat-grid.is-large {
-  min-width: max-content;
-  flex: 0 0 auto;
-  gap: 2px;
+.mcl-seat-row-label {
+  align-self: center;
+  justify-self: center;
+  color: #8b919a;
+  font-size: .67rem;
+  font-weight: 700;
+  line-height: 1;
+  z-index: 1;
+}
+
+.mcl-seat-row-label.left,
+.mcl-seat-row-label.right {
+  pointer-events: none;
 }
 
 .mcl-seat {
-  width: 100%;
-  min-width: 0;
-  aspect-ratio: 1.14 / 1;
-  height: auto;
+  width: calc(var(--mcl-cell-size, 20px) - 3px);
+  height: calc(var(--mcl-cell-size, 20px) - 5px);
   box-sizing: border-box;
+  align-self: center;
+  justify-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid #4b5159;
-  border-radius: 7px 7px 5px 5px;
-  font-size: clamp(.48rem, 1.7vw, .68rem);
+  border-radius: 5px 5px 4px 4px;
+  font-size: clamp(.44rem, 1.6vw, .66rem);
   font-weight: 700;
   line-height: 1;
 }
 
-.mcl-seat-grid.is-large .mcl-seat {
-  width: 18px;
-  height: 16px;
-  aspect-ratio: auto;
-  border-radius: 4px;
-  font-size: .48rem;
+.mcl-seat.sofa-available,
+.mcl-seat.sofa-sold {
+  width: calc((var(--mcl-cell-size, 20px) * 2) - 2px);
 }
 
 .mcl-seatmap-footer {
-  min-width: 0;
   align-items: flex-start;
   margin-top: 14px;
   padding-top: 14px;
@@ -238,7 +212,6 @@
 }
 
 .mcl-seatmap-footer p {
-  min-width: 0;
   margin: 0;
   max-width: 420px;
 }
@@ -263,6 +236,27 @@
   margin-top: 8px;
 }
 
+/* Legacy parser fallback only. */
+.mcl-seat-legacy-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.mcl-seat-legacy-grid {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.mcl-seat-legacy-row > .mcl-seat-row-label {
+  width: 18px;
+  flex: 0 0 18px;
+  text-align: center;
+}
+
 @media (max-width: 700px) {
   .mcl-seatmap-panel {
     width: 100%;
@@ -281,34 +275,13 @@
     font-size: .72rem;
   }
 
-  .mcl-seatmap-scroll-hint {
-    display: block;
-  }
-
-  .mcl-seat-row {
-    gap: 3px;
-    margin: 4px 0;
-  }
-
-  .mcl-seat-row-name {
-    width: 18px;
-    flex-basis: 18px;
-    font-size: .66rem;
-  }
-
-  .mcl-seat-grid:not(.is-large) {
-    max-width: calc(100% - 42px) !important;
-    gap: 2px;
-  }
-
-  .mcl-seat:not(.is-large) {
-    border-radius: 5px 5px 4px 4px;
-    font-size: clamp(.43rem, 2vw, .6rem);
-  }
-
   .mcl-seat-screen {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     font-size: .72rem;
+  }
+
+  .mcl-seat {
+    font-size: clamp(.42rem, 1.9vw, .58rem);
   }
 
   .mcl-seatmap-footer {
