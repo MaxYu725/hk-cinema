@@ -285,6 +285,9 @@
     state.loading = true;
     state.error = null;
     state.ticketing = null;
+
+    // Open the drawer immediately before any MCL network request.
+    // This gives mobile users instant feedback even when a VPN makes MCL slow.
     render();
 
     if (!provider?.getTicketing) {
@@ -325,6 +328,24 @@
     state.loading = false;
     state.error = null;
   }
+
+  window.HKCinemaMCLDetail = {
+    open(movie) {
+      if (!movie) return false;
+      load(movie);
+      return true;
+    },
+    load,
+    close,
+    getState() {
+      return {
+        movie: state.movie,
+        ticketing: state.ticketing,
+        loading: state.loading,
+        error: state.error
+      };
+    }
+  };
 
   window.addEventListener(
     "hkcinema:mcl-open",
