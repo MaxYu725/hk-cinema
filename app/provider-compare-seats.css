@@ -1,0 +1,21 @@
+.provider-compare-seat.loading {
+  color: #65707a;
+}
+
+.provider-compare-seat-lazy-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f2f4f7;
+  color: #707780;
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+.provider-compare-show[data-seat-loaded="true"] .provider-compare-seat {
+  font-variant-numeric: tabular-nums;
+}
+
+.provider-compare-show[data-seat-error="true"] .provider-compare-seat {
+  color: #8a9098;
+}
