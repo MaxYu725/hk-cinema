@@ -15,7 +15,9 @@
 
 .provider-compare:focus-visible,
 .provider-compare-provider-action:focus-visible,
-.provider-compare-close:focus-visible {
+.provider-compare-close:focus-visible,
+.provider-compare-date:focus-visible,
+.provider-compare-warning button:focus-visible {
   outline: 3px solid rgba(23, 25, 29, .2);
   outline-offset: 2px;
 }
@@ -42,7 +44,7 @@
 .provider-compare-sheet {
   position: relative;
   z-index: 1;
-  width: min(620px, 94vw);
+  width: min(700px, 96vw);
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
@@ -64,6 +66,7 @@
   font-size: 34px;
   line-height: 1;
   cursor: pointer;
+  z-index: 3;
 }
 
 .provider-compare-hero {
@@ -125,8 +128,25 @@
 }
 
 .provider-compare-section h2 {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 1.15rem;
+}
+
+.provider-compare-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.provider-compare-section-heading .eyebrow {
+  margin: 0 0 4px;
+}
+
+.provider-compare-section-heading small {
+  color: #7a8089;
+  text-align: right;
 }
 
 .provider-compare-providers {
@@ -164,12 +184,14 @@
 }
 
 .provider-compare-provider small,
-.provider-compare-next p {
+.provider-compare-next p,
+.provider-compare-note {
   color: #747a83;
   line-height: 1.55;
 }
 
-.provider-compare-provider-action {
+.provider-compare-provider-action,
+.provider-compare-warning button {
   width: 100%;
   margin-top: 14px;
   padding: 10px 12px;
@@ -180,6 +202,222 @@
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+.provider-compare-loading,
+.provider-compare-empty {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  text-align: center;
+}
+
+.provider-compare-loading span,
+.provider-compare-empty span {
+  color: #7a8089;
+}
+
+.provider-compare-warning {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #eadfc6;
+  border-radius: 20px;
+  background: #fff9ec;
+}
+
+.provider-compare-warning strong,
+.provider-compare-warning span {
+  display: block;
+}
+
+.provider-compare-warning span {
+  margin-top: 5px;
+  color: #7b7060;
+  font-size: .82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.provider-compare-dates {
+  display: flex;
+  gap: 9px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+}
+
+.provider-compare-date {
+  flex: 0 0 auto;
+  min-width: 105px;
+  padding: 10px 12px;
+  border: 1px solid #e1e4e9;
+  border-radius: 16px;
+  background: #f7f8fa;
+  color: #17191d;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.provider-compare-date strong,
+.provider-compare-date span {
+  display: block;
+}
+
+.provider-compare-date strong {
+  font-size: .88rem;
+}
+
+.provider-compare-date span {
+  margin-top: 5px;
+  font-size: .66rem;
+  font-weight: 800;
+}
+
+.provider-compare-date span.both {
+  color: #23734a;
+}
+
+.provider-compare-date span.broadway {
+  color: #515862;
+}
+
+.provider-compare-date span.mcl {
+  color: #23734a;
+}
+
+.provider-compare-date.active {
+  border-color: #17191d;
+  background: #17191d;
+  color: #fff;
+}
+
+.provider-compare-date.active span {
+  color: #cfd3d9;
+}
+
+.provider-compare-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.provider-compare-timeline::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 40px;
+  width: 1px;
+  background: #e2e5e9;
+}
+
+.provider-compare-show {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #f8f9fa;
+  color: #17191d;
+  text-decoration: none;
+}
+
+.provider-compare-show:hover {
+  border-color: #cfd3d9;
+  background: #fff;
+}
+
+.provider-compare-show-time {
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.provider-compare-show-main {
+  min-width: 0;
+}
+
+.provider-compare-show-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.provider-compare-show-topline strong {
+  min-width: 0;
+  font-size: .88rem;
+}
+
+.provider-compare-source {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: .61rem;
+  font-weight: 900;
+}
+
+.provider-compare-source.broadway {
+  background: #e7e9ed;
+  color: #444a52;
+}
+
+.provider-compare-source.mcl {
+  background: #e4f3eb;
+  color: #23734a;
+}
+
+.provider-compare-show-main p {
+  margin: 5px 0 0;
+  color: #777d86;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+.provider-compare-seat {
+  display: inline-block;
+  margin-top: 6px;
+  color: #767c85;
+  font-size: .69rem;
+  font-weight: 700;
+}
+
+.provider-compare-seat.available {
+  color: #23734a;
+}
+
+.provider-compare-seat.limited {
+  color: #9a6b13;
+}
+
+.provider-compare-seat.full {
+  color: #a44747;
+}
+
+.provider-compare-show-price {
+  align-self: start;
+  min-width: 54px;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.provider-compare-note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eceef1;
+  font-size: .76rem;
 }
 
 .provider-compare-next h2 {
@@ -197,7 +435,7 @@ body.provider-compare-open {
 @media (max-width: 700px) {
   .provider-compare-sheet {
     width: 100%;
-    padding: 54px 22px 32px;
+    padding: 54px 18px 32px;
   }
 
   .provider-compare-close {
@@ -222,6 +460,52 @@ body.provider-compare-open {
   }
 
   .provider-compare-section {
-    padding: 20px;
+    padding: 18px 14px;
+    border-radius: 20px;
+  }
+
+  .provider-compare-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .provider-compare-section-heading small {
+    text-align: left;
+  }
+
+  .provider-compare-date {
+    min-width: 98px;
+  }
+
+  .provider-compare-timeline::before {
+    left: 34px;
+  }
+
+  .provider-compare-show {
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .provider-compare-show-time {
+    font-size: .93rem;
+  }
+
+  .provider-compare-show-topline {
+    gap: 5px;
+  }
+
+  .provider-compare-show-topline strong {
+    font-size: .78rem;
+  }
+
+  .provider-compare-show-main p {
+    font-size: .7rem;
+  }
+
+  .provider-compare-show-price {
+    min-width: 46px;
+    font-size: .91rem;
   }
 }
