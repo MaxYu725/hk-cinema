@@ -20,6 +20,21 @@
     return Number(match[1]) * 60 + Number(match[2]);
   }
 
+  function parseSeatAvailable(card) {
+    const dataValue = Number(card?.dataset?.seatAvailable);
+    if (Number.isFinite(dataValue)) return dataValue;
+
+    const text = card
+      .querySelector(".provider-compare-seat")
+      ?.textContent
+      ?.trim() || "";
+    const match = text.match(/^(\d+)(?:\/\d+)?\s*(?:個)?可選/);
+    if (!match) return null;
+
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? value : null;
+  }
+
   function parseCard(card, index) {
     const source = card.querySelector(".provider-compare-source");
     const provider = source?.classList.contains("mcl")
@@ -40,7 +55,8 @@
       time,
       timeValue: timeValue(time),
       cinema,
-      price
+      price,
+      seatAvailable: parseSeatAvailable(card)
     };
   }
 
@@ -67,6 +83,20 @@
     )[0];
   }
 
+  function mostAvailable(items) {
+    const eligible = items.filter(item =>
+      Number.isFinite(item.seatAvailable)
+    );
+
+    if (!eligible.length) return null;
+
+    return eligible.slice().sort((a, b) =>
+      b.seatAvailable - a.seatAvailable ||
+      a.timeValue - b.timeValue ||
+      a.index - b.index
+    )[0];
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -81,6 +111,7 @@
     const first = earliest(items);
     const broadway = cheapest(items, "broadway");
     const mcl = cheapest(items, "mcl");
+    const seats = mostAvailable(items);
 
     let differenceValue = "—";
     let differenceDetail = "兩院線均有票價後顯示";
@@ -118,6 +149,12 @@
             <strong>${escapeHtml(differenceValue)}</strong>
             <small>${escapeHtml(differenceDetail)}</small>
           </article>
+
+          <article class="provider-compare-insight seat-insight">
+            <span>目前最多可選座位</span>
+            <strong>${seats ? `${escapeHtml(seats.seatAvailable)} 個` : "—"}</strong>
+            <small>${seats ? `${escapeHtml(seats.providerLabel)} · ${escapeHtml(seats.time)} · ${escapeHtml(seats.cinema)}` : "MCL 座位會隨捲動逐步載入"}</small>
+          </article>
         </div>
 
         <div class="provider-compare-controls" aria-label="場次篩選及排序">
@@ -136,7 +173,7 @@
         </div>
 
         <p class="provider-compare-insight-note">
-          最低價比較為各院線當日成人票最低值，不代表相同影廳、格式或場次條件。
+          最低價比較為各院線當日成人票最低值，不代表相同影廳、格式或場次條件。座位最多只比較目前已取得座位資料的場次。
         </p>
       </div>
     `;
@@ -214,7 +251,8 @@
       if (content && observer) {
         observer.observe(content, {
           childList: true,
-          subtree: true
+          subtree: true,
+          characterData: true
         });
       }
     }
@@ -239,7 +277,8 @@
 
     observer.observe(content, {
       childList: true,
-      subtree: true
+      subtree: true,
+      characterData: true
     });
 
     enhance();
