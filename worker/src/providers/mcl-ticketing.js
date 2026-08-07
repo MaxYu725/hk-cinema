@@ -75,65 +75,110 @@ async function fetchTextWithRetry(url, movieSetId) {
   throw lastError || new Error("MCL ticketing upstream failed");
 }
 
-function findBalancedObject(text, marker) {
-  const markerIndex = text.indexOf(marker);
-
-  if (markerIndex < 0) {
+function readBalancedObject(text, start) {
+  if (text[start] !== "{") {
     return null;
   }
 
-  let start = text.lastIndexOf("{", markerIndex);
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
 
-  while (start >= 0) {
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
 
-    for (let i = start; i < text.length; i++) {
-      const char = text[i];
-
-      if (inString) {
-        if (escaped) {
-          escaped = false;
-        } else if (char === "\\") {
-          escaped = true;
-        } else if (char === '"') {
-          inString = false;
-        }
-        continue;
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
       }
-
-      if (char === '"') {
-        inString = true;
-        continue;
-      }
-
-      if (char === "{") {
-        depth++;
-      } else if (char === "}") {
-        depth--;
-
-        if (depth === 0) {
-          const candidate = text.slice(start, i + 1);
-
-          try {
-            const parsed = JSON.parse(candidate);
-
-            if (
-              parsed &&
-              parsed.AvailableDates &&
-              Array.isArray(parsed.AvailableSessions)
-            ) {
-              return parsed;
-            }
-          } catch {
-            break;
-          }
-        }
-      }
+      continue;
     }
 
-    start = text.lastIndexOf("{", start - 1);
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (char === "{") {
+      depth++;
+      continue;
+    }
+
+    if (char === "}") {
+      depth--;
+
+      if (depth === 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function isTicketingPayload(value) {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    value.AvailableDates &&
+    value.AvailableCinemas &&
+    Array.isArray(value.AvailableSessions) &&
+    Array.isArray(value.AvailableVersions)
+  );
+}
+
+function parseJsonCandidate(candidate) {
+  if (!candidate) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(candidate);
+    return isTicketingPayload(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function findEmbeddedTicketingObject(text) {
+  const exactStart = /\{\s*"AvailableDates"\s*:/g;
+  let match;
+
+  while ((match = exactStart.exec(text)) !== null) {
+    const candidate = readBalancedObject(text, match.index);
+    const parsed = parseJsonCandidate(candidate);
+
+    if (parsed) {
+      return parsed;
+    }
+
+    exactStart.lastIndex = match.index + 1;
+  }
+
+  const marker = '"AvailableDates"';
+  let markerIndex = text.indexOf(marker);
+
+  while (markerIndex >= 0) {
+    let start = text.lastIndexOf("{", markerIndex);
+    let attempts = 0;
+
+    while (start >= 0 && attempts < 12) {
+      const candidate = readBalancedObject(text, start);
+      const parsed = parseJsonCandidate(candidate);
+
+      if (parsed) {
+        return parsed;
+      }
+
+      start = text.lastIndexOf("{", start - 1);
+      attempts++;
+    }
+
+    markerIndex = text.indexOf(marker, markerIndex + marker.length);
   }
 
   return null;
@@ -148,42 +193,14 @@ function parseTicketingPayload(text) {
   for (const trimmed of variants) {
     if (!trimmed) continue;
 
-    try {
-      const direct = JSON.parse(trimmed);
-
-      if (
-        direct &&
-        direct.AvailableDates &&
-        Array.isArray(direct.AvailableSessions)
-      ) {
-        return direct;
-      }
-    } catch {
-      // Continue with embedded-object detection.
+    const direct = parseJsonCandidate(trimmed);
+    if (direct) {
+      return direct;
     }
 
-    const embedded = findBalancedObject(
-      trimmed,
-      '"AvailableDates"'
-    );
-
+    const embedded = findEmbeddedTicketingObject(trimmed);
     if (embedded) {
       return embedded;
-    }
-
-    const scriptJsonMatch = trimmed.match(
-      /\{[\s\S]*?"AvailableDates"[\s\S]*?"AvailableSessions"[\s\S]*?\}/
-    );
-
-    if (scriptJsonMatch) {
-      try {
-        const parsed = JSON.parse(scriptJsonMatch[0]);
-        if (Array.isArray(parsed?.AvailableSessions)) {
-          return parsed;
-        }
-      } catch {
-        // Ignore and try the next representation.
-      }
     }
   }
 
@@ -302,16 +319,28 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
 
 function makeDiagnostic(result) {
   const text = String(result?.text || "");
+  const datesIndex = text.indexOf("AvailableDates");
+  const sessionsIndex = text.indexOf("AvailableSessions");
+
+  const snippetAround = index => {
+    if (index < 0) return null;
+
+    return text
+      .slice(Math.max(0, index - 80), index + 220)
+      .replace(/\s+/g, " ");
+  };
 
   return {
     bytes: text.length,
     finalUrl: result?.finalUrl || null,
     contentType: result?.contentType || null,
-    hasAvailableDates: text.includes("AvailableDates") || text.includes("AvailableDates".replaceAll('"', '&quot;')),
-    hasAvailableSessions: text.includes("AvailableSessions"),
+    hasAvailableDates: datesIndex >= 0,
+    hasAvailableSessions: sessionsIndex >= 0,
+    datesSnippet: snippetAround(datesIndex),
+    sessionsSnippet: snippetAround(sessionsIndex),
     preview: text
       .replace(/\s+/g, " ")
-      .slice(0, 280)
+      .slice(0, 220)
   };
 }
 
@@ -347,6 +376,8 @@ export async function getMCLTicketing(movieSetId, selectedDate = null) {
     `contentType=${diagnostic.contentType || "unknown"}; ` +
     `hasDates=${diagnostic.hasAvailableDates ? "yes" : "no"}; ` +
     `hasSessions=${diagnostic.hasAvailableSessions ? "yes" : "no"}; ` +
+    `datesSnippet=${diagnostic.datesSnippet || "none"}; ` +
+    `sessionsSnippet=${diagnostic.sessionsSnippet || "none"}; ` +
     `preview=${diagnostic.preview || "empty"}`
   );
 }
