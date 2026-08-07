@@ -3,10 +3,17 @@ const API_BASE =
 
 const state = {
   tab: "now",
-  movies: [],
+  showingMovies: [],
+  upcomingMovies: [],
   loading: true,
-  error: null,
-  updatedAt: null
+  errors: {
+    now: null,
+    coming: null
+  },
+  updatedAt: {
+    now: null,
+    coming: null
+  }
 };
 
 const elements = {
@@ -36,33 +43,56 @@ function setStatus(type, title, text) {
 
   strong.textContent = title;
   paragraph.textContent = text;
-
   elements.systemStatus.dataset.status = type;
 }
 
-function getVisibleMovies() {
-  const movies =
-    state.movies.filter(movie =>
-      state.tab === "now"
-        ? movie.status === "now-showing"
-        : movie.status === "presale"
+function getNowShowingMovies() {
+  return state.showingMovies
+    .filter(movie => movie.status === "now-showing")
+    .slice()
+    .sort((a, b) =>
+      (b.releaseDate || "0000-00-00")
+        .localeCompare(a.releaseDate || "0000-00-00")
     );
+}
 
-  return movies.sort((a, b) => {
-    const dateA =
-      a.releaseDate || "0000-00-00";
+function getPresaleMovies() {
+  return state.showingMovies
+    .filter(movie => movie.status === "presale")
+    .slice()
+    .sort((a, b) =>
+      (a.releaseDate || "9999-12-31")
+        .localeCompare(b.releaseDate || "9999-12-31")
+    );
+}
 
-    const dateB =
-      b.releaseDate || "0000-00-00";
+function getUpcomingMovies() {
+  return state.upcomingMovies
+    .slice()
+    .sort((a, b) =>
+      (a.releaseDate || "9999-12-31")
+        .localeCompare(b.releaseDate || "9999-12-31")
+    );
+}
 
-    // 現正上映：最新上映優先
-    if (state.tab === "now") {
-      return dateB.localeCompare(dateA);
-    }
+function getVisibleMovies() {
+  return state.tab === "now"
+    ? getNowShowingMovies()
+    : getUpcomingMovies();
+}
 
-    // 預售：最近即將上映優先
-    return dateA.localeCompare(dateB);
-  });
+function getCurrentError() {
+  return state.tab === "now"
+    ? state.errors.now
+    : state.errors.coming;
+}
+
+function getPresaleIds() {
+  return new Set(
+    getPresaleMovies().map(movie =>
+      String(movie.sourceId || movie.id)
+    )
+  );
 }
 
 function renderLoading() {
@@ -74,11 +104,11 @@ function renderLoading() {
   `;
 }
 
-function renderError() {
+function renderError(message) {
   elements.movieGrid.innerHTML = `
     <div class="empty-state">
       <strong>暫時無法取得電影資料</strong>
-      <span>${escapeHtml(state.error)}</span>
+      <span>${escapeHtml(message)}</span>
     </div>
   `;
 }
@@ -91,8 +121,8 @@ function renderEmptyState() {
           text: "目前沒有找到 Broadway 的上映電影。"
         }
       : {
-          title: "暫時沒有預售電影",
-          text: "有新預售場次時會顯示在這裡。"
+          title: "暫時沒有即將上映電影",
+          text: "Broadway 有新片資料時會顯示在這裡。"
         };
 
   elements.movieGrid.innerHTML = `
@@ -122,17 +152,29 @@ function renderMovieCard(movie) {
   }
 
   if (movie.durationMinutes) {
-    metadata.push(
-      `${movie.durationMinutes} 分鐘`
-    );
+    metadata.push(`${movie.durationMinutes} 分鐘`);
   }
 
-  if (
-    state.tab === "coming" &&
-    movie.releaseDate
-  ) {
+  if (state.tab === "coming" && movie.releaseDate) {
     metadata.push(movie.releaseDate);
   }
+
+  const presaleIds = getPresaleIds();
+  const movieSourceId = String(movie.sourceId || movie.id);
+  const isPresale =
+    state.tab === "coming" &&
+    presaleIds.has(movieSourceId);
+
+  const badge =
+    state.tab === "coming"
+      ? `
+        <div class="movie-badges">
+          <span class="movie-badge ${isPresale ? "presale" : "coming"}">
+            ${isPresale ? "已預售" : "尚未開售"}
+          </span>
+        </div>
+      `
+      : "";
 
   const poster = movie.poster
     ? `
@@ -155,6 +197,7 @@ function renderMovieCard(movie) {
     >
       <div class="movie-poster">
         ${poster}
+        ${badge}
 
         <div class="poster-placeholder">
           HK Cinema
@@ -192,14 +235,15 @@ function render() {
     return;
   }
 
-  if (state.error) {
+  const error = getCurrentError();
+
+  if (error) {
     elements.movieCount.textContent = "—";
-    renderError();
+    renderError(error);
     return;
   }
 
-  const visibleMovies =
-    getVisibleMovies();
+  const visibleMovies = getVisibleMovies();
 
   elements.movieCount.textContent =
     `${visibleMovies.length} 部`;
@@ -215,89 +259,106 @@ function render() {
       .join("");
 }
 
-async function loadMovies() {
-  state.loading = true;
-  state.error = null;
+async function fetchMovieEndpoint(path) {
+  const response = await fetch(
+    `${API_BASE}${path}`,
+    {
+      cache: "no-store"
+    }
+  );
 
-const nowCount =
-  state.movies.filter(
-    movie => movie.status === "now-showing"
-  ).length;
+  if (!response.ok) {
+    throw new Error(`API HTTP ${response.status}`);
+  }
 
-const presaleCount =
-  state.movies.filter(
-    movie => movie.status === "presale"
-  ).length;
+  const result = await response.json();
 
-setStatus(
-  "ready",
-  "Broadway 已連接",
-  `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部`
-);
-
-  render();
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/api/broadway/movies`,
-      {
-        cache: "no-store"
-      }
+  if (!result.ok || !Array.isArray(result.data)) {
+    throw new Error(
+      result.error?.message ||
+      "API response invalid"
     );
+  }
 
-    if (!response.ok) {
-      throw new Error(
-        `API HTTP ${response.status}`
-      );
-    }
+  return result;
+}
 
-    const result =
-      await response.json();
+function updateStatusSummary() {
+  const nowCount = getNowShowingMovies().length;
+  const presaleCount = getPresaleMovies().length;
+  const upcomingCount = getUpcomingMovies().length;
 
-    if (
-      !result.ok ||
-      !Array.isArray(result.data)
-    ) {
-      throw new Error(
-        result.error?.message ||
-        "API response invalid"
-      );
-    }
-
-    state.movies = result.data;
-    state.updatedAt =
-      result.meta?.updatedAt || null;
-
-const nowCount =
-  state.movies.filter(
-    movie => movie.status === "now-showing"
-  ).length;
-
-const presaleCount =
-  state.movies.filter(
-    movie => movie.status === "presale"
-  ).length;
-
-setStatus(
-  "ready",
-  "Broadway 已連接",
-  `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部`
-);
-  } catch (error) {
-    state.error =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
+  if (state.errors.now && state.errors.coming) {
     setStatus(
       "error",
       "資料暫時無法更新",
-      "Broadway 資料來源目前不可用。"
+      "Broadway 上映及即將上映資料目前均不可用。"
     );
-  } finally {
-    state.loading = false;
-    render();
+    return;
   }
+
+  if (state.errors.now || state.errors.coming) {
+    setStatus(
+      "loading",
+      "Broadway 部分資料已連接",
+      `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部 · 即將上映 ${upcomingCount} 部`
+    );
+    return;
+  }
+
+  setStatus(
+    "ready",
+    "Broadway 已連接",
+    `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部 · 即將上映 ${upcomingCount} 部`
+  );
+}
+
+async function loadMovies() {
+  state.loading = true;
+  state.errors.now = null;
+  state.errors.coming = null;
+
+  setStatus(
+    "loading",
+    "正在更新",
+    "正在取得 Broadway 最新上映及即將上映資料。"
+  );
+
+  render();
+
+  const [showingResult, upcomingResult] =
+    await Promise.allSettled([
+      fetchMovieEndpoint("/api/broadway/movies"),
+      fetchMovieEndpoint("/api/broadway/upcoming")
+    ]);
+
+  if (showingResult.status === "fulfilled") {
+    state.showingMovies = showingResult.value.data;
+    state.updatedAt.now =
+      showingResult.value.meta?.updatedAt || null;
+  } else {
+    state.showingMovies = [];
+    state.errors.now =
+      showingResult.reason instanceof Error
+        ? showingResult.reason.message
+        : String(showingResult.reason);
+  }
+
+  if (upcomingResult.status === "fulfilled") {
+    state.upcomingMovies = upcomingResult.value.data;
+    state.updatedAt.coming =
+      upcomingResult.value.meta?.updatedAt || null;
+  } else {
+    state.upcomingMovies = [];
+    state.errors.coming =
+      upcomingResult.reason instanceof Error
+        ? upcomingResult.reason.message
+        : String(upcomingResult.reason);
+  }
+
+  state.loading = false;
+  updateStatusSummary();
+  render();
 }
 
 function setTab(tab) {
