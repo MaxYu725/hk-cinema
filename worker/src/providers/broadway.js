@@ -74,16 +74,10 @@ function extractNextPayload(html) {
   return output;
 }
 
-function extractArray(source, key) {
-  const marker = `"${key}":[`;
-  const markerIndex = source.indexOf(marker);
-
-  if (markerIndex === -1) {
+function parseArrayAt(source, start) {
+  if (source[start] !== "[") {
     return null;
   }
-
-  const start =
-    markerIndex + marker.length - 1;
 
   let depth = 0;
   let inString = false;
@@ -118,16 +112,147 @@ function extractArray(source, key) {
       depth--;
 
       if (depth === 0) {
-        const raw =
-          source.slice(start, i + 1);
+        const raw = source.slice(start, i + 1);
 
         try {
-          return JSON.parse(raw);
+          return {
+            value: JSON.parse(raw),
+            end: i
+          };
         } catch {
           return null;
         }
       }
     }
+  }
+
+  return null;
+}
+
+function extractArray(source, key) {
+  const marker = `"${key}":[`;
+  const markerIndex = source.indexOf(marker);
+
+  if (markerIndex === -1) {
+    return null;
+  }
+
+  const start =
+    markerIndex + marker.length - 1;
+
+  return parseArrayAt(source, start)?.value || null;
+}
+
+function movieArrayScore(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0;
+  }
+
+  const sample = items
+    .filter((item) => item && typeof item === "object")
+    .slice(0, 8);
+
+  if (sample.length === 0) {
+    return 0;
+  }
+
+  let score = 0;
+
+  for (const item of sample) {
+    if (item.openingDate) score += 4;
+    if (item.id !== undefined) score += 1;
+
+    if (
+      item.title ||
+      item.title_lang ||
+      item.name ||
+      item.name_lang
+    ) {
+      score += 3;
+    }
+
+    if (Array.isArray(item.images)) score += 2;
+    if (item.duration !== undefined) score += 1;
+    if (Array.isArray(item.movieTypes)) score += 1;
+  }
+
+  return score;
+}
+
+function extractMovieArray(source) {
+  const preferredKeys = [
+    "movies",
+    "upcomingMovies",
+    "upcomingMovie",
+    "movieList",
+    "movieLists",
+    "films",
+    "filmList",
+    "programmes",
+    "programs",
+    "items"
+  ];
+
+  for (const key of preferredKeys) {
+    const value = extractArray(source, key);
+
+    if (movieArrayScore(value) >= 6) {
+      return {
+        key,
+        value
+      };
+    }
+  }
+
+  const pattern = /"([^"\\]+)":\[/g;
+  let match;
+  let best = null;
+
+  while ((match = pattern.exec(source)) !== null) {
+    const key = match[1];
+    const start = match.index + match[0].length - 1;
+
+    // A movie object should expose one of these fields near the start
+    // of the array. This avoids parsing every unrelated RSC array.
+    const preview = source.slice(
+      start,
+      Math.min(source.length, start + 25000)
+    );
+
+    if (
+      !preview.includes('"openingDate"') &&
+      !preview.includes('"movieTypes"') &&
+      !preview.includes('"title_lang"')
+    ) {
+      continue;
+    }
+
+    const parsed = parseArrayAt(source, start);
+
+    if (!parsed || !Array.isArray(parsed.value)) {
+      continue;
+    }
+
+    const score = movieArrayScore(parsed.value);
+
+    if (!best || score > best.score) {
+      best = {
+        key,
+        value: parsed.value,
+        score
+      };
+    }
+
+    if (score >= 40) {
+      break;
+    }
+  }
+
+  if (best && best.score >= 6) {
+    return {
+      key: best.key,
+      value: best.value
+    };
   }
 
   return null;
@@ -166,53 +291,34 @@ function normalizeShowDate(value) {
     return null;
   }
 
-  const text = String(value);
-
   const match =
-    text.match(/\d{4}-\d{2}-\d{2}/);
+    String(value).match(/\d{4}-\d{2}-\d{2}/);
 
-  return match
-    ? match[0]
-    : null;
+  return match ? match[0] : null;
 }
 
 function normalizeMovie(movie, activeMovieIds) {
-  const titleLang =
-    parseLang(movie.title_lang);
-
-  const nameLang =
-    parseLang(movie.name_lang);
-
-  const dialectLang =
-    parseLang(movie.dialect_lang);
-
-  const subtitleLang =
-    parseLang(movie.subtitle_lang);
-
-  const directorLang =
-    parseLang(movie.director_lang);
-
-  const castLang =
-    parseLang(movie.cast_lang);
+  const titleLang = parseLang(movie.title_lang);
+  const nameLang = parseLang(movie.name_lang);
+  const dialectLang = parseLang(movie.dialect_lang);
+  const subtitleLang = parseLang(movie.subtitle_lang);
+  const directorLang = parseLang(movie.director_lang);
+  const castLang = parseLang(movie.cast_lang);
 
   const today = getHongKongDate();
 
   const releaseDate =
     movie.openingDate
-      ? movie.openingDate.slice(0, 10)
+      ? String(movie.openingDate).slice(0, 10)
       : null;
 
   let status = "unknown";
 
   if (activeMovieIds.has(movie.id)) {
-    if (
-      releaseDate &&
-      releaseDate > today
-    ) {
-      status = "presale";
-    } else {
-      status = "now-showing";
-    }
+    status =
+      releaseDate && releaseDate > today
+        ? "presale"
+        : "now-showing";
   }
 
   return {
@@ -243,40 +349,29 @@ function normalizeMovie(movie, activeMovieIds) {
     durationMinutes:
       Number.isFinite(movie.duration)
         ? movie.duration
-        : null,
+        : Number(movie.duration) || null,
 
-    category:
-      movie.category || null,
-
-    rating:
-      movie.category || null,
+    category: movie.category || null,
+    rating: movie.category || null,
 
     language:
       movie.dialect
-        ? [
-            dialectLang.zh_hk ||
-            movie.dialect
-          ]
+        ? [dialectLang.zh_hk || movie.dialect]
         : [],
 
     subtitles:
       movie.subtitle
-        ? [
-            subtitleLang.zh_hk ||
-            movie.subtitle
-          ]
+        ? [subtitleLang.zh_hk || movie.subtitle]
         : [],
 
     director:
       splitNames(
-        directorLang.zh_hk ||
-        movie.director
+        directorLang.zh_hk || movie.director
       ),
 
     cast:
       splitNames(
-        castLang.zh_hk ||
-        movie.cast
+        castLang.zh_hk || movie.cast
       ),
 
     poster:
@@ -286,8 +381,7 @@ function normalizeMovie(movie, activeMovieIds) {
           : null
       ),
 
-    trailer:
-      movie.trailer || null,
+    trailer: movie.trailer || null,
 
     formats:
       Array.isArray(movie.movieTypes)
@@ -299,23 +393,15 @@ function normalizeMovie(movie, activeMovieIds) {
 }
 
 async function fetchBroadwayPage(url, label) {
-  const response =
-    await fetch(url, {
-      method: "GET",
-
-      headers: {
-        Accept:
-          "text/html,application/xhtml+xml",
-
-        "Accept-Language":
-          "zh-HK,zh-TW;q=0.9,en;q=0.8",
-
-        "User-Agent":
-          "Mozilla/5.0 (compatible; HKCinema/0.1)"
-      },
-
-      redirect: "follow"
-    });
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
+      "User-Agent": "Mozilla/5.0 (compatible; HKCinema/0.1)"
+    },
+    redirect: "follow"
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -323,11 +409,8 @@ async function fetchBroadwayPage(url, label) {
     );
   }
 
-  const html =
-    await response.text();
-
-  const payload =
-    extractNextPayload(html);
+  const html = await response.text();
+  const payload = extractNextPayload(html);
 
   if (!payload) {
     throw new Error(
@@ -339,17 +422,13 @@ async function fetchBroadwayPage(url, label) {
 }
 
 export async function getBroadwayMovies() {
-  const payload =
-    await fetchBroadwayPage(
-      TICKETING_URL,
-      "Broadway"
-    );
+  const payload = await fetchBroadwayPage(
+    TICKETING_URL,
+    "Broadway"
+  );
 
-  const movies =
-    extractArray(payload, "movies");
-
-  const shows =
-    extractArray(payload, "shows");
+  const movies = extractArray(payload, "movies");
+  const shows = extractArray(payload, "shows");
 
   if (!Array.isArray(movies)) {
     throw new Error(
@@ -363,72 +442,50 @@ export async function getBroadwayMovies() {
     );
   }
 
-  const today =
-    getHongKongDate();
+  const today = getHongKongDate();
+  const windowEnd = addDays(today, 7);
 
-  const windowEnd =
-    addDays(today, 7);
+  const currentShows = shows.filter((show) => {
+    const showDate = normalizeShowDate(show?.date);
 
-  const currentShows =
-    shows.filter((show) => {
-      const showDate =
-        normalizeShowDate(show?.date);
-
-      if (!showDate) {
-        return false;
-      }
-
-      return (
-        showDate >= today &&
-        showDate <= windowEnd
-      );
-    });
-
-  const activeMovieIds =
-    new Set(
-      currentShows
-        .map((show) => show?.movie?.id)
-        .filter(
-          (id) =>
-            id !== null &&
-            id !== undefined
-        )
+    return Boolean(
+      showDate &&
+      showDate >= today &&
+      showDate <= windowEnd
     );
+  });
 
-  const normalized =
-    movies
+  const activeMovieIds = new Set(
+    currentShows
+      .map((show) => show?.movie?.id)
       .filter(
-        (movie) =>
-          movie &&
-          movie.active !== false &&
-          activeMovieIds.has(movie.id)
+        (id) => id !== null && id !== undefined
       )
-      .map((movie) =>
-        normalizeMovie(
-          movie,
-          activeMovieIds
-        )
-      )
-      .sort((a, b) => {
-        const dateA =
-          a.releaseDate || "9999-12-31";
+  );
 
-        const dateB =
-          b.releaseDate || "9999-12-31";
-
-        return dateA.localeCompare(dateB);
-      });
+  const normalized = movies
+    .filter(
+      (movie) =>
+        movie &&
+        movie.active !== false &&
+        activeMovieIds.has(movie.id)
+    )
+    .map((movie) =>
+      normalizeMovie(movie, activeMovieIds)
+    )
+    .sort((a, b) =>
+      (a.releaseDate || "9999-12-31")
+        .localeCompare(b.releaseDate || "9999-12-31")
+    );
 
   return {
     movies: normalized,
-
     source: {
       provider: "broadway",
       rawMovies: movies.length,
       rawShows: shows.length,
       currentWindowShows: currentShows.length,
       activeMovies: normalized.length,
-
       dateWindow: {
         from: today,
         to: windowEnd
@@ -438,67 +495,51 @@ export async function getBroadwayMovies() {
 }
 
 export async function getBroadwayUpcoming() {
-  const payload =
-    await fetchBroadwayPage(
-      UPCOMING_URL,
-      "Broadway upcoming"
-    );
+  const payload = await fetchBroadwayPage(
+    UPCOMING_URL,
+    "Broadway upcoming"
+  );
 
-  const movies =
-    extractArray(payload, "movies");
+  const detected = extractMovieArray(payload);
 
-  if (!Array.isArray(movies)) {
+  if (!detected || !Array.isArray(detected.value)) {
     throw new Error(
-      "Broadway upcoming movies array not found"
+      "Broadway upcoming movie array not detected"
     );
   }
 
-  const today =
-    getHongKongDate();
+  const movies = detected.value;
+  const today = getHongKongDate();
 
-  const normalized =
-    movies
-      .filter((movie) => {
-        if (!movie || movie.active === false) {
-          return false;
-        }
+  const normalized = movies
+    .filter((movie) => {
+      if (!movie || movie.active === false) {
+        return false;
+      }
 
-        if (!movie.openingDate) {
-          return true;
-        }
+      if (!movie.openingDate) {
+        return true;
+      }
 
-        return (
-          movie.openingDate.slice(0, 10) >= today
-        );
-      })
-      .map((movie) => {
-        const item =
-          normalizeMovie(
-            movie,
-            new Set()
-          );
-
-        return {
-          ...item,
-          status: "coming-soon"
-        };
-      })
-      .sort((a, b) => {
-        const dateA =
-          a.releaseDate || "9999-12-31";
-
-        const dateB =
-          b.releaseDate || "9999-12-31";
-
-        return dateA.localeCompare(dateB);
-      });
+      return (
+        String(movie.openingDate).slice(0, 10) >= today
+      );
+    })
+    .map((movie) => ({
+      ...normalizeMovie(movie, new Set()),
+      status: "coming-soon"
+    }))
+    .sort((a, b) =>
+      (a.releaseDate || "9999-12-31")
+        .localeCompare(b.releaseDate || "9999-12-31")
+    );
 
   return {
     movies: normalized,
-
     source: {
       provider: "broadway",
       page: "upcoming",
+      detectedArrayKey: detected.key,
       rawMovies: movies.length,
       upcomingMovies: normalized.length,
       from: today
