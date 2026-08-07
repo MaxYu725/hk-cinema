@@ -1,6 +1,7 @@
 (() => {
   const uiState = {
     provider: "all",
+    period: "all",
     sort: "time"
   };
 
@@ -93,6 +94,32 @@
     };
   }
 
+  function matchesPeriod(item) {
+    if (!Number.isFinite(item.timeValue)) return false;
+
+    if (uiState.period === "morning") {
+      return item.timeValue < 12 * 60;
+    }
+
+    if (uiState.period === "afternoon") {
+      return item.timeValue >= 12 * 60 && item.timeValue < 18 * 60;
+    }
+
+    if (uiState.period === "evening") {
+      return item.timeValue >= 18 * 60;
+    }
+
+    return true;
+  }
+
+  function matchesFilters(item) {
+    const providerMatches =
+      uiState.provider === "all" ||
+      item.provider === uiState.provider;
+
+    return providerMatches && matchesPeriod(item);
+  }
+
   function cheapest(items, provider = null) {
     const eligible = items.filter(item =>
       (!provider || item.provider === provider) &&
@@ -147,7 +174,7 @@
     const seats = mostAvailable(items);
 
     let differenceValue = "—";
-    let differenceDetail = "兩院線均有票價後顯示";
+    let differenceDetail = "目前篩選結果未同時包含兩院線票價";
 
     if (broadway && mcl) {
       const difference = Math.abs(broadway.price - mcl.price);
@@ -166,15 +193,15 @@
       <div class="provider-compare-insights" data-provider-insights>
         <div class="provider-compare-insight-grid">
           <article class="provider-compare-insight highlight">
-            <span>當日最低成人票價</span>
+            <span>目前最低成人票價</span>
             <strong>${lowest ? `$${escapeHtml(lowest.price)}` : "—"}</strong>
-            <small>${lowest ? `${escapeHtml(lowest.providerLabel)} · ${escapeHtml(lowest.time)} · ${escapeHtml(lowest.cinema)}` : "暫無票價資料"}</small>
+            <small>${lowest ? `${escapeHtml(lowest.providerLabel)} · ${escapeHtml(lowest.time)} · ${escapeHtml(lowest.cinema)}` : "目前篩選沒有票價資料"}</small>
           </article>
 
           <article class="provider-compare-insight">
-            <span>最早場次</span>
+            <span>目前最早場次</span>
             <strong>${first ? escapeHtml(first.time) : "—"}</strong>
-            <small>${first ? `${escapeHtml(first.providerLabel)} · ${escapeHtml(first.cinema)}` : "暫無場次"}</small>
+            <small>${first ? `${escapeHtml(first.providerLabel)} · ${escapeHtml(first.cinema)}` : "目前篩選沒有場次"}</small>
           </article>
 
           <article class="provider-compare-insight">
@@ -186,7 +213,7 @@
           <article class="provider-compare-insight seat-insight">
             <span>目前最多可選座位</span>
             <strong>${seats ? `${escapeHtml(seats.seatAvailable)} 個` : "—"}</strong>
-            <small>${seats ? `${escapeHtml(seats.providerLabel)} · ${escapeHtml(seats.time)} · ${escapeHtml(seats.cinema)}` : "MCL 座位會隨捲動逐步載入"}</small>
+            <small>${seats ? `${escapeHtml(seats.providerLabel)} · ${escapeHtml(seats.time)} · ${escapeHtml(seats.cinema)}` : "只比較目前已取得座位資料的場次"}</small>
           </article>
         </div>
 
@@ -199,6 +226,14 @@
           </div>
 
           <div class="provider-compare-control-group">
+            <span>時段</span>
+            <button type="button" data-insight-period="all" class="${uiState.period === "all" ? "active" : ""}">全日</button>
+            <button type="button" data-insight-period="morning" class="${uiState.period === "morning" ? "active" : ""}">早場</button>
+            <button type="button" data-insight-period="afternoon" class="${uiState.period === "afternoon" ? "active" : ""}">下午</button>
+            <button type="button" data-insight-period="evening" class="${uiState.period === "evening" ? "active" : ""}">晚場</button>
+          </div>
+
+          <div class="provider-compare-control-group">
             <span>排序</span>
             <button type="button" data-insight-sort="time" class="${uiState.sort === "time" ? "active" : ""}">時間</button>
             <button type="button" data-insight-sort="price" class="${uiState.sort === "price" ? "active" : ""}">價格</button>
@@ -207,7 +242,7 @@
         </div>
 
         <p class="provider-compare-insight-note">
-          最低價比較為各院線當日成人票最低值，不代表相同影廳、格式或場次條件。座位排序按可選座位比例由高至低；未取得可靠座位總數的場次會排最後。
+          時段定義：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前院線與時段篩選結果重新計算；座位排序按可選比例由高至低。
         </p>
       </div>
     `;
@@ -243,13 +278,12 @@
     });
 
     for (const item of ordered) {
-      item.card.hidden =
-        uiState.provider !== "all" &&
-        item.provider !== uiState.provider;
+      item.card.hidden = !matchesFilters(item);
       timeline.appendChild(item.card);
     }
 
-    const visible = ordered.filter(item => !item.card.hidden).length;
+    const visibleItems = ordered.filter(item => !item.card.hidden);
+    const visible = visibleItems.length;
     const section = timeline.closest(".provider-compare-timeline-section");
     let result = section?.querySelector("[data-insight-result]");
 
@@ -266,13 +300,22 @@
         : uiState.provider === "mcl"
           ? "MCL"
           : "Broadway";
+      const periodLabel = uiState.period === "morning"
+        ? "早場"
+        : uiState.period === "afternoon"
+          ? "下午"
+          : uiState.period === "evening"
+            ? "晚場"
+            : "全日";
       const sortLabel = uiState.sort === "price"
         ? "價格由低至高"
         : uiState.sort === "seats"
           ? "可選比例由高至低"
           : "時間由早至晚";
-      result.textContent = `${filterLabel} · ${visible} 場 · ${sortLabel}`;
+      result.textContent = `${filterLabel} · ${periodLabel} · ${visible} 場 · ${sortLabel}`;
     }
+
+    return visibleItems;
   }
 
   function enhance() {
@@ -296,9 +339,10 @@
       section.querySelector("[data-provider-insights]")?.remove();
       section.querySelector("[data-insight-result]")?.remove();
 
+      const visibleItems = items.filter(matchesFilters);
       const heading = section.querySelector(".provider-compare-section-heading");
       if (heading && items.length) {
-        heading.insertAdjacentHTML("afterend", renderSummary(items));
+        heading.insertAdjacentHTML("afterend", renderSummary(visibleItems));
       }
 
       applyFilterAndSort(timeline, items);
@@ -350,6 +394,15 @@
       event.preventDefault();
       event.stopPropagation();
       uiState.provider = providerButton.dataset.insightProvider || "all";
+      enhance();
+      return;
+    }
+
+    const periodButton = event.target.closest("[data-insight-period]");
+    if (periodButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      uiState.period = periodButton.dataset.insightPeriod || "all";
       enhance();
       return;
     }
