@@ -7,6 +7,10 @@ import {
   getBroadwayMovieShows
 } from "./providers/broadway-shows.js";
 
+import {
+  getBroadwaySeatMap
+} from "./providers/broadway-seats.js";
+
 const json = (
   data,
   status = 200,
@@ -33,7 +37,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "3A",
+        phase: "3B",
         time: new Date().toISOString()
       });
     }
@@ -196,6 +200,53 @@ export default {
             error: {
               code:
                 "BROADWAY_SHOWS_PARSE_ERROR",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : String(error)
+            }
+          },
+          502
+        );
+      }
+    }
+
+    const seatMatch = url.pathname.match(
+      /^\/api\/broadway\/shows\/([^/]+)\/seats$/
+    );
+
+    if (seatMatch) {
+      const showId =
+        decodeURIComponent(seatMatch[1]);
+
+      try {
+        const result =
+          await getBroadwaySeatMap(showId);
+
+        return json(
+          {
+            ok: true,
+            data: result,
+            meta: {
+              provider: "broadway",
+              showId: result.showId,
+              updatedAt:
+                result.updatedAt
+            }
+          },
+          200,
+          {
+            "cache-control":
+              "public, max-age=30"
+          }
+        );
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+            error: {
+              code:
+                "BROADWAY_SEATMAP_PARSE_ERROR",
               message:
                 error instanceof Error
                   ? error.message
