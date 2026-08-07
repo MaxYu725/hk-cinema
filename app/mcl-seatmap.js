@@ -78,42 +78,53 @@
     return seatNum;
   }
 
-  function renderSeatV2(seat) {
-    const cell = Math.max(1, Number(seat.displayCell) || 1);
-    const span = Math.max(1, Math.min(2, Number(seat.span) || 1));
+  function renderCellV3(cell) {
+    if (!cell || cell.type === "blank") {
+      return `<span class="mcl-seat-cell blank" aria-hidden="true"></span>`;
+    }
+
+    if (cell.type === "label") {
+      return `
+        <span class="mcl-seat-cell label" aria-hidden="true">
+          ${escapeHtml(cell.text || "")}
+        </span>
+      `;
+    }
+
+    const seat = cell.seat;
+    if (!seat) {
+      return `<span class="mcl-seat-cell blank" aria-hidden="true"></span>`;
+    }
+
+    const wide = Number(seat.visualSpan) > 1;
 
     return `
-      <span
-        class="mcl-seat ${escapeHtml(seat.status)}"
-        style="grid-column:${cell} / span ${span}"
-        title="${escapeHtml(seat.seatNum)} · ${escapeHtml(statusLabel(seat.status))}"
-        aria-label="${escapeHtml(seat.seatNum)} ${escapeHtml(statusLabel(seat.status))}"
-      >${escapeHtml(seatNumber(seat))}</span>
+      <span class="mcl-seat-cell seat-cell">
+        <span
+          class="mcl-seat ${escapeHtml(seat.status)} ${wide ? "wide" : ""}"
+          title="${escapeHtml(seat.seatNum)} · ${escapeHtml(statusLabel(seat.status))}"
+          aria-label="${escapeHtml(seat.seatNum)} ${escapeHtml(statusLabel(seat.status))}"
+        >${escapeHtml(seatNumber(seat))}</span>
+      </span>
     `;
   }
 
-  function layoutMetrics(data) {
+  function layoutMetricsV3(data) {
     const totalColumns = Math.max(1, Number(data.totalColumns) || 1);
     const availableWidth = Math.max(
       250,
       Math.min(720, (window.innerWidth || 390) - 92)
     );
-    const gap = 2;
-    const maxCell = 26;
-    const minCell = totalColumns > 28 ? 18 : 16;
-    const fitted = Math.floor(
-      (availableWidth - Math.max(0, totalColumns - 1) * gap) /
-      totalColumns
-    );
-    const cellSize = Math.max(minCell, Math.min(maxCell, fitted));
-    const canvasWidth =
-      totalColumns * cellSize +
-      Math.max(0, totalColumns - 1) * gap;
-    const rowPitch = cellSize + 4;
+    const fitted = Math.floor(availableWidth / totalColumns);
+    const minCell = totalColumns > 28 ? 17 : 18;
+    const cellSize = Math.max(minCell, Math.min(28, fitted));
+    const seatplanWidth = totalColumns * cellSize;
     const areas = Array.isArray(data.areas) ? data.areas : [];
-    const maxAreaRows = Math.max(
-      1,
-      ...areas.map(area => Math.max(1, area.rows?.length || 0))
+    const seatplanHeight = Math.max(
+      cellSize,
+      ...areas.map(area =>
+        Math.max(1, area.rows?.length || 0) * cellSize
+      )
     );
 
     const positionedAreas = areas.map(area => {
@@ -121,49 +132,43 @@
         1,
         Number(area.cellColumns) || totalColumns
       );
-      const width =
-        columns * cellSize +
-        Math.max(0, columns - 1) * gap;
+      const width = columns * cellSize;
+      const height = Math.max(1, area.rows?.length || 0) * cellSize;
       const left = Math.max(
         0,
-        Math.round((Number(area.ratioLeft) || 0) * canvasWidth)
+        Math.round((Number(area.ratioLeft) || 0) * seatplanWidth)
       );
-      const top = areas.length > 1
-        ? Math.max(
+      const top = areas.length === 1
+        ? 0
+        : Math.max(
             0,
-            Math.round(
-              (Number(area.ratioTop) || 0) *
-              maxAreaRows *
-              rowPitch
-            )
-          )
-        : 0;
-      const height = Math.max(1, area.rows?.length || 0) * rowPitch;
+            Math.round((Number(area.ratioTop) || 0) * seatplanHeight)
+          );
 
       return {
         ...area,
         columns,
         width,
+        height,
         left,
-        top,
-        height
+        top
       };
     });
 
     const contentWidth = Math.max(
-      canvasWidth,
+      seatplanWidth,
       ...positionedAreas.map(area => area.left + area.width)
     );
     const contentHeight = Math.max(
-      rowPitch,
+      seatplanHeight,
       ...positionedAreas.map(area => area.top + area.height)
     );
 
     return {
       totalColumns,
-      gap,
       cellSize,
-      rowPitch,
+      seatplanWidth,
+      seatplanHeight,
       canvasWidth: contentWidth,
       canvasHeight: contentHeight,
       availableWidth,
@@ -172,7 +177,7 @@
     };
   }
 
-  function renderArea(area, metrics) {
+  function renderAreaV3(area, metrics) {
     return `
       <div
         class="mcl-seat-area"
@@ -181,19 +186,17 @@
         ${(area.rows || []).map(row => `
           <div
             class="mcl-seat-area-row"
-            style="grid-template-columns:repeat(${area.columns}, ${metrics.cellSize}px); gap:${metrics.gap}px; min-height:${metrics.rowPitch}px"
+            style="grid-template-columns:repeat(${area.columns}, ${metrics.cellSize}px); height:${metrics.cellSize}px"
           >
-            ${row.name ? `<span class="mcl-seat-row-label left" style="grid-column:1">${escapeHtml(row.name)}</span>` : ""}
-            ${(row.seats || []).map(renderSeatV2).join("")}
-            ${row.name ? `<span class="mcl-seat-row-label right" style="grid-column:${area.columns}">${escapeHtml(row.name)}</span>` : ""}
+            ${(row.cells || []).map(renderCellV3).join("")}
           </div>
         `).join("")}
       </div>
     `;
   }
 
-  function renderOfficialLayout(data) {
-    const metrics = layoutMetrics(data);
+  function renderOfficialLayoutV3(data) {
+    const metrics = layoutMetricsV3(data);
 
     return `
       ${metrics.scrollable ? `<p class="mcl-seatmap-scroll-hint">大型／闊身影廳 · 左右滑動查看完整座位</p>` : ""}
@@ -202,12 +205,15 @@
           class="mcl-seatmap-canvas"
           style="width:${metrics.canvasWidth}px; min-width:${metrics.canvasWidth}px; --mcl-cell-size:${metrics.cellSize}px"
         >
-          <div class="mcl-seat-screen">${escapeHtml(data.screenLabel || "銀幕")}</div>
+          <div
+            class="mcl-seat-screen"
+            style="width:${metrics.seatplanWidth}px"
+          >${escapeHtml(data.screenLabel || "銀幕")}</div>
           <div
             class="mcl-seat-areas"
-            style="height:${metrics.canvasHeight}px"
+            style="height:${metrics.canvasHeight}px; width:${metrics.canvasWidth}px"
           >
-            ${metrics.areas.map(area => renderArea(area, metrics)).join("")}
+            ${metrics.areas.map(area => renderAreaV3(area, metrics)).join("")}
           </div>
         </div>
       </div>
@@ -243,10 +249,10 @@
   function renderMap(data, bookingUrl) {
     const counts = data.counts || {};
     const layout =
-      data.layoutVersion >= 2 &&
+      data.layoutVersion >= 3 &&
       Array.isArray(data.areas) &&
       data.areas.length
-        ? renderOfficialLayout(data)
+        ? renderOfficialLayoutV3(data)
         : renderLegacyLayout(data);
 
     return `
