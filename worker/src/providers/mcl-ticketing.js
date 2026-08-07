@@ -177,11 +177,11 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
       const dateTime = String(session.SessionDateTime || "");
       const date = /^\d{4}-\d{2}-\d{2}/.test(dateTime)
         ? dateTime.slice(0, 10)
-        : String(session.BusinessDay || "").slice(0, 10) || null;
+        : null;
       const time = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateTime)
         ? dateTime.slice(11, 16)
-        : String(session.Time || session.SessionTime || "");
-      const cinemaId = String(session.CinemaCodeID || session.CinemaCode || "");
+        : String(session.Time || "");
+      const cinemaId = String(session.CinemaCodeID || "");
       const sessionId = String(session.SessionID);
 
       return {
@@ -193,16 +193,16 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
         cinema: {
           id: cinemaId || null,
           name: {
-            zh: cinemas[cinemaId] || session.CinemaName || cinemaId || "MCL 戲院",
+            zh: cinemas[cinemaId] || cinemaId || "MCL 戲院",
             en: null
           }
         },
         house: {
           id: null,
-          name: session.ScreenName || session.HouseName || null
+          name: session.ScreenName || null
         },
         format: session.Format || null,
-        language: session.Languages || session.Language || null,
+        language: session.Languages || null,
         versionName: session.VersionName || null,
         displayVersion: session.DisplayVersion || null,
         price: {
@@ -225,24 +225,12 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
     });
 
   const dateSet = new Set();
-  const availableDateSource = raw.AvailableDates || {};
-
-  const dateValues = Array.isArray(availableDateSource)
-    ? availableDateSource
-    : Object.values(availableDateSource);
-
-  dateValues.forEach(value => {
-    const text = typeof value === "object" && value
-      ? String(value.Date || value.Value || value.BusinessDay || "")
-      : String(value || "");
-    const match = text.match(/\d{4}-\d{2}-\d{2}/);
+  Object.values(raw.AvailableDates || {}).forEach(value => {
+    const match = String(value || "").match(/\d{4}-\d{2}-\d{2}/);
     if (match) dateSet.add(match[0]);
   });
-
   allSessions.forEach(session => {
-    if (session.date && /^\d{4}-\d{2}-\d{2}$/.test(session.date)) {
-      dateSet.add(session.date);
-    }
+    if (session.date) dateSet.add(session.date);
   });
 
   const availableDates = Array.from(dateSet).sort();
@@ -250,7 +238,6 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
     selectedDate && availableDates.includes(selectedDate)
       ? selectedDate
       : availableDates[0] || null;
-
   const sessions = resolvedDate
     ? allSessions.filter(session => session.date === resolvedDate)
     : allSessions;
@@ -279,7 +266,7 @@ function allIndexes(text, marker) {
   const indexes = [];
   let index = text.indexOf(marker);
 
-  while (index >= 0 && indexes.length < 50) {
+  while (index >= 0 && indexes.length < 100) {
     indexes.push(index);
     index = text.indexOf(marker, index + marker.length);
   }
@@ -287,7 +274,7 @@ function allIndexes(text, marker) {
   return indexes;
 }
 
-function compactSnippet(text, index, before = 180, after = 520) {
+function compactSnippet(text, index, before = 700, after = 1300) {
   if (index < 0) return null;
 
   return text
@@ -296,62 +283,62 @@ function compactSnippet(text, index, before = 180, after = 520) {
     .slice(0, before + after);
 }
 
-function extractUrlCandidates(text) {
-  const decoded = decodeHtmlEntities(text);
-  const candidates = new Set();
-
-  const absolute = /https?:\/\/[^"'<>\s)]+/gi;
-  let match;
-
-  while ((match = absolute.exec(decoded)) !== null) {
-    const value = match[0];
-    if (/mcl|ticket|movie|session|available/i.test(value)) {
-      candidates.add(value.slice(0, 260));
-    }
-    if (candidates.size >= 12) break;
-  }
-
-  const quoted = /["']([^"']{1,240})["']/g;
-  while ((match = quoted.exec(decoded)) !== null && candidates.size < 20) {
-    const value = match[1];
-    if (
-      /(?:\/|\\)(?:[^"']*?)(?:ticket|movie|session|available|show)[^"']*/i.test(value) ||
-      /(?:ticket|movie|session|available|show).*(?:\.json|\/|\?)/i.test(value)
-    ) {
-      candidates.add(value.slice(0, 260));
-    }
-  }
-
-  return Array.from(candidates).slice(0, 12);
-}
-
 function makeDiagnostic(result) {
-  const text = String(result?.text || "");
-  const initIndexes = allIndexes(text, "InitAvailableUI");
-  const ajaxMarkers = ["$.ajax", "$.getJSON", "$.get(", "fetch(", "axios."];
-  const ajaxHits = [];
+  const text = decodeHtmlEntities(String(result?.text || ""));
+  const target = "ticketing/cinema";
+  const targetIndex = text.toLowerCase().indexOf(target);
 
-  for (const marker of ajaxMarkers) {
+  const requestMarkers = [
+    "$.post",
+    "$.ajax",
+    "$.getJSON",
+    "$.get(",
+    ".post(",
+    "axios",
+    "fetch(",
+    "XMLHttpRequest",
+    "type: 'POST'",
+    'type: "POST"',
+    "method: 'POST'",
+    'method: "POST"'
+  ];
+
+  const requestHits = [];
+  for (const marker of requestMarkers) {
     for (const index of allIndexes(text, marker)) {
-      ajaxHits.push({ marker, index });
+      requestHits.push({ marker, index });
     }
   }
+  requestHits.sort((a, b) => a.index - b.index);
 
-  ajaxHits.sort((a, b) => a.index - b.index);
+  let nearestRequest = null;
+  if (targetIndex >= 0 && requestHits.length) {
+    nearestRequest = requestHits
+      .map(hit => ({ ...hit, distance: Math.abs(hit.index - targetIndex) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+  }
 
   return {
     bytes: text.length,
     finalUrl: result?.finalUrl || null,
     contentType: result?.contentType || null,
-    initCount: initIndexes.length,
-    initFirstSnippet: compactSnippet(text, initIndexes[0] ?? -1),
-    initLastSnippet: compactSnippet(text, initIndexes.at(-1) ?? -1),
-    ajaxCount: ajaxHits.length,
-    ajaxSnippet: ajaxHits.length
-      ? compactSnippet(text, ajaxHits.at(-1).index)
+    targetFound: targetIndex >= 0,
+    ticketingCinemaSnippet: compactSnippet(text, targetIndex),
+    requestCount: requestHits.length,
+    nearestRequestMarker: nearestRequest?.marker || null,
+    nearestRequestSnippet: nearestRequest
+      ? compactSnippet(text, nearestRequest.index)
       : null,
-    urlCandidates: extractUrlCandidates(text),
-    preview: text.replace(/\s+/g, " ").slice(0, 180)
+    movieSetIdSnippet: compactSnippet(
+      text,
+      Math.max(
+        text.indexOf("MovieSetID"),
+        text.indexOf("movieSetId"),
+        text.indexOf("moviesetid")
+      ),
+      350,
+      700
+    )
   };
 }
 
@@ -380,14 +367,15 @@ export async function getMCLTicketing(movieSetId, selectedDate = null) {
     lastDiagnostic = makeDiagnostic(result);
   }
 
-  const diagnostic = lastDiagnostic || {};
+  const d = lastDiagnostic || {};
 
   throw new Error(
-    `MCL ticketing payload not embedded; bytes=${diagnostic.bytes ?? 0}; ` +
-    `initCount=${diagnostic.initCount ?? 0}; ajaxCount=${diagnostic.ajaxCount ?? 0}; ` +
-    `initLast=${diagnostic.initLastSnippet || "none"}; ` +
-    `ajax=${diagnostic.ajaxSnippet || "none"}; ` +
-    `urls=${JSON.stringify(diagnostic.urlCandidates || [])}; ` +
-    `preview=${diagnostic.preview || "empty"}`
+    `MCL ticketing AJAX not resolved; bytes=${d.bytes ?? 0}; ` +
+    `targetFound=${d.targetFound ? "yes" : "no"}; ` +
+    `requestCount=${d.requestCount ?? 0}; ` +
+    `nearest=${d.nearestRequestMarker || "none"}; ` +
+    `ticketingCinema=${d.ticketingCinemaSnippet || "none"}; ` +
+    `request=${d.nearestRequestSnippet || "none"}; ` +
+    `movieSet=${d.movieSetIdSnippet || "none"}`
   );
 }
