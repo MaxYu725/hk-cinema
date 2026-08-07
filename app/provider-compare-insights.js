@@ -20,19 +20,49 @@
     return Number(match[1]) * 60 + Number(match[2]);
   }
 
-  function parseSeatAvailable(card) {
-    const dataValue = Number(card?.dataset?.seatAvailable);
-    if (Number.isFinite(dataValue)) return dataValue;
+  function parseSeats(card) {
+    const dataAvailable = Number(card?.dataset?.seatAvailable);
+    const dataTotal = Number(card?.dataset?.seatTotal);
+
+    if (
+      Number.isFinite(dataAvailable) &&
+      Number.isFinite(dataTotal) &&
+      dataTotal > 0 &&
+      dataAvailable >= 0 &&
+      dataAvailable <= dataTotal
+    ) {
+      return {
+        available: dataAvailable,
+        total: dataTotal,
+        ratio: dataAvailable / dataTotal
+      };
+    }
 
     const text = card
       .querySelector(".provider-compare-seat")
       ?.textContent
       ?.trim() || "";
-    const match = text.match(/^(\d+)(?:\/\d+)?\s*(?:個)?可選/);
+    const match = text.match(/^(\d+)\s*\/\s*(\d+)\s*(?:個)?可選/);
     if (!match) return null;
 
-    const value = Number(match[1]);
-    return Number.isFinite(value) ? value : null;
+    const available = Number(match[1]);
+    const total = Number(match[2]);
+
+    if (
+      !Number.isFinite(available) ||
+      !Number.isFinite(total) ||
+      total <= 0 ||
+      available < 0 ||
+      available > total
+    ) {
+      return null;
+    }
+
+    return {
+      available,
+      total,
+      ratio: available / total
+    };
   }
 
   function parseCard(card, index) {
@@ -46,6 +76,7 @@
     const price = parseMoney(
       card.querySelector(".provider-compare-show-price")?.textContent
     );
+    const seats = parseSeats(card);
 
     return {
       card,
@@ -56,7 +87,9 @@
       timeValue: timeValue(time),
       cinema,
       price,
-      seatAvailable: parseSeatAvailable(card)
+      seats,
+      seatAvailable: seats?.available ?? null,
+      seatRatio: seats?.ratio ?? null
     };
   }
 
@@ -169,11 +202,12 @@
             <span>排序</span>
             <button type="button" data-insight-sort="time" class="${uiState.sort === "time" ? "active" : ""}">時間</button>
             <button type="button" data-insight-sort="price" class="${uiState.sort === "price" ? "active" : ""}">價格</button>
+            <button type="button" data-insight-sort="seats" class="${uiState.sort === "seats" ? "active" : ""}">座位</button>
           </div>
         </div>
 
         <p class="provider-compare-insight-note">
-          最低價比較為各院線當日成人票最低值，不代表相同影廳、格式或場次條件。座位最多只比較目前已取得座位資料的場次。
+          最低價比較為各院線當日成人票最低值，不代表相同影廳、格式或場次條件。座位排序按可選座位比例由高至低；未取得可靠座位總數的場次會排最後。
         </p>
       </div>
     `;
@@ -185,6 +219,24 @@
         const aPrice = Number.isFinite(a.price) ? a.price : Number.MAX_SAFE_INTEGER;
         const bPrice = Number.isFinite(b.price) ? b.price : Number.MAX_SAFE_INTEGER;
         return aPrice - bPrice || a.timeValue - b.timeValue || a.index - b.index;
+      }
+
+      if (uiState.sort === "seats") {
+        const aHasSeats = Number.isFinite(a.seatRatio);
+        const bHasSeats = Number.isFinite(b.seatRatio);
+
+        if (aHasSeats !== bHasSeats) {
+          return aHasSeats ? -1 : 1;
+        }
+
+        if (aHasSeats && bHasSeats) {
+          return (
+            b.seatRatio - a.seatRatio ||
+            b.seatAvailable - a.seatAvailable ||
+            a.timeValue - b.timeValue ||
+            a.index - b.index
+          );
+        }
       }
 
       return a.timeValue - b.timeValue || a.index - b.index;
@@ -214,7 +266,11 @@
         : uiState.provider === "mcl"
           ? "MCL"
           : "Broadway";
-      const sortLabel = uiState.sort === "price" ? "價格由低至高" : "時間由早至晚";
+      const sortLabel = uiState.sort === "price"
+        ? "價格由低至高"
+        : uiState.sort === "seats"
+          ? "可選比例由高至低"
+          : "時間由早至晚";
       result.textContent = `${filterLabel} · ${visible} 場 · ${sortLabel}`;
     }
   }
@@ -252,7 +308,9 @@
         observer.observe(content, {
           childList: true,
           subtree: true,
-          characterData: true
+          characterData: true,
+          attributes: true,
+          attributeFilter: ["data-seat-available", "data-seat-total"]
         });
       }
     }
@@ -278,7 +336,9 @@
     observer.observe(content, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["data-seat-available", "data-seat-total"]
     });
 
     enhance();
