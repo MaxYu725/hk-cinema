@@ -1,0 +1,278 @@
+const SERVICES_BASE = "https://services.mclcinema.com/";
+const SITE_BASE = "https://www.mclcinema.com/";
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchTextWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json,text/html;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 (compatible; HKCinema/0.1)"
+      }
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `MCL ticketing upstream HTTP ${response.status}: ${text.slice(0, 160)}`
+      );
+    }
+
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchTextWithRetry(url) {
+  const timeouts = [10000, 15000];
+  let lastError = null;
+
+  for (let attempt = 0; attempt < timeouts.length; attempt++) {
+    try {
+      return await fetchTextWithTimeout(url, timeouts[attempt]);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < timeouts.length - 1) {
+        await sleep(700);
+      }
+    }
+  }
+
+  throw lastError || new Error("MCL ticketing upstream failed");
+}
+
+function findBalancedObject(text, marker) {
+  const markerIndex = text.indexOf(marker);
+
+  if (markerIndex < 0) {
+    return null;
+  }
+
+  let start = text.lastIndexOf("{", markerIndex);
+
+  while (start >= 0) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{") {
+        depth++;
+      } else if (char === "}") {
+        depth--;
+
+        if (depth === 0) {
+          const candidate = text.slice(start, i + 1);
+
+          try {
+            const parsed = JSON.parse(candidate);
+
+            if (
+              parsed &&
+              parsed.AvailableDates &&
+              Array.isArray(parsed.AvailableSessions)
+            ) {
+              return parsed;
+            }
+          } catch {
+            break;
+          }
+        }
+      }
+    }
+
+    start = text.lastIndexOf("{", start - 1);
+  }
+
+  return null;
+}
+
+function parseTicketingPayload(text) {
+  const trimmed = String(text || "").trim();
+
+  if (!trimmed) {
+    throw new Error("MCL ticketing response empty");
+  }
+
+  try {
+    const direct = JSON.parse(trimmed);
+
+    if (
+      direct &&
+      direct.AvailableDates &&
+      Array.isArray(direct.AvailableSessions)
+    ) {
+      return direct;
+    }
+  } catch {
+    // Some MCL responses wrap the JSON in HTML.
+  }
+
+  const embedded = findBalancedObject(
+    trimmed,
+    '"AvailableDates"'
+  );
+
+  if (embedded) {
+    return embedded;
+  }
+
+  throw new Error("MCL ticketing payload not found");
+}
+
+function toFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeTicketing(raw, movieSetId, selectedDate = null) {
+  const cinemas = raw.AvailableCinemas || {};
+  const rawSessions = Array.isArray(raw.AvailableSessions)
+    ? raw.AvailableSessions
+    : [];
+
+  const allSessions = rawSessions
+    .filter(session => session && session.SessionID != null)
+    .map(session => {
+      const dateTime = String(session.SessionDateTime || "");
+      const date = /^\d{4}-\d{2}-\d{2}/.test(dateTime)
+        ? dateTime.slice(0, 10)
+        : null;
+      const time = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateTime)
+        ? dateTime.slice(11, 16)
+        : String(session.Time || "");
+      const cinemaId = String(session.CinemaCodeID || "");
+      const sessionId = String(session.SessionID);
+
+      return {
+        id: `mcl:${sessionId}`,
+        provider: "mcl",
+        sourceId: sessionId,
+        date,
+        time,
+        cinema: {
+          id: cinemaId || null,
+          name: {
+            zh: cinemas[cinemaId] || cinemaId || "MCL 戲院",
+            en: null
+          }
+        },
+        house: {
+          id: null,
+          name: session.ScreenName || null
+        },
+        format: session.Format || null,
+        language: session.Languages || null,
+        versionName: session.VersionName || null,
+        displayVersion: session.DisplayVersion || null,
+        price: {
+          display: toFiniteNumber(session.AdultPrice),
+          adult: toFiniteNumber(session.AdultPrice),
+          student: toFiniteNumber(session.StudentPrice),
+          child: toFiniteNumber(session.ChildPrice),
+          senior: toFiniteNumber(session.SeniorPrice)
+        },
+        seatSummary: {
+          available: null,
+          total: null,
+          held: null,
+          unavailable: null,
+          occupiedPercent: toFiniteNumber(session.OccupiedSeatsInPercent)
+        },
+        bookingUrl:
+          `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(cinemaId)}&si=${encodeURIComponent(sessionId)}`
+      };
+    });
+
+  const dateSet = new Set();
+
+  Object.values(raw.AvailableDates || {}).forEach(value => {
+    const text = String(value || "");
+    const match = text.match(/^\d{4}-\d{2}-\d{2}/);
+    if (match) dateSet.add(match[0]);
+  });
+
+  allSessions.forEach(session => {
+    if (session.date) dateSet.add(session.date);
+  });
+
+  const availableDates = Array.from(dateSet).sort();
+  const resolvedDate =
+    selectedDate && availableDates.includes(selectedDate)
+      ? selectedDate
+      : availableDates[0] || null;
+
+  const sessions = resolvedDate
+    ? allSessions.filter(session => session.date === resolvedDate)
+    : allSessions;
+
+  return {
+    movieSetId: String(movieSetId),
+    availableDates,
+    selectedDate: resolvedDate,
+    sessions,
+    allSessions,
+    availableVersions: Array.isArray(raw.AvailableVersions)
+      ? raw.AvailableVersions
+      : [],
+    source: {
+      provider: "mcl",
+      transport: "cloudflare-worker",
+      upstream: `${SERVICES_BASE}Ticketing/MovieSet`,
+      totalSessions: allSessions.length,
+      selectedDateSessions: sessions.length,
+      updatedAt: new Date().toISOString()
+    }
+  };
+}
+
+export async function getMCLTicketing(movieSetId, selectedDate = null) {
+  const id = String(movieSetId || "").replace(/^mcl:/, "");
+
+  if (!/^\d+$/.test(id)) {
+    throw new Error("Invalid MCL movie ID");
+  }
+
+  const url =
+    `${SERVICES_BASE}Ticketing/MovieSet?language=zh-TW&movieSetId=${encodeURIComponent(id)}`;
+
+  const text = await fetchTextWithRetry(url);
+  const raw = parseTicketingPayload(text);
+
+  return normalizeTicketing(raw, id, selectedDate);
+}
