@@ -43,6 +43,15 @@
   gap: 9px;
 }
 
+.provider-compare-provider-picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid #eceef0;
+}
+
 .provider-compare-recommendation {
   min-width: 0;
   padding: 13px;
@@ -52,6 +61,15 @@
 
 .provider-compare-recommendation.balanced {
   background: #edf7f2;
+}
+
+.provider-compare-recommendation.provider {
+  background: #fafafa;
+  border: 1px solid #eceef0;
+}
+
+.provider-compare-recommendation.provider.mcl {
+  background: #f2f9f5;
 }
 
 .provider-compare-recommendation span,
@@ -100,7 +118,8 @@
     border-radius: 17px;
   }
 
-  .provider-compare-recommendation-grid {
+  .provider-compare-recommendation-grid,
+  .provider-compare-provider-picks {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
