@@ -1,5 +1,7 @@
 (() => {
   let scheduled = false;
+  let recommendationKey = 0;
+  let jumpTimer = null;
 
   const clamp = value => Math.min(1, Math.max(0, value));
 
@@ -51,6 +53,14 @@
     return { available, total, ratio: available / total };
   }
 
+  function ensureRecommendationKey(card) {
+    if (!card.dataset.recommendationKey) {
+      recommendationKey += 1;
+      card.dataset.recommendationKey = `show-${recommendationKey}`;
+    }
+    return card.dataset.recommendationKey;
+  }
+
   function item(card, index) {
     const isMcl = Boolean(card.querySelector(".provider-compare-source.mcl"));
     const provider = isMcl ? "mcl" : "broadway";
@@ -59,6 +69,7 @@
 
     return {
       card,
+      key: ensureRecommendationKey(card),
       index,
       provider,
       providerLabel,
@@ -140,24 +151,59 @@
     return parts.map(escapeHtml).join(" · ");
   }
 
+  function recommendationShell(entry, className, content) {
+    if (!entry) {
+      return `<article class="provider-compare-recommendation ${className} is-unavailable">${content}</article>`;
+    }
+
+    return `
+      <button
+        type="button"
+        class="provider-compare-recommendation ${className} is-clickable"
+        data-recommendation-target="${escapeHtml(entry.key)}"
+        aria-label="跳到 ${escapeHtml(entry.time)} ${escapeHtml(entry.cinema)} 場次"
+      >${content}<em>查看場次 ↓</em></button>
+    `;
+  }
+
   function cardHtml(label, entry, type) {
     if (!entry) {
-      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>—</strong><small>目前資料不足</small></article>`;
+      return recommendationShell(
+        null,
+        type,
+        `<span>${escapeHtml(label)}</span><strong>—</strong><small>目前資料不足</small>`
+      );
     }
 
     if (type === "saving") {
-      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>$${escapeHtml(entry.price)}</strong><small>${recommendationDetails(entry)} </small></article>`;
+      return recommendationShell(
+        entry,
+        type,
+        `<span>${escapeHtml(label)}</span><strong>$${escapeHtml(entry.price)}</strong><small>${recommendationDetails(entry)}</small>`
+      );
     }
 
     if (type === "seats") {
-      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.seats.ratio * 100)}% 可選</strong><small>${recommendationDetails(entry)} · ${entry.seats.available}/${entry.seats.total}</small></article>`;
+      return recommendationShell(
+        entry,
+        type,
+        `<span>${escapeHtml(label)}</span><strong>${Math.round(entry.seats.ratio * 100)}% 可選</strong><small>${recommendationDetails(entry)} · ${entry.seats.available}/${entry.seats.total}</small>`
+      );
     }
 
     if (type === "balanced") {
-      return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small></article>`;
+      return recommendationShell(
+        entry,
+        type,
+        `<span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small>`
+      );
     }
 
-    return `<article class="provider-compare-recommendation ${type}"><span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry, false)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small></article>`;
+    return recommendationShell(
+      entry,
+      type,
+      `<span>${escapeHtml(label)}</span><strong>${Math.round(entry.score * 100)} 分</strong><small>${recommendationDetails(entry, false)} · $${escapeHtml(entry.price)} · ${Math.round(entry.seats.ratio * 100)}% 可選</small>`
+    );
   }
 
   function render() {
@@ -187,7 +233,7 @@
     const html = `
       <div class="provider-compare-recommendation-heading">
         <div><span>SMART PICKS</span><strong>推薦場次</strong></div>
-        <small>按目前篩選結果計算</small>
+        <small>點推薦可跳到場次</small>
       </div>
       <div class="provider-compare-recommendation-grid">
         ${cardHtml("全院線最慳", saving, "saving")}
@@ -198,7 +244,7 @@
         ${cardHtml("Broadway 平衡推薦", broadwayPick, "provider broadway")}
         ${cardHtml("MCL 平衡推薦", mclPick, "provider mcl")}
       </div>
-      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。所有推薦均顯示時間及戲院名稱；Broadway 與 MCL 各自另列一個平衡推薦，避免跨院線比較只見單一院線。只使用已有可靠票價、時間及座位比例的場次；MCL 座位 lazy loading 後會自動更新。</p>
+      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。所有推薦均顯示時間及戲院名稱；點推薦只會跳到時間線中的相應場次，不會直接離開 HK Cinema。只使用已有可靠票價、時間及座位比例的場次；MCL 座位 lazy loading 後會自動更新。</p>
     `;
 
     let panel = section.querySelector("[data-provider-recommendations]");
@@ -212,6 +258,35 @@
     }
 
     if (panel.innerHTML !== html) panel.innerHTML = html;
+  }
+
+  function jumpToRecommendation(key) {
+    const timeline = document.querySelector(
+      "#providerCompareContent .provider-compare-timeline"
+    );
+    if (!timeline || !key) return;
+
+    const target = Array.from(
+      timeline.querySelectorAll(":scope > .provider-compare-show")
+    ).find(card => card.dataset.recommendationKey === key);
+
+    if (!target || target.hidden) return;
+
+    timeline.querySelectorAll(".is-recommendation-jump").forEach(card => {
+      card.classList.remove("is-recommendation-jump");
+    });
+
+    target.classList.add("is-recommendation-jump");
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest"
+    });
+
+    clearTimeout(jumpTimer);
+    jumpTimer = setTimeout(() => {
+      target.classList.remove("is-recommendation-jump");
+    }, 1800);
   }
 
   function schedule() {
@@ -247,6 +322,14 @@
 
     window.addEventListener("hkcinema:compare-seat-summary", schedule);
     document.addEventListener("click", event => {
+      const recommendation = event.target.closest("[data-recommendation-target]");
+      if (recommendation) {
+        event.preventDefault();
+        event.stopPropagation();
+        jumpToRecommendation(recommendation.dataset.recommendationTarget);
+        return;
+      }
+
       if (
         event.target.closest("[data-insight-provider]") ||
         event.target.closest("[data-insight-sort]") ||
