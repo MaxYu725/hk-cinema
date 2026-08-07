@@ -13,6 +13,13 @@ const state = {
   updatedAt: {
     now: null,
     coming: null
+  },
+  detail: {
+    open: false,
+    movie: null,
+    data: null,
+    loading: false,
+    error: null
   }
 };
 
@@ -93,6 +100,26 @@ function getPresaleIds() {
       String(movie.sourceId || movie.id)
     )
   );
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "";
+
+  const date = new Date(`${dateString}T00:00:00+08:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat(
+    "zh-HK",
+    {
+      timeZone: "Asia/Hong_Kong",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short"
+    }
+  ).format(date);
 }
 
 function renderLoading() {
@@ -194,6 +221,10 @@ function renderMovieCard(movie) {
     <article
       class="movie-card"
       data-movie-id="${escapeHtml(movie.id)}"
+      data-source-id="${escapeHtml(movieSourceId)}"
+      role="button"
+      tabindex="0"
+      aria-label="查看 ${escapeHtml(titleZh)} 詳情"
     >
       <div class="movie-poster">
         ${poster}
@@ -361,6 +392,384 @@ async function loadMovies() {
   render();
 }
 
+function ensureDetailDrawer() {
+  if (document.querySelector("#movieDetailOverlay")) {
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "movieDetailOverlay";
+  overlay.className = "detail-overlay";
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="detail-backdrop" data-detail-close></div>
+    <aside
+      class="detail-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="電影詳情"
+    >
+      <button
+        class="detail-close"
+        type="button"
+        data-detail-close
+        aria-label="關閉電影詳情"
+      >
+        ×
+      </button>
+      <div id="movieDetailContent"></div>
+    </aside>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target.closest("[data-detail-close]")) {
+      closeMovieDetail();
+      return;
+    }
+
+    const dateButton =
+      event.target.closest("[data-detail-date]");
+
+    if (dateButton && state.detail.movie) {
+      loadMovieShows(
+        state.detail.movie,
+        dateButton.dataset.detailDate
+      );
+    }
+  });
+}
+
+function closeMovieDetail() {
+  const overlay =
+    document.querySelector("#movieDetailOverlay");
+
+  state.detail.open = false;
+  state.detail.movie = null;
+  state.detail.data = null;
+  state.detail.loading = false;
+  state.detail.error = null;
+
+  if (overlay) {
+    overlay.hidden = true;
+  }
+
+  document.body.classList.remove("detail-open");
+}
+
+function groupSessionsByCinema(sessions) {
+  const groups = new Map();
+
+  for (const session of sessions || []) {
+    const key =
+      session.cinema?.id ||
+      session.cinema?.name?.zh ||
+      "unknown";
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        cinema: session.cinema,
+        sessions: []
+      });
+    }
+
+    groups.get(key).sessions.push(session);
+  }
+
+  return Array.from(groups.values());
+}
+
+function renderSession(session) {
+  const seat = session.seatSummary;
+  const price = session.price?.display;
+
+  let seatText = "座位資料暫缺";
+  let seatClass = "unknown";
+
+  if (seat && Number.isFinite(seat.available)) {
+    seatText = `${seat.available}/${seat.total} 可選`;
+
+    if (seat.available <= 0) {
+      seatClass = "full";
+    } else if (seat.available <= 10) {
+      seatClass = "limited";
+    } else {
+      seatClass = "available";
+    }
+  }
+
+  const secondary = [
+    session.house?.name,
+    session.format,
+    session.language
+  ].filter(Boolean);
+
+  return `
+    <a
+      class="showtime-card"
+      href="${escapeHtml(session.bookingUrl || "#")}" 
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <div>
+        <strong class="showtime-time">${escapeHtml(session.time || "--:--")}</strong>
+        <p>${escapeHtml(secondary.join(" · ") || "Broadway")}</p>
+      </div>
+
+      <div class="showtime-side">
+        ${
+          Number.isFinite(price)
+            ? `<strong class="showtime-price">$${escapeHtml(price)}</strong>`
+            : `<strong class="showtime-price">—</strong>`
+        }
+        <span class="seat-pill ${seatClass}">${escapeHtml(seatText)}</span>
+      </div>
+    </a>
+  `;
+}
+
+function renderMovieDetail() {
+  ensureDetailDrawer();
+
+  const overlay =
+    document.querySelector("#movieDetailOverlay");
+  const content =
+    document.querySelector("#movieDetailContent");
+
+  if (!overlay || !content || !state.detail.movie) {
+    return;
+  }
+
+  overlay.hidden = false;
+  document.body.classList.add("detail-open");
+
+  const fallbackMovie = state.detail.movie;
+  const data = state.detail.data;
+  const movie = data?.movie || fallbackMovie;
+
+  const titleZh =
+    movie.title?.zh ||
+    movie.title?.en ||
+    "未命名電影";
+
+  const titleEn =
+    movie.title?.en && movie.title.en !== titleZh
+      ? movie.title.en
+      : "";
+
+  const info = [];
+
+  if (movie.rating) info.push(movie.rating);
+  if (movie.durationMinutes) {
+    info.push(`${movie.durationMinutes} 分鐘`);
+  }
+  if (movie.language) {
+    info.push(
+      Array.isArray(movie.language)
+        ? movie.language.join("、")
+        : movie.language
+    );
+  }
+
+  const poster = movie.poster
+    ? `<img src="${escapeHtml(movie.poster)}" alt="${escapeHtml(titleZh)}">`
+    : `<div class="detail-poster-placeholder">HK Cinema</div>`;
+
+  const dates = data?.availableDates || [];
+  const sessions = data?.sessions || [];
+  const groups = groupSessionsByCinema(sessions);
+
+  let bodyHtml = "";
+
+  if (state.detail.loading) {
+    bodyHtml = `
+      <div class="detail-state">
+        <strong>正在載入場次</strong>
+        <span>正在取得 Broadway 最新場次及座位概況...</span>
+      </div>
+    `;
+  } else if (state.detail.error) {
+    bodyHtml = `
+      <div class="detail-state">
+        <strong>暫時無法取得場次</strong>
+        <span>${escapeHtml(state.detail.error)}</span>
+      </div>
+    `;
+  } else if (!data) {
+    bodyHtml = `
+      <div class="detail-state">
+        <strong>尚未開售</strong>
+        <span>Broadway 暫時未有此電影的可售場次。</span>
+      </div>
+    `;
+  } else {
+    const dateHtml = dates.length
+      ? `
+        <div class="detail-dates">
+          ${dates.map(date => `
+            <button
+              type="button"
+              class="detail-date ${date === data.selectedDate ? "active" : ""}"
+              data-detail-date="${escapeHtml(date)}"
+            >
+              ${escapeHtml(formatDate(date))}
+            </button>
+          `).join("")}
+        </div>
+      `
+      : "";
+
+    const showsHtml = groups.length
+      ? groups.map(group => {
+          const cinemaName =
+            group.cinema?.name?.zh ||
+            group.cinema?.name?.en ||
+            "Broadway 戲院";
+
+          return `
+            <section class="cinema-group">
+              <div class="cinema-group-heading">
+                <h3>${escapeHtml(cinemaName)}</h3>
+                <span>${group.sessions.length} 場</span>
+              </div>
+              <div class="showtime-list">
+                ${group.sessions.map(renderSession).join("")}
+              </div>
+            </section>
+          `;
+        }).join("")
+      : `
+        <div class="detail-state compact">
+          <strong>這一天沒有場次</strong>
+          <span>請選擇其他日期。</span>
+        </div>
+      `;
+
+    bodyHtml = `
+      ${dateHtml}
+      <div class="detail-section-heading">
+        <h2>場次</h2>
+        <span>${sessions.length} 場</span>
+      </div>
+      ${showsHtml}
+    `;
+  }
+
+  const description =
+    movie.description &&
+    !/^\$/.test(String(movie.description))
+      ? `
+        <section class="detail-description">
+          <h2>電影簡介</h2>
+          <p>${escapeHtml(movie.description)}</p>
+        </section>
+      `
+      : "";
+
+  const trailer = movie.trailer
+    ? `
+      <a
+        class="detail-action"
+        href="${escapeHtml(movie.trailer)}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        預告片
+      </a>
+    `
+    : "";
+
+  content.innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-poster">${poster}</div>
+
+      <div class="detail-title">
+        <p class="eyebrow">BROADWAY</p>
+        <h1>${escapeHtml(titleZh)}</h1>
+        ${titleEn ? `<p class="detail-title-en">${escapeHtml(titleEn)}</p>` : ""}
+        ${info.length ? `<p class="detail-meta">${escapeHtml(info.join(" · "))}</p>` : ""}
+        ${movie.releaseDate ? `<p class="detail-release">上映日期 ${escapeHtml(movie.releaseDate)}</p>` : ""}
+        ${trailer}
+      </div>
+    </div>
+
+    ${description}
+
+    <section class="detail-showtimes">
+      ${bodyHtml}
+    </section>
+  `;
+}
+
+async function loadMovieShows(movie, date = null) {
+  state.detail.open = true;
+  state.detail.movie = movie;
+  state.detail.loading = true;
+  state.detail.error = null;
+
+  renderMovieDetail();
+
+  const sourceId = String(movie.sourceId || "")
+    .replace(/^broadway:/, "");
+
+  const query = date
+    ? `?date=${encodeURIComponent(date)}`
+    : "";
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/broadway/movies/${encodeURIComponent(sourceId)}/shows${query}`,
+      { cache: "no-store" }
+    );
+
+    if (response.status === 404) {
+      state.detail.data = null;
+      state.detail.error = null;
+      return;
+    }
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok || !result.data) {
+      throw new Error(
+        result.error?.message ||
+        `API HTTP ${response.status}`
+      );
+    }
+
+    state.detail.data = result.data;
+  } catch (error) {
+    state.detail.error =
+      error instanceof Error
+        ? error.message
+        : String(error);
+  } finally {
+    state.detail.loading = false;
+    renderMovieDetail();
+  }
+}
+
+function findMovieBySourceId(sourceId) {
+  const allMovies = [
+    ...state.showingMovies,
+    ...state.upcomingMovies
+  ];
+
+  return allMovies.find(movie =>
+    String(movie.sourceId || movie.id) === String(sourceId)
+  );
+}
+
+function openMovieCard(card) {
+  const movie =
+    findMovieBySourceId(card.dataset.sourceId);
+
+  if (movie) {
+    loadMovieShows(movie);
+  }
+}
+
 function setTab(tab) {
   state.tab = tab;
 
@@ -380,6 +789,27 @@ elements.tabs.forEach(button => {
   });
 });
 
+elements.movieGrid.addEventListener("click", (event) => {
+  const card = event.target.closest(".movie-card");
+
+  if (card) {
+    openMovieCard(card);
+  }
+});
+
+elements.movieGrid.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  const card = event.target.closest(".movie-card");
+
+  if (card) {
+    event.preventDefault();
+    openMovieCard(card);
+  }
+});
+
 elements.refreshButton.addEventListener(
   "click",
   () => {
@@ -387,4 +817,11 @@ elements.refreshButton.addEventListener(
   }
 );
 
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.detail.open) {
+    closeMovieDetail();
+  }
+});
+
+ensureDetailDrawer();
 loadMovies();
