@@ -1,6 +1,8 @@
 (() => {
   const SITE_BASE = "https://www.mclcinema.com/";
   const API_BASE = `${SITE_BASE}MCLWebAPI2/`;
+  const CACHE_KEY = "hkcinema:mcl-catalogue:v1";
+  const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
   function buildPosterUrl(group, item) {
     if (item?.n) {
@@ -58,7 +60,11 @@
       }));
   }
 
-  async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function fetchJsonWithTimeout(url, timeoutMs) {
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
@@ -86,11 +92,29 @@
     }
   }
 
-  async function getCatalogue() {
-    const raw = await fetchJsonWithTimeout(
-      `${API_BASE}GetNCF.aspx?l=1`
-    );
+  async function fetchJsonWithRetry(url) {
+    const timeouts = [8000, 12000];
+    let lastError = null;
 
+    for (let attempt = 0; attempt < timeouts.length; attempt++) {
+      try {
+        return await fetchJsonWithTimeout(
+          url,
+          timeouts[attempt]
+        );
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < timeouts.length - 1) {
+          await sleep(750);
+        }
+      }
+    }
+
+    throw lastError || new Error("MCL request failed");
+  }
+
+  function normalizeCatalogue(raw) {
     if (!raw || !raw.n || !raw.c) {
       throw new Error("MCL catalogue response invalid");
     }
@@ -98,6 +122,7 @@
     const now = normalizeGroup(raw.n, "now-showing");
     const coming = normalizeGroup(raw.c, "coming-soon");
     const festival = normalizeGroup(raw.f, "festival");
+    const updatedAt = new Date().toISOString();
 
     return {
       now,
@@ -107,14 +132,86 @@
         provider: "mcl",
         transport: "browser-direct",
         endpoint: `${API_BASE}GetNCF.aspx?l=1`,
+        cache: false,
         counts: {
           now: now.length,
           coming: coming.length,
           festival: festival.length
         },
-        updatedAt: new Date().toISOString()
+        updatedAt
       }
     };
+  }
+
+  function saveCachedCatalogue(catalogue) {
+    try {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          savedAt: Date.now(),
+          catalogue
+        })
+      );
+    } catch {
+      // Storage may be unavailable in private/restricted contexts.
+    }
+  }
+
+  function getCachedCatalogue() {
+    try {
+      const text = localStorage.getItem(CACHE_KEY);
+
+      if (!text) {
+        return null;
+      }
+
+      const cached = JSON.parse(text);
+      const savedAt = Number(cached?.savedAt);
+      const catalogue = cached?.catalogue;
+
+      if (
+        !Number.isFinite(savedAt) ||
+        !catalogue ||
+        !Array.isArray(catalogue.now) ||
+        !Array.isArray(catalogue.coming)
+      ) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      const ageMs = Date.now() - savedAt;
+
+      if (ageMs < 0 || ageMs > CACHE_MAX_AGE_MS) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      return {
+        ...catalogue,
+        meta: {
+          ...(catalogue.meta || {}),
+          cache: true,
+          cacheSavedAt: new Date(savedAt).toISOString(),
+          cacheAgeMs: ageMs
+        }
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function refreshCatalogue() {
+    const raw = await fetchJsonWithRetry(
+      `${API_BASE}GetNCF.aspx?l=1`
+    );
+
+    const catalogue = normalizeCatalogue(raw);
+    saveCachedCatalogue(catalogue);
+    return catalogue;
+  }
+
+  async function getCatalogue() {
+    return await refreshCatalogue();
   }
 
   window.HKCinemaProviders =
@@ -122,7 +219,10 @@
 
   window.HKCinemaProviders.mcl = {
     getCatalogue,
+    refreshCatalogue,
+    getCachedCatalogue,
     siteBase: SITE_BASE,
-    apiBase: API_BASE
+    apiBase: API_BASE,
+    cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };
 })();
