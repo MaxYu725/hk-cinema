@@ -143,86 +143,50 @@ function extractArray(source, key) {
   return parseArrayAt(source, start)?.value || null;
 }
 
-function movieArrayScore(items) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return 0;
+function isMovieLike(item) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    return false;
   }
 
-  const sample = items
-    .filter((item) => item && typeof item === "object")
-    .slice(0, 8);
+  const hasIdentity =
+    item.id !== undefined &&
+    item.id !== null;
 
-  if (sample.length === 0) {
-    return 0;
-  }
+  const hasTitle = Boolean(
+    item.title ||
+    item.title_lang ||
+    item.name ||
+    item.name_lang
+  );
 
-  let score = 0;
+  const hasMovieField = Boolean(
+    item.openingDate ||
+    item.duration !== undefined ||
+    Array.isArray(item.images) ||
+    Array.isArray(item.movieTypes)
+  );
 
-  for (const item of sample) {
-    if (item.openingDate) score += 4;
-    if (item.id !== undefined) score += 1;
-
-    if (
-      item.title ||
-      item.title_lang ||
-      item.name ||
-      item.name_lang
-    ) {
-      score += 3;
-    }
-
-    if (Array.isArray(item.images)) score += 2;
-    if (item.duration !== undefined) score += 1;
-    if (Array.isArray(item.movieTypes)) score += 1;
-  }
-
-  return score;
+  return hasIdentity && hasTitle && hasMovieField;
 }
 
-function extractMovieArray(source) {
-  const preferredKeys = [
-    "movies",
-    "upcomingMovies",
-    "upcomingMovie",
-    "movieList",
-    "movieLists",
-    "films",
-    "filmList",
-    "programmes",
-    "programs",
-    "items"
-  ];
-
-  for (const key of preferredKeys) {
-    const value = extractArray(source, key);
-
-    if (movieArrayScore(value) >= 6) {
-      return {
-        key,
-        value
-      };
-    }
-  }
-
+function extractAllMovieArrays(source) {
   const pattern = /"([^"\\]+)":\[/g;
+  const arrays = [];
   let match;
-  let best = null;
 
   while ((match = pattern.exec(source)) !== null) {
     const key = match[1];
     const start = match.index + match[0].length - 1;
 
-    // A movie object should expose one of these fields near the start
-    // of the array. This avoids parsing every unrelated RSC array.
     const preview = source.slice(
       start,
-      Math.min(source.length, start + 25000)
+      Math.min(source.length, start + 30000)
     );
 
     if (
       !preview.includes('"openingDate"') &&
-      !preview.includes('"movieTypes"') &&
-      !preview.includes('"title_lang"')
+      !preview.includes('"title_lang"') &&
+      !preview.includes('"movieTypes"')
     ) {
       continue;
     }
@@ -233,29 +197,51 @@ function extractMovieArray(source) {
       continue;
     }
 
-    const score = movieArrayScore(parsed.value);
+    const objectItems = parsed.value.filter(
+      (item) => item && typeof item === "object" && !Array.isArray(item)
+    );
 
-    if (!best || score > best.score) {
-      best = {
-        key,
-        value: parsed.value,
-        score
-      };
+    if (objectItems.length === 0) {
+      continue;
     }
 
-    if (score >= 40) {
-      break;
+    const movieItems = objectItems.filter(isMovieLike);
+
+    if (movieItems.length === 0) {
+      continue;
+    }
+
+    const ratio = movieItems.length / objectItems.length;
+
+    // Accept arrays whose direct members are predominantly movie objects.
+    // Broadway upcoming is grouped into multiple small `items` arrays,
+    // so all matching arrays must be merged rather than taking only the first.
+    if (ratio < 0.5) {
+      continue;
+    }
+
+    arrays.push({
+      key,
+      items: movieItems
+    });
+  }
+
+  const byId = new Map();
+
+  for (const array of arrays) {
+    for (const movie of array.items) {
+      const key = String(movie.id);
+
+      if (!byId.has(key)) {
+        byId.set(key, movie);
+      }
     }
   }
 
-  if (best && best.score >= 6) {
-    return {
-      key: best.key,
-      value: best.value
-    };
-  }
-
-  return null;
+  return {
+    arrays,
+    movies: Array.from(byId.values())
+  };
 }
 
 function getHongKongDate() {
@@ -500,15 +486,15 @@ export async function getBroadwayUpcoming() {
     "Broadway upcoming"
   );
 
-  const detected = extractMovieArray(payload);
+  const detected = extractAllMovieArrays(payload);
 
-  if (!detected || !Array.isArray(detected.value)) {
+  if (!detected.movies.length) {
     throw new Error(
-      "Broadway upcoming movie array not detected"
+      "Broadway upcoming movie arrays not detected"
     );
   }
 
-  const movies = detected.value;
+  const movies = detected.movies;
   const today = getHongKongDate();
 
   const normalized = movies
@@ -539,7 +525,10 @@ export async function getBroadwayUpcoming() {
     source: {
       provider: "broadway",
       page: "upcoming",
-      detectedArrayKey: detected.key,
+      detectedArrayKeys: Array.from(
+        new Set(detected.arrays.map((item) => item.key))
+      ),
+      detectedArrays: detected.arrays.length,
       rawMovies: movies.length,
       upcomingMovies: normalized.length,
       from: today
