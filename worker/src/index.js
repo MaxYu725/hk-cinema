@@ -37,7 +37,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "4C",
+        phase: "5C",
         time: new Date().toISOString()
       });
     }
@@ -183,6 +183,7 @@ export default {
     if (mclSeatMatch) {
       const sessionId = decodeURIComponent(mclSeatMatch[1]);
       const cinemaCode = url.searchParams.get("cinemaCode");
+      const summaryOnly = url.searchParams.get("summary") === "1";
 
       if (!cinemaCode || !/^\d{1,4}$/.test(cinemaCode)) {
         return json({
@@ -196,13 +197,29 @@ export default {
 
       try {
         const result = await getMCLSeatMap(cinemaCode, sessionId);
+        const data = summaryOnly
+          ? {
+              provider: "mcl",
+              cinemaCode: result.cinemaCode,
+              sessionId: result.sessionId,
+              counts: result.counts,
+              layoutVersion: result.layoutVersion,
+              source: {
+                provider: result.source?.provider || "mcl",
+                parser: result.source?.parser || null,
+                updatedAt: result.source?.updatedAt || new Date().toISOString()
+              }
+            }
+          : result;
+
         return json({
           ok: true,
-          data: result,
+          data,
           meta: {
             provider: "mcl",
             cinemaCode: String(cinemaCode),
             sessionId: String(sessionId),
+            summaryOnly,
             updatedAt: new Date().toISOString()
           }
         }, 200, { "cache-control": "public, max-age=30" });
