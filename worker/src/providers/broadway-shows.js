@@ -57,6 +57,10 @@ function stripHtml(value) {
     return null;
   }
 
+  if (/^\$[0-9A-Za-z:_-]+$/.test(value.trim())) {
+    return null;
+  }
+
   return value
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
@@ -478,6 +482,8 @@ function normalizeShow(show, movie, maps) {
   const normalizedHouse =
     normalizeHouse(house, houseId);
 
+  const movieMeta = normalizeMovie(movie);
+
   return {
     id: `broadway:${show.id}`,
     provider: "broadway",
@@ -501,11 +507,8 @@ function normalizeShow(show, movie, maps) {
     time: dateTime.time,
 
     format: normalizedHouse.format,
-
-    language:
-      normalizeMovie(movie).language,
-    subtitles:
-      normalizeMovie(movie).subtitles,
+    language: movieMeta.language,
+    subtitles: movieMeta.subtitles,
 
     bookingUrl:
       `https://www.cinema.com.hk/hk/show/${show.id}`,
