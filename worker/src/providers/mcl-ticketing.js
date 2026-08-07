@@ -5,7 +5,19 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchTextWithTimeout(url, timeoutMs) {
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#34;", '"')
+    .replaceAll("&#x22;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+}
+
+async function fetchTextWithTimeout(url, movieSetId, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -15,9 +27,10 @@ async function fetchTextWithTimeout(url, timeoutMs) {
       redirect: "follow",
       signal: controller.signal,
       headers: {
-        Accept: "application/json,text/html;q=0.9,*/*;q=0.8",
-        "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
-        "User-Agent": "Mozilla/5.0 (compatible; HKCinema/0.1)"
+        Accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-HK,zh-TW;q=0.9,en-US;q=0.8,en;q=0.7",
+        Referer: `${SITE_BASE}MovieSet.aspx?id=${encodeURIComponent(movieSetId)}&visLang=1`,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
       }
     });
 
@@ -29,19 +42,27 @@ async function fetchTextWithTimeout(url, timeoutMs) {
       );
     }
 
-    return text;
+    return {
+      text,
+      finalUrl: response.url,
+      contentType: response.headers.get("content-type") || null
+    };
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function fetchTextWithRetry(url) {
+async function fetchTextWithRetry(url, movieSetId) {
   const timeouts = [10000, 15000];
   let lastError = null;
 
   for (let attempt = 0; attempt < timeouts.length; attempt++) {
     try {
-      return await fetchTextWithTimeout(url, timeouts[attempt]);
+      return await fetchTextWithTimeout(
+        url,
+        movieSetId,
+        timeouts[attempt]
+      );
     } catch (error) {
       lastError = error;
 
@@ -119,36 +140,54 @@ function findBalancedObject(text, marker) {
 }
 
 function parseTicketingPayload(text) {
-  const trimmed = String(text || "").trim();
+  const variants = [
+    String(text || "").trim(),
+    decodeHtmlEntities(text).trim()
+  ];
 
-  if (!trimmed) {
-    throw new Error("MCL ticketing response empty");
-  }
+  for (const trimmed of variants) {
+    if (!trimmed) continue;
 
-  try {
-    const direct = JSON.parse(trimmed);
+    try {
+      const direct = JSON.parse(trimmed);
 
-    if (
-      direct &&
-      direct.AvailableDates &&
-      Array.isArray(direct.AvailableSessions)
-    ) {
-      return direct;
+      if (
+        direct &&
+        direct.AvailableDates &&
+        Array.isArray(direct.AvailableSessions)
+      ) {
+        return direct;
+      }
+    } catch {
+      // Continue with embedded-object detection.
     }
-  } catch {
-    // Some MCL responses wrap the JSON in HTML.
+
+    const embedded = findBalancedObject(
+      trimmed,
+      '"AvailableDates"'
+    );
+
+    if (embedded) {
+      return embedded;
+    }
+
+    const scriptJsonMatch = trimmed.match(
+      /\{[\s\S]*?"AvailableDates"[\s\S]*?"AvailableSessions"[\s\S]*?\}/
+    );
+
+    if (scriptJsonMatch) {
+      try {
+        const parsed = JSON.parse(scriptJsonMatch[0]);
+        if (Array.isArray(parsed?.AvailableSessions)) {
+          return parsed;
+        }
+      } catch {
+        // Ignore and try the next representation.
+      }
+    }
   }
 
-  const embedded = findBalancedObject(
-    trimmed,
-    '"AvailableDates"'
-  );
-
-  if (embedded) {
-    return embedded;
-  }
-
-  throw new Error("MCL ticketing payload not found");
+  return null;
 }
 
 function toFiniteNumber(value) {
@@ -261,6 +300,21 @@ function normalizeTicketing(raw, movieSetId, selectedDate = null) {
   };
 }
 
+function makeDiagnostic(result) {
+  const text = String(result?.text || "");
+
+  return {
+    bytes: text.length,
+    finalUrl: result?.finalUrl || null,
+    contentType: result?.contentType || null,
+    hasAvailableDates: text.includes("AvailableDates") || text.includes("AvailableDates".replaceAll('"', '&quot;')),
+    hasAvailableSessions: text.includes("AvailableSessions"),
+    preview: text
+      .replace(/\s+/g, " ")
+      .slice(0, 280)
+  };
+}
+
 export async function getMCLTicketing(movieSetId, selectedDate = null) {
   const id = String(movieSetId || "").replace(/^mcl:/, "");
 
@@ -268,11 +322,31 @@ export async function getMCLTicketing(movieSetId, selectedDate = null) {
     throw new Error("Invalid MCL movie ID");
   }
 
-  const url =
-    `${SERVICES_BASE}Ticketing/MovieSet?language=zh-TW&movieSetId=${encodeURIComponent(id)}`;
+  const urls = [
+    `${SERVICES_BASE}Ticketing/MovieSet?MovieSetID=${encodeURIComponent(id)}&language=zh-TW`,
+    `${SERVICES_BASE}Ticketing/MovieSet?language=zh-TW&movieSetId=${encodeURIComponent(id)}`
+  ];
 
-  const text = await fetchTextWithRetry(url);
-  const raw = parseTicketingPayload(text);
+  let lastDiagnostic = null;
 
-  return normalizeTicketing(raw, id, selectedDate);
+  for (const url of urls) {
+    const result = await fetchTextWithRetry(url, id);
+    const raw = parseTicketingPayload(result.text);
+
+    if (raw) {
+      return normalizeTicketing(raw, id, selectedDate);
+    }
+
+    lastDiagnostic = makeDiagnostic(result);
+  }
+
+  const diagnostic = lastDiagnostic || {};
+
+  throw new Error(
+    `MCL ticketing payload not found; bytes=${diagnostic.bytes ?? 0}; ` +
+    `contentType=${diagnostic.contentType || "unknown"}; ` +
+    `hasDates=${diagnostic.hasAvailableDates ? "yes" : "no"}; ` +
+    `hasSessions=${diagnostic.hasAvailableSessions ? "yes" : "no"}; ` +
+    `preview=${diagnostic.preview || "empty"}`
+  );
 }
