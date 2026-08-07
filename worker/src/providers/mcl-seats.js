@@ -11,7 +11,7 @@ function decodeHtml(value) {
 
 function attr(source, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = source.match(
+  const match = String(source || "").match(
     new RegExp(`(?:^|\\s)${escaped}=["']([^"']*)["']`, "i")
   );
   return match ? decodeHtml(match[1]) : null;
@@ -25,23 +25,40 @@ function firstAttr(source, names) {
   return null;
 }
 
-function normalizeStatus(status) {
+function toNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeStatus(status, seatStyle = "") {
   const value = String(status || "")
     .replace(/[\s_-]+/g, "")
     .toLowerCase();
+  const style = String(seatStyle || "")
+    .replace(/[\s_-]+/g, "")
+    .toLowerCase();
+  const sofa = style.includes("sofa");
 
   switch (value) {
     case "normal":
     case "available":
     case "free":
-      return "available";
+    case "vibrate":
+      return sofa ? "sofa-available" : "available";
+    case "sofaleft":
+    case "sofaright":
+    case "sofaavailable":
+      return "sofa-available";
+    case "sofasold":
+    case "sofaoccupied":
+      return "sofa-sold";
     case "sold":
     case "occupied":
     case "unavailable":
     case "reserved":
     case "hold":
     case "held":
-      return "sold";
+      return sofa ? "sofa-sold" : "sold";
     case "broken":
     case "blocked":
     case "disabled":
@@ -49,19 +66,30 @@ function normalizeStatus(status) {
     case "wheelchair":
     case "wheelchairavailable":
       return "wheelchair";
-    case "sofaavailable":
-    case "sofa":
-      return "sofa-available";
-    case "sofasold":
-    case "sofaoccupied":
-      return "sofa-sold";
     default:
       return "unknown";
   }
 }
 
-function buildSeat(tag, rowNameFallback = null) {
-  const seatNum = firstAttr(tag, [
+function findStatusTag(cellHtml) {
+  const tagPattern = /<(?:img|div|span|label|input|button)\b([^>]*)>/gi;
+  let match;
+
+  while ((match = tagPattern.exec(cellHtml)) !== null) {
+    if (
+      /(?:^|\s)(?:status|seatStatus|seatstatus|seat-status|data-status|data-seat-status)=["']/i.test(
+        match[1]
+      )
+    ) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+function findSeatName(cellHtml, statusAttrs) {
+  const direct = firstAttr(statusAttrs, [
     "seatNum",
     "seatnum",
     "seat-number",
@@ -71,22 +99,42 @@ function buildSeat(tag, rowNameFallback = null) {
     "id"
   ]);
 
-  const rawColumn = firstAttr(tag, [
-    "column",
-    "data-column",
-    "col",
-    "data-col"
-  ]);
+  if (direct) return direct;
 
-  const column = Number(rawColumn);
-
-  if (!seatNum || !Number.isFinite(column) || column <= 0) {
-    return null;
+  const labelMatch = cellHtml.match(/<label\b([^>]*)>/i);
+  if (labelMatch) {
+    return firstAttr(labelMatch[1], [
+      "seatNum",
+      "seatnum",
+      "seat-number",
+      "data-seat-num",
+      "data-seat-number",
+      "data-seat",
+      "for",
+      "id"
+    ]);
   }
 
-  const rawRow = firstAttr(tag, ["row", "data-row", "row-index", "data-row-index"]);
-  const row = Number(rawRow);
-  const upstreamStatus = firstAttr(tag, [
+  return null;
+}
+
+function textContent(html) {
+  return decodeHtml(
+    String(html || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+}
+
+function buildSeatFromCell(tdAttrs, cellHtml, rowName, displayCell, areaIndex) {
+  const statusAttrs = findStatusTag(cellHtml);
+  if (!statusAttrs) return null;
+
+  const seatNum = findSeatName(cellHtml, statusAttrs);
+  if (!seatNum) return null;
+
+  const upstreamStatus = firstAttr(statusAttrs, [
     "status",
     "seatStatus",
     "seatstatus",
@@ -95,7 +143,28 @@ function buildSeat(tag, rowNameFallback = null) {
     "data-seat-status"
   ]) || "Unknown";
 
-  const explicitRowName = firstAttr(tag, [
+  const seatStyle = firstAttr(tdAttrs, [
+    "seatStyle",
+    "seatstyle",
+    "seat-style",
+    "data-seat-style"
+  ]) || "";
+
+  const rawRow = firstAttr(statusAttrs, [
+    "row",
+    "data-row",
+    "row-index",
+    "data-row-index"
+  ]);
+
+  const rawColumn = firstAttr(statusAttrs, [
+    "column",
+    "data-column",
+    "col",
+    "data-col"
+  ]);
+
+  const explicitRowName = firstAttr(statusAttrs, [
     "row-name",
     "rowName",
     "rowname",
@@ -103,147 +172,150 @@ function buildSeat(tag, rowNameFallback = null) {
   ]);
 
   const inferredRowName = String(seatNum).match(/^([^0-9]+)/)?.[1] || null;
-  const rowName = explicitRowName || rowNameFallback || inferredRowName || "";
+  const resolvedRowName = explicitRowName || rowName || inferredRowName || "";
+  const status = normalizeStatus(upstreamStatus, seatStyle);
 
   return {
     id: String(seatNum),
     seatNum: String(seatNum),
-    rowName,
-    row: Number.isFinite(row) ? row : null,
-    column,
-    area: firstAttr(tag, ["area", "data-area"]),
-    areaCode: firstAttr(tag, ["areaCode", "areacode", "data-area-code"]),
-    status: normalizeStatus(upstreamStatus),
-    upstreamStatus
+    rowName: resolvedRowName,
+    row: toNumber(rawRow),
+    column: toNumber(rawColumn),
+    displayCell,
+    areaIndex,
+    area: firstAttr(statusAttrs, ["area", "data-area"]),
+    areaCode: firstAttr(statusAttrs, ["areaCode", "areacode", "data-area-code"]),
+    seatStyle: seatStyle || null,
+    status,
+    upstreamStatus,
+    span: status === "sofa-available" || status === "sofa-sold" ? 2 : 1
   };
 }
 
-function collectSeatsFromFragment(fragment, rowNameFallback = null) {
-  const results = [];
-  const seen = new Set();
-  const tagPattern = /<(?:img|div|span|label|input|button)\b([^>]*)>/gi;
-  let match;
+function parseAreas(html) {
+  const areas = [];
+  const allSeats = [];
+  const tablePattern = /<table\b([^>]*)>([\s\S]*?)<\/table>/gi;
+  let tableMatch;
 
-  while ((match = tagPattern.exec(fragment)) !== null) {
-    const tag = match[1];
+  while ((tableMatch = tablePattern.exec(html)) !== null) {
+    const tableAttrs = tableMatch[1];
+    const className = attr(tableAttrs, "class") || "";
 
-    if (!/(?:seatnum|seat-num|seat-number|data-seat|\bid=)[\s=]/i.test(tag)) {
+    if (!/(?:^|\s)area(?:\s|$)/i.test(className)) {
       continue;
     }
 
-    if (!/(?:status|seat-status|seatstatus|data-status)[\s=]/i.test(tag)) {
-      continue;
-    }
-
-    const seat = buildSeat(tag, rowNameFallback);
-    if (!seat) continue;
-
-    const key = `${seat.seatNum}:${seat.column}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    results.push(seat);
-  }
-
-  return results;
-}
-
-function parseSeatPlan(html, cinemaCode, sessionId) {
-  const totalColumnsMatch = html.match(
-    /totalNumberOfColumns\s*=\s*(\d+)/i
-  );
-  let totalColumns = Number(totalColumnsMatch?.[1] || 0) || null;
-
-  const seats = [];
-  const rows = [];
-  const seenSeats = new Set();
-
-  function addSeat(seat, rowSeats) {
-    const key = `${seat.seatNum}:${seat.column}`;
-    if (seenSeats.has(key)) return;
-    seenSeats.add(key);
-    seats.push(seat);
-    rowSeats?.push(seat);
-  }
-
-  const rowPatterns = [
-    /<tr\b[^>]*row-name=["']([^"']+)["'][^>]*>([\s\S]*?)<\/tr>/gi,
-    /<[^>]+data-row-name=["']([^"']+)["'][^>]*>([\s\S]*?)<\/(?:div|section|ul)>/gi
-  ];
-
-  for (const rowPattern of rowPatterns) {
+    const areaIndex = areas.length;
+    const areaRows = [];
+    const areaSeats = [];
+    let cellColumns = 0;
+    const rowPattern = /<tr\b([^>]*)>([\s\S]*?)<\/tr>/gi;
     let rowMatch;
 
-    while ((rowMatch = rowPattern.exec(html)) !== null) {
-      const rowName = decodeHtml(rowMatch[1]);
+    while ((rowMatch = rowPattern.exec(tableMatch[2])) !== null) {
+      const rowAttrs = rowMatch[1];
       const rowHtml = rowMatch[2];
-      const rowSeats = [];
+      const tdMatches = Array.from(
+        rowHtml.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/gi)
+      );
 
-      for (const seat of collectSeatsFromFragment(rowHtml, rowName)) {
-        addSeat(seat, rowSeats);
+      if (!tdMatches.length) continue;
+
+      cellColumns = Math.max(cellColumns, tdMatches.length);
+
+      let rowName = attr(rowAttrs, "row-name") || "";
+      if (!rowName) {
+        for (const td of tdMatches) {
+          if (/rowLabel/i.test(td[2])) {
+            const candidate = textContent(td[2]);
+            if (candidate) {
+              rowName = candidate;
+              break;
+            }
+          }
+        }
       }
 
-      if (rowSeats.length) {
-        rows.push({
+      const rowSeats = [];
+
+      tdMatches.forEach((td, index) => {
+        const seat = buildSeatFromCell(
+          td[1],
+          td[2],
+          rowName,
+          index + 1,
+          areaIndex
+        );
+
+        if (!seat) return;
+        rowSeats.push(seat);
+        areaSeats.push(seat);
+        allSeats.push(seat);
+      });
+
+      if (rowName || rowSeats.length) {
+        areaRows.push({
           name: rowName,
-          seats: rowSeats.sort((a, b) => a.column - b.column)
+          cellCount: tdMatches.length,
+          seats: rowSeats
         });
       }
     }
 
-    if (rows.length) break;
+    if (!areaSeats.length) continue;
+
+    areas.push({
+      index: areaIndex,
+      className,
+      ratioLeft: toNumber(attr(tableAttrs, "RatioLeft"), 0),
+      ratioTop: toNumber(attr(tableAttrs, "RatioTop"), 0),
+      cellColumns,
+      rows: areaRows,
+      seatCount: areaSeats.length
+    });
   }
 
-  if (!seats.length) {
-    const grouped = new Map();
+  return { areas, seats: allSeats };
+}
 
-    for (const seat of collectSeatsFromFragment(html)) {
-      const rowName = seat.rowName || String(seat.row ?? "?");
-      if (!grouped.has(rowName)) grouped.set(rowName, []);
-      addSeat(seat, grouped.get(rowName));
-    }
+function parseSeatPlan(html, cinemaCode, sessionId) {
+  const declaredColumns = toNumber(
+    html.match(/totalNumberOfColumns\s*=\s*(\d+)/i)?.[1]
+  );
 
-    for (const [name, rowSeats] of grouped) {
-      if (!rowSeats.length) continue;
-      rows.push({
-        name,
-        seats: rowSeats.sort((a, b) => a.column - b.column)
-      });
-    }
-  }
+  const { areas, seats } = parseAreas(html);
 
-  if (!seats.length) {
+  if (!areas.length || !seats.length) {
     const hasSeatPlan = /id=["']seatplan["']/i.test(html);
-    const hasSeatNum = /seat(?:num|-num|-number)|data-seat/i.test(html);
+    const hasAreaTable = /<table\b[^>]*class=["'][^"']*\barea\b/i.test(html);
     const bytes = new TextEncoder().encode(html).length;
 
     throw new Error(
-      `MCL 暫未提供此場座位圖（bytes=${bytes}, seatplan=${hasSeatPlan ? "yes" : "no"}, seatMarkup=${hasSeatNum ? "yes" : "no"}）`
+      `MCL 暫未提供可解析座位圖（bytes=${bytes}, seatplan=${hasSeatPlan ? "yes" : "no"}, areaTable=${hasAreaTable ? "yes" : "no"}）`
     );
   }
 
-  if (!totalColumns) {
-    totalColumns = Math.max(...seats.map(seat => seat.column), 1);
-  }
-
-  rows.sort((a, b) => {
-    const aRow = a.seats.find(seat => Number.isFinite(seat.row))?.row;
-    const bRow = b.seats.find(seat => Number.isFinite(seat.row))?.row;
-
-    if (Number.isFinite(aRow) && Number.isFinite(bRow) && aRow !== bRow) {
-      return bRow - aRow;
-    }
-
-    return String(a.name).localeCompare(String(b.name), "en", { numeric: true });
-  });
+  const totalColumns = declaredColumns || Math.max(
+    ...areas.map(area => area.cellColumns),
+    1
+  );
 
   const counts = seats.reduce(
     (result, seat) => {
       result.total += 1;
       result[seat.status] = (result[seat.status] || 0) + 1;
 
-      if (seat.status === "available" || seat.status === "wheelchair" || seat.status === "sofa-available") {
+      if (
+        seat.status === "available" ||
+        seat.status === "wheelchair" ||
+        seat.status === "sofa-available"
+      ) {
         result.available += 1;
-      } else if (seat.status === "sold" || seat.status === "sofa-sold") {
+      } else if (
+        seat.status === "sold" ||
+        seat.status === "sofa-sold"
+      ) {
         result.sold += 1;
       } else if (seat.status === "broken") {
         result.blocked += 1;
@@ -267,14 +339,22 @@ function parseSeatPlan(html, cinemaCode, sessionId) {
     provider: "mcl",
     cinemaCode: String(cinemaCode),
     sessionId: String(sessionId),
+    layoutVersion: 2,
     totalColumns,
-    rows,
+    areas,
+    rows: areas.flatMap(area =>
+      area.rows.map(row => ({
+        ...row,
+        areaIndex: area.index
+      }))
+    ),
     seats,
     counts,
     screenLabel: "銀幕",
     source: {
       provider: "mcl",
       endpoint: SEAT_BASE,
+      parser: "official-table-v2",
       updatedAt: new Date().toISOString()
     }
   };
