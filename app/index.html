@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>HK Cinema</title>
+
+  <meta
+    name="description"
+    content="香港戲院電影、場次、票價及座位資訊"
+  >
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HONG KONG CINEMA</p>
+        <h1>HK Cinema</h1>
+      </div>
+
+      <button
+        class="icon-button"
+        type="button"
+        id="refreshButton"
+        aria-label="重新整理"
+      >
+        ↻
+      </button>
+    </header>
+
+    <main>
+
+      <section class="hero">
+        <h2>今晚睇咩戲？</h2>
+        <p>
+          集中查看香港戲院上映電影、場次、票價及座位情況。
+        </p>
+      </section>
+
+      <nav class="tabs" aria-label="電影分類">
+        <button
+          class="tab active"
+          type="button"
+          data-tab="now"
+        >
+          現正上映
+        </button>
+
+        <button
+          class="tab"
+          type="button"
+          data-tab="coming"
+        >
+          即將上映
+        </button>
+      </nav>
+
+      <section class="status-card" id="systemStatus">
+        <div class="status-dot"></div>
+
+        <div>
+          <strong>系統準備中</strong>
+          <p>
+            電影資料來源將於下一階段接入。
+          </p>
+        </div>
+      </section>
+
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">MOVIES</p>
+          <h2 id="sectionTitle">現正上映</h2>
+        </div>
+
+        <span class="movie-count" id="movieCount">
+          0 部
+        </span>
+      </section>
+
+      <section
+        class="movie-grid"
+        id="movieGrid"
+        aria-live="polite"
+      >
+      </section>
+
+    </main>
+
+    <footer>
+      <p>
+        HK Cinema · Preview
+      </p>
+    </footer>
+
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
