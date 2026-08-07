@@ -15,23 +15,19 @@ import {
   getMCLTicketing
 } from "./providers/mcl-ticketing.js";
 
-const json = (
-  data,
-  status = 200,
-  extraHeaders = {}
-) =>
-  new Response(
-    JSON.stringify(data, null, 2),
-    {
-      status,
-      headers: {
-        "content-type":
-          "application/json; charset=utf-8",
-        "access-control-allow-origin": "*",
-        ...extraHeaders
-      }
+import {
+  getMCLSeatMap
+} from "./providers/mcl-seats.js";
+
+const json = (data, status = 200, extraHeaders = {}) =>
+  new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      ...extraHeaders
     }
-  );
+  });
 
 export default {
   async fetch(request) {
@@ -41,7 +37,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "4B",
+        phase: "4C",
         time: new Date().toISOString()
       });
     }
@@ -49,77 +45,49 @@ export default {
     if (url.pathname === "/api/broadway/movies") {
       try {
         const result = await getBroadwayMovies();
-
-        return json(
-          {
-            ok: true,
-            data: result.movies,
-            meta: {
-              provider: "broadway",
-              count: result.movies.length,
-              source: result.source,
-              updatedAt: new Date().toISOString()
-            }
-          },
-          200,
-          {
-            "cache-control":
-              "public, max-age=300"
+        return json({
+          ok: true,
+          data: result.movies,
+          meta: {
+            provider: "broadway",
+            count: result.movies.length,
+            source: result.source,
+            updatedAt: new Date().toISOString()
           }
-        );
+        }, 200, { "cache-control": "public, max-age=300" });
       } catch (error) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "BROADWAY_PARSE_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : String(error)
-            }
-          },
-          502
-        );
+        return json({
+          ok: false,
+          error: {
+            code: "BROADWAY_PARSE_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
       }
     }
 
     if (url.pathname === "/api/broadway/upcoming") {
       try {
         const result = await getBroadwayUpcoming();
-
-        return json(
-          {
-            ok: true,
-            data: result.movies,
-            meta: {
-              provider: "broadway",
-              type: "coming-soon",
-              count: result.movies.length,
-              source: result.source,
-              updatedAt: new Date().toISOString()
-            }
-          },
-          200,
-          {
-            "cache-control":
-              "public, max-age=1800"
+        return json({
+          ok: true,
+          data: result.movies,
+          meta: {
+            provider: "broadway",
+            type: "coming-soon",
+            count: result.movies.length,
+            source: result.source,
+            updatedAt: new Date().toISOString()
           }
-        );
+        }, 200, { "cache-control": "public, max-age=1800" });
       } catch (error) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "BROADWAY_UPCOMING_PARSE_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : String(error)
-            }
-          },
-          502
-        );
+        return json({
+          ok: false,
+          error: {
+            code: "BROADWAY_UPCOMING_PARSE_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
       }
     }
 
@@ -128,90 +96,54 @@ export default {
     );
 
     if (showMatch) {
-      const movieId =
-        decodeURIComponent(showMatch[1]);
+      const movieId = decodeURIComponent(showMatch[1]);
+      const date = url.searchParams.get("date");
 
-      const date =
-        url.searchParams.get("date");
-
-      if (
-        date &&
-        !/^\d{4}-\d{2}-\d{2}$/.test(date)
-      ) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "INVALID_DATE",
-              message:
-                "date must use YYYY-MM-DD"
-            }
-          },
-          400
-        );
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_DATE",
+            message: "date must use YYYY-MM-DD"
+          }
+        }, 400);
       }
 
       try {
-        const result =
-          await getBroadwayMovieShows(
-            movieId,
-            date
-          );
+        const result = await getBroadwayMovieShows(movieId, date);
 
         if (!result) {
-          return json(
-            {
-              ok: false,
-              error: {
-                code: "MOVIE_NOT_FOUND",
-                message:
-                  "Broadway movie not found"
-              }
-            },
-            404
-          );
-        }
-
-        return json(
-          {
-            ok: true,
-            data: {
-              movie: result.movie,
-              availableDates:
-                result.availableDates,
-              selectedDate:
-                result.selectedDate,
-              sessions:
-                result.sessions
-            },
-            meta: {
-              provider: "broadway",
-              source: result.source,
-              updatedAt:
-                new Date().toISOString()
-            }
-          },
-          200,
-          {
-            "cache-control":
-              "public, max-age=60"
-          }
-        );
-      } catch (error) {
-        return json(
-          {
+          return json({
             ok: false,
             error: {
-              code:
-                "BROADWAY_SHOWS_PARSE_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : String(error)
+              code: "MOVIE_NOT_FOUND",
+              message: "Broadway movie not found"
             }
+          }, 404);
+        }
+
+        return json({
+          ok: true,
+          data: {
+            movie: result.movie,
+            availableDates: result.availableDates,
+            selectedDate: result.selectedDate,
+            sessions: result.sessions
           },
-          502
-        );
+          meta: {
+            provider: "broadway",
+            source: result.source,
+            updatedAt: new Date().toISOString()
+          }
+        }, 200, { "cache-control": "public, max-age=60" });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: {
+            code: "BROADWAY_SHOWS_PARSE_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
       }
     }
 
@@ -220,131 +152,124 @@ export default {
     );
 
     if (seatMatch) {
-      const showId =
-        decodeURIComponent(seatMatch[1]);
+      const showId = decodeURIComponent(seatMatch[1]);
 
       try {
-        const result =
-          await getBroadwaySeatMap(showId);
-
-        return json(
-          {
-            ok: true,
-            data: result,
-            meta: {
-              provider: "broadway",
-              showId: result.showId,
-              updatedAt:
-                result.updatedAt
-            }
-          },
-          200,
-          {
-            "cache-control":
-              "public, max-age=30"
+        const result = await getBroadwaySeatMap(showId);
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            provider: "broadway",
+            showId: result.showId,
+            updatedAt: result.updatedAt
           }
-        );
+        }, 200, { "cache-control": "public, max-age=30" });
       } catch (error) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code:
-                "BROADWAY_SEATMAP_PARSE_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : String(error)
-            }
-          },
-          502
-        );
+        return json({
+          ok: false,
+          error: {
+            code: "BROADWAY_SEATMAP_PARSE_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
+      }
+    }
+
+    const mclSeatMatch = url.pathname.match(
+      /^\/api\/mcl\/shows\/([^/]+)\/seats$/
+    );
+
+    if (mclSeatMatch) {
+      const sessionId = decodeURIComponent(mclSeatMatch[1]);
+      const cinemaCode = url.searchParams.get("cinemaCode");
+
+      if (!cinemaCode || !/^\d{1,4}$/.test(cinemaCode)) {
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_MCL_CINEMA_CODE",
+            message: "cinemaCode must be numeric"
+          }
+        }, 400);
+      }
+
+      try {
+        const result = await getMCLSeatMap(cinemaCode, sessionId);
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            provider: "mcl",
+            cinemaCode: String(cinemaCode),
+            sessionId: String(sessionId),
+            updatedAt: new Date().toISOString()
+          }
+        }, 200, { "cache-control": "public, max-age=30" });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: {
+            code: "MCL_SEATMAP_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
       }
     }
 
     if (url.pathname === "/api/mcl/ticketing") {
-      const movieSetId =
-        url.searchParams.get("movieSetId");
-
-      const date =
-        url.searchParams.get("date");
+      const movieSetId = url.searchParams.get("movieSetId");
+      const date = url.searchParams.get("date");
 
       if (!movieSetId || !/^\d+$/.test(movieSetId)) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "INVALID_MCL_MOVIE_ID",
-              message: "movieSetId must be numeric"
-            }
-          },
-          400
-        );
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_MCL_MOVIE_ID",
+            message: "movieSetId must be numeric"
+          }
+        }, 400);
       }
 
-      if (
-        date &&
-        !/^\d{4}-\d{2}-\d{2}$/.test(date)
-      ) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "INVALID_DATE",
-              message: "date must use YYYY-MM-DD"
-            }
-          },
-          400
-        );
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_DATE",
+            message: "date must use YYYY-MM-DD"
+          }
+        }, 400);
       }
 
       try {
-        const result =
-          await getMCLTicketing(movieSetId, date);
-
-        return json(
-          {
-            ok: true,
-            data: result,
-            meta: {
-              provider: "mcl",
-              movieSetId: String(movieSetId),
-              source: result.source,
-              updatedAt: new Date().toISOString()
-            }
-          },
-          200,
-          {
-            "cache-control":
-              "public, max-age=60"
+        const result = await getMCLTicketing(movieSetId, date);
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            provider: "mcl",
+            movieSetId: String(movieSetId),
+            source: result.source,
+            updatedAt: new Date().toISOString()
           }
-        );
+        }, 200, { "cache-control": "public, max-age=60" });
       } catch (error) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "MCL_TICKETING_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : String(error)
-            }
-          },
-          502
-        );
+        return json({
+          ok: false,
+          error: {
+            code: "MCL_TICKETING_ERROR",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        }, 502);
       }
     }
 
-    return json(
-      {
-        ok: false,
-        error: {
-          code: "NOT_FOUND",
-          message: "Endpoint not found"
-        }
-      },
-      404
-    );
+    return json({
+      ok: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "Endpoint not found"
+      }
+    }, 404);
   }
 };
