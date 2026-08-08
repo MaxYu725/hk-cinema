@@ -553,6 +553,7 @@
     const emperorMovie = match.emperor?.movie || {};
     const poster = match.broadway?.poster || mclMovie.poster || emperorMovie.poster || null;
     const labels = providerLabels(match);
+    const matchLabel = match.matchType === "normalized-variant" ? "版本配對" : "精確標題";
 
     const body = state.loadingInitial
       ? `
@@ -575,7 +576,7 @@
           <h1>${escapeHtml(match.title)}</h1>
           <div class="provider-compare-status">
             <span>已配對</span>
-            <small>精確標題 · ${labels.length} 院線 · 信心 ${Math.round((match.confidence || 0) * 100)}%</small>
+            <small>${matchLabel} · ${labels.length} 院線 · 信心 ${Math.round((match.confidence || 0) * 100)}%</small>
           </div>
         </div>
       </div>

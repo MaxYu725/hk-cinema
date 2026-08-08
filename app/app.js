@@ -406,7 +406,7 @@ function updateStatusSummary() {
       usingCache ? "Broadway 使用備用資料" : "Broadway 部分資料已連接",
       `${counts} · ${broadwayAgeText()}`
     );
-    reportBroadway("degraded", usingCache ? "cache" : "network", "部分資料未能更新");
+    reportBroadway("degraded", usingCache ? "cache" : "network", `${counts} · 部分資料未能更新`);
     return;
   }
 
@@ -415,7 +415,7 @@ function updateStatusSummary() {
     "Broadway 已連接",
     `${counts} · ${broadwayAgeText()}`
   );
-  reportBroadway("fresh", "network", "完整資料已更新");
+  reportBroadway("fresh", "network", counts);
 }
 
 async function loadMovies() {
@@ -877,6 +877,21 @@ function findMovieBySourceId(sourceId) {
     String(movie.sourceId || movie.id) === String(sourceId)
   );
 }
+
+window.HKCinemaBroadwayApp = {
+  open(sourceId) {
+    const movie = findMovieBySourceId(sourceId);
+    if (!movie) return false;
+    loadMovieShows(movie);
+    return true;
+  },
+  getCatalogue() {
+    return {
+      now: [...state.showingMovies],
+      coming: [...state.upcomingMovies]
+    };
+  }
+};
 
 function openMovieCard(card) {
   const movie =

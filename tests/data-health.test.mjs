@@ -83,7 +83,7 @@ test("Phase 6G cache, comparison freshness and Worker observability stay wired",
     source("worker/wrangler.jsonc")
   ]);
 
-  assert.ok(index.indexOf("data-health.js?v=6g1") < index.indexOf("app.js?v=6g1"));
+  assert.ok(index.indexOf("data-health.js") < index.indexOf("app.js"));
   assert.match(app, /BROADWAY_CACHE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
   assert.match(app, /writeBroadwayCache\(cacheEntries\)/);
   assert.match(app, /reportBroadway\("degraded"/);

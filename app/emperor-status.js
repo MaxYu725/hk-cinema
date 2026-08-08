@@ -120,7 +120,7 @@
           "degraded",
           catalogue.meta?.cache ? "cache" : "network",
           catalogue,
-          catalogue.meta?.cache ? "部分目錄使用備用資料" : "部分目錄未能更新"
+          `${summary(catalogue)} · ${catalogue.meta?.cache ? "部分目錄使用備用資料" : "部分目錄未能更新"}`
         );
       } else {
         setCardState(
@@ -129,7 +129,7 @@
           "Emperor 已連接",
           `${summary(catalogue)} · ${updatedText(catalogue)}`
         );
-        reportHealth("fresh", "network", catalogue, "完整資料已更新");
+        reportHealth("fresh", "network", catalogue, summary(catalogue));
       }
     } catch (error) {
       if (cached) {
@@ -139,7 +139,7 @@
           "Emperor 使用快取資料",
           `${summary(cached)} · 暫時未能更新`
         );
-        reportHealth("degraded", "cache", cached, "暫時未能更新");
+        reportHealth("degraded", "cache", cached, `${summary(cached)} · 暫時未能更新`);
       } else {
         const message = error?.name === "AbortError"
           ? "Emperor 連線逾時；Broadway 與 MCL 功能不受影響。"
