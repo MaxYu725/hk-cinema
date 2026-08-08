@@ -29,9 +29,11 @@
     }
   });
 
-  let observer = null;
+  let contentObserver = null;
+  let waitingObserver = null;
   let scheduled = false;
   let applying = false;
+  let installed = false;
 
   function contentRoot() {
     return document.querySelector("#providerCompareContent");
@@ -136,9 +138,9 @@
     const bookingUrl = card.getAttribute("href") || "";
     if (bookingUrl) {
       replacement.dataset.bookingUrl = bookingUrl;
-      // Existing Broadway/MCL seat modules read getAttribute("href") from the card.
-      // Keep the URL as inert metadata on the non-link article while the explicit
-      // booking anchor below owns navigation semantics.
+      // Broadway and MCL seat helpers already read getAttribute("href") from
+      // comparison cards. Preserve the URL as inert metadata on this non-link
+      // article while the explicit booking anchor below owns navigation.
       replacement.setAttribute("href", bookingUrl);
     }
 
@@ -269,6 +271,30 @@
     return `目前 ${filters.map(filter => filter.label).join("、")} 沒有相符場次。`;
   }
 
+  function emptyContainer(className) {
+    const empty = document.createElement("div");
+    empty.className = `provider-compare-empty ${className}`.trim();
+    empty.setAttribute("role", "status");
+    empty.setAttribute("aria-live", "polite");
+    return empty;
+  }
+
+  function addEmptyCopy(empty, title, message) {
+    const strong = document.createElement("strong");
+    strong.textContent = title;
+    const span = document.createElement("span");
+    span.textContent = message;
+    empty.append(strong, span);
+  }
+
+  function actionButton(attribute, label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute(attribute, "");
+    button.textContent = label;
+    return button;
+  }
+
   function enhanceFilteredEmpty(root) {
     const timeline = root.querySelector(".provider-compare-timeline");
     if (!timeline) return;
@@ -281,20 +307,16 @@
       return;
     }
 
-    if (!empty) {
-      empty = document.createElement("div");
-      empty.className = "provider-compare-empty phase6m-filter-empty";
-      empty.dataset.phase6mFilterEmpty = "true";
-      empty.setAttribute("role", "status");
-      empty.setAttribute("aria-live", "polite");
-      timeline.insertAdjacentElement("beforebegin", empty);
-    }
+    const message = filteredEmptyText();
+    if (empty?.dataset.message === message) return;
+    empty?.remove();
 
-    empty.innerHTML = `
-      <strong>沒有符合目前篩選的場次</strong>
-      <span>${filteredEmptyText()}</span>
-      <button type="button" data-provider-compare-reset>清除全部篩選</button>
-    `;
+    empty = emptyContainer("phase6m-filter-empty");
+    empty.dataset.phase6mFilterEmpty = "true";
+    empty.dataset.message = message;
+    addEmptyCopy(empty, "沒有符合目前篩選的場次", message);
+    empty.appendChild(actionButton("data-provider-compare-reset", "清除全部篩選"));
+    timeline.insertAdjacentElement("beforebegin", empty);
   }
 
   function enhanceBaseEmpty(root) {
@@ -314,7 +336,7 @@
 
       const actions = document.createElement("div");
       actions.className = "phase6m-empty-actions";
-      actions.innerHTML = `<button type="button" data-provider-compare-retry>重新載入</button>`;
+      actions.appendChild(actionButton("data-provider-compare-retry", "重新載入"));
       empty.appendChild(actions);
     });
   }
@@ -339,13 +361,20 @@
     const section = document.createElement("section");
     section.className = "provider-compare-section phase6m-empty-section";
     section.dataset.phase6mNoDates = "true";
-    section.innerHTML = `
-      <div class="provider-compare-empty">
-        <strong>${errors.length ? "暫未取得可售日期" : "目前沒有可售日期"}</strong>
-        <span>${errors.length ? "部分或全部院線暫時未能更新，已載入的資料仍會保留。" : "院線目前未提供這部電影的可售日期。"}</span>
-        <div class="phase6m-empty-actions"><button type="button" data-provider-compare-retry>重新載入</button></div>
-      </div>
-    `;
+
+    const empty = emptyContainer("");
+    addEmptyCopy(
+      empty,
+      errors.length ? "暫未取得可售日期" : "目前沒有可售日期",
+      errors.length
+        ? "部分或全部院線暫時未能更新，已載入的資料仍會保留。"
+        : "院線目前未提供這部電影的可售日期。"
+    );
+    const actions = document.createElement("div");
+    actions.className = "phase6m-empty-actions";
+    actions.appendChild(actionButton("data-provider-compare-retry", "重新載入"));
+    empty.appendChild(actions);
+    section.appendChild(empty);
     root.appendChild(section);
   }
 
@@ -372,52 +401,69 @@
 
   function openFiltersFromShortcut() {
     const toggle = document.querySelector("#providerCompareContent [data-provider-filter-toggle]");
-    const controls = document.querySelector("#providerCompareContent .provider-compare-controls");
     if (!toggle) return;
     if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
     requestAnimationFrame(() => {
-      const target = document.querySelector("#providerCompareContent .provider-compare-controls") || controls;
-      target?.scrollIntoView?.({ behavior: "smooth", block: "start", inline: "nearest" });
+      document.querySelector("#providerCompareContent .provider-compare-controls")
+        ?.scrollIntoView?.({ behavior: "smooth", block: "start", inline: "nearest" });
     });
   }
 
-  function install() {
-    const root = contentRoot();
-    if (!root) {
-      requestAnimationFrame(install);
+  function handleClick(event) {
+    const clear = event.target.closest?.("[data-phase6m-clear-filter]");
+    if (clear) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearFilter(clear.dataset.phase6mClearFilter);
       return;
     }
 
-    observer = new MutationObserver(() => {
+    const shortcut = event.target.closest?.("[data-phase6m-filter-shortcut]");
+    if (shortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      openFiltersFromShortcut();
+    }
+  }
+
+  function attach(root) {
+    if (!root || root.dataset.phase6mAttached === "true") return;
+    root.dataset.phase6mAttached = "true";
+
+    contentObserver?.disconnect();
+    contentObserver = new MutationObserver(() => {
       if (!applying) schedule();
     });
-    observer.observe(root, {
+    contentObserver.observe(root, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ["hidden", "data-seat-available", "data-seat-total"]
     });
+    schedule();
+  }
 
-    document.addEventListener("click", event => {
-      const clear = event.target.closest?.("[data-phase6m-clear-filter]");
-      if (clear) {
-        event.preventDefault();
-        event.stopPropagation();
-        clearFilter(clear.dataset.phase6mClearFilter);
-        return;
-      }
-
-      const shortcut = event.target.closest?.("[data-phase6m-filter-shortcut]");
-      if (shortcut) {
-        event.preventDefault();
-        event.stopPropagation();
-        openFiltersFromShortcut();
-      }
-    }, true);
-
+  function install() {
+    if (installed) return;
+    installed = true;
+    document.addEventListener("click", handleClick, true);
     window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
     window.addEventListener("hkcinema:compare-seat-summary", schedule);
-    schedule();
+
+    const root = contentRoot();
+    if (root) {
+      attach(root);
+      return;
+    }
+
+    waitingObserver = new MutationObserver(() => {
+      const current = contentRoot();
+      if (!current) return;
+      waitingObserver?.disconnect();
+      waitingObserver = null;
+      attach(current);
+    });
+    waitingObserver.observe(document.body, { childList: true });
   }
 
   window.HKCinemaProviderComparePhase6M = Object.freeze({
