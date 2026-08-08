@@ -1,0 +1,147 @@
+.provider-compare-resilience {
+  margin: 16px 20px 0;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+}
+
+.provider-resilience-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.provider-resilience-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.provider-resilience-heading span {
+  font-size: 11px;
+  letter-spacing: .12em;
+  opacity: .55;
+}
+
+.provider-resilience-heading strong {
+  font-size: 15px;
+}
+
+.provider-resilience-heading small {
+  max-width: 52%;
+  text-align: right;
+  line-height: 1.35;
+  opacity: .68;
+}
+
+.provider-resilience-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.provider-resilience-source {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+}
+
+.provider-resilience-source-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.provider-resilience-source-main strong {
+  font-size: 13px;
+}
+
+.provider-resilience-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255,255,255,.08);
+}
+
+.provider-resilience-source.ready .provider-resilience-badge {
+  background: rgba(79, 209, 140, .14);
+}
+
+.provider-resilience-source.loading .provider-resilience-badge {
+  background: rgba(255, 190, 92, .14);
+}
+
+.provider-resilience-source.error .provider-resilience-badge {
+  background: rgba(255, 102, 102, .14);
+}
+
+.provider-resilience-source small {
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  opacity: .66;
+}
+
+.provider-resilience-source button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.provider-resilience-source button:active {
+  transform: translateY(1px);
+}
+
+.provider-resilience-partial-note {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: .72;
+}
+
+.provider-compare-resilience ~ #providerCompareContent .provider-compare-warning {
+  display: none;
+}
+
+.provider-compare-is-partial .provider-compare-insight-grid,
+.provider-compare-is-partial .provider-compare-recommendations {
+  display: none !important;
+}
+
+.provider-compare-is-partial .provider-compare-insight-note::before {
+  content: "部分院線資料未能更新；以下篩選只套用於目前成功載入的場次。 ";
+}
+
+@media (max-width: 640px) {
+  .provider-compare-resilience {
+    margin: 12px 14px 0;
+    padding: 12px;
+  }
+
+  .provider-resilience-heading {
+    display: grid;
+  }
+
+  .provider-resilience-heading small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .provider-resilience-sources {
+    grid-template-columns: 1fr;
+  }
+}
