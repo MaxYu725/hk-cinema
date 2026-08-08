@@ -264,6 +264,28 @@ function normalizeMovie(movie) {
   };
 }
 
+function normalizePurchase(schedule) {
+  const seatRate = Number(schedule?.seatRate);
+  const soldOut = Number.isFinite(seatRate) && seatRate >= 100;
+  const blocked = schedule?.blockBookingFlag === "Y";
+  const prioritySale = schedule?.prioritySaleFlag === "Y";
+  const priorityAllowed = schedule?.canPurchaseFlag === "Y";
+  const priorityRestricted = prioritySale && !priorityAllowed;
+
+  return {
+    canPurchase: !soldOut && !blocked && !priorityRestricted,
+    scheduleKey: schedule?.scheduleKey || null,
+    freeSeating: schedule?.freeSeatingFlag === "Y",
+    soldOut,
+    blocked,
+    prioritySale,
+    priorityAllowed,
+    rawCanPurchaseFlag: schedule?.canPurchaseFlag || null,
+    rawBlockBookingFlag: schedule?.blockBookingFlag || null,
+    rawPrioritySaleFlag: schedule?.prioritySaleFlag || null
+  };
+}
+
 function normalizeSchedule(group, schedule) {
   const totalSeats = Number(schedule?.hallSeatCount);
   const soldSeats = Number(schedule?.saleCount);
@@ -313,11 +335,7 @@ function normalizeSchedule(group, schedule) {
         ? Number(schedule.seatRate)
         : null
     },
-    purchase: {
-      canPurchase: schedule?.canPurchaseFlag === "Y",
-      scheduleKey: schedule?.scheduleKey || null,
-      freeSeating: schedule?.freeSeatingFlag === "Y"
-    },
+    purchase: normalizePurchase(schedule),
     bookingUrl: schedule?.filmUniqueId
       ? `https://www.emperorcinemas.com/showtimes?wapid=${CHANNEL_CODE}&filmUniqueId=${encodeURIComponent(schedule.filmUniqueId)}`
       : "https://www.emperorcinemas.com/showtimes"
