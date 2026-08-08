@@ -104,6 +104,18 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function metadataValues(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return Array.from(new Set(values
+    .flatMap(item => String(item || "").split(/[、,，/;；]+/))
+    .map(item => item.trim())
+    .filter(Boolean)));
+}
+
+function metadataAttribute(value) {
+  return escapeHtml(JSON.stringify(metadataValues(value)));
+}
+
 function setStatus(type, title, text) {
   const strong =
     elements.systemStatus.querySelector("strong");
@@ -289,6 +301,9 @@ function renderMovieCard(movie) {
       class="movie-card"
       data-movie-id="${escapeHtml(movie.id)}"
       data-source-id="${escapeHtml(movieSourceId)}"
+      data-home-languages="${metadataAttribute(movie.language)}"
+      data-home-formats="${metadataAttribute(movie.formats)}"
+      data-home-release-date="${escapeHtml(movie.releaseDate || "")}"
       role="button"
       tabindex="0"
       aria-label="查看 ${escapeHtml(titleZh)} 詳情"
@@ -922,6 +937,9 @@ function setTab(tab) {
   });
 
   render();
+  window.dispatchEvent(new CustomEvent("hkcinema:home-tab", {
+    detail: { tab }
+  }));
 }
 
 elements.tabs.forEach(button => {

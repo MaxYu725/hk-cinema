@@ -43,6 +43,13 @@ test("home sorting supports provider coverage, titles and recent activity", asyn
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "providers"))[0].title, "A");
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "title"))[0].title, "A");
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "recent"))[0].title, "A");
+
+  const dated = [
+    { title: "Soon", releaseDate: "2026-08-10", defaultOrder: 1 },
+    { title: "New", releaseDate: "2026-08-12", defaultOrder: 2 }
+  ];
+  assert.equal([...dated].sort((a, b) => core.compareItems(a, b, "release-newest"))[0].title, "New");
+  assert.equal([...dated].sort((a, b) => core.compareItems(a, b, "release-soonest"))[0].title, "Soon");
 });
 
 test("language and presentation facets compose across categories", async () => {
@@ -63,6 +70,9 @@ test("language and presentation facets compose across categories", async () => {
     language: new Set(["cantonese"]),
     format: new Set(["imax"])
   }), false);
+
+  const detailLanguages = core.extractFacets(["普通話,英文,泰語"]);
+  assert.deepEqual(Array.from(detailLanguages.language), ["english", "mandarin", "thai"]);
 });
 
 test("Phase 6I search, library and card actions stay wired", async () => {
@@ -74,8 +84,8 @@ test("Phase 6I search, library and card actions stay wired", async () => {
     source("app/home-library.css")
   ]);
 
-  assert.ok(index.indexOf("home-library-core.js?v=6j1") < index.indexOf("home-library.js?v=6j2"));
-  assert.ok(index.indexOf("multi-provider.js?v=6j1") < index.indexOf("home-library-core.js?v=6j1"));
+  assert.ok(index.indexOf("home-library-core.js?v=6k1") < index.indexOf("home-library.js?v=6k1"));
+  assert.ok(index.indexOf("multi-provider.js?v=6k1") < index.indexOf("home-library-core.js?v=6k1"));
   assert.match(app, /data-movie-favorite/);
   assert.match(multiProvider, /providerVisible/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
@@ -84,7 +94,36 @@ test("Phase 6I search, library and card actions stay wired", async () => {
   assert.match(library, /data-home-recent-clear/);
   assert.match(library, /data-home-facet/);
   assert.match(library, /HKCinemaHomeProviderFilters/);
+  assert.match(library, /homeLanguages/);
+  assert.match(library, /data-home-filter-toggle/);
+  assert.match(library, /data-home-region/);
+  assert.match(library, /provider-compare-filters:v1/);
   assert.match(styles, /\.movie-favorite-button/);
+});
+
+test("Phase 6K propagates catalogue and detail metadata into home facets", async () => {
+  const [app, multiProvider, mclDetail, health, style, providerStyle, compare, library] = await Promise.all([
+    source("app/app.js"),
+    source("app/multi-provider.js"),
+    source("app/mcl-detail.js"),
+    source("app/data-health.js"),
+    source("app/home-library.css"),
+    source("app/multi-provider.css"),
+    source("app/provider-compare-v3.js"),
+    source("app/home-library.js")
+  ]);
+
+  assert.match(app, /data-home-languages/);
+  assert.match(app, /data-home-formats/);
+  assert.match(app, /hkcinema:home-tab/);
+  assert.match(multiProvider, /mergeMovieMetadata/);
+  assert.match(multiProvider, /hkcinema:movie-metadata/);
+  assert.match(mclDetail, /reportMovieMetadata/);
+  assert.match(health, /syncRefreshButton/);
+  assert.match(style, /\.home-library-tools\.is-stuck/);
+  assert.match(providerStyle, /\.home-provider-filters\.collapsed/);
+  assert.match(compare, /hkcinema:provider-compare-open/);
+  assert.match(library, /restoreRegionPreferenceToCompare/);
 });
 
 test("Phase 6J removes the temporary hero and moves compact health into the topbar", async () => {

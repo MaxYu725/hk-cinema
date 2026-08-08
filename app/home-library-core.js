@@ -3,10 +3,13 @@
     language: [
       { key: "cantonese", label: "粵語", pattern: /粵語|廣東話|cantonese/i },
       { key: "japanese", label: "日語", pattern: /日語|日本語|japanese/i },
-      { key: "english", label: "英語", pattern: /英語|英文版|english/i },
-      { key: "mandarin", label: "國語", pattern: /國語|普通話|mandarin/i },
+      { key: "english", label: "英語", pattern: /英語|英文(?:版)?|english/i },
+      { key: "mandarin", label: "國語", pattern: /國語|普通話|國語版|mandarin|putonghua/i },
       { key: "korean", label: "韓語", pattern: /韓語|korean/i },
-      { key: "thai", label: "泰語", pattern: /泰語|thai/i }
+      { key: "thai", label: "泰語", pattern: /泰語|thai/i },
+      { key: "french", label: "法語", pattern: /法語|法文|french/i },
+      { key: "spanish", label: "西班牙語", pattern: /西班牙語|西班牙文|spanish/i },
+      { key: "hindi", label: "印地語", pattern: /印地語|印度語|hindi/i }
     ],
     format: [
       { key: "2d", label: "2D", pattern: /2d/i },
@@ -60,6 +63,14 @@
     }
 
     if (mode === "title") return titleCompare;
+    if (mode === "release-newest") {
+      return String(right.releaseDate || "0000-00-00")
+        .localeCompare(String(left.releaseDate || "0000-00-00")) || titleCompare;
+    }
+    if (mode === "release-soonest") {
+      return String(left.releaseDate || "9999-12-31")
+        .localeCompare(String(right.releaseDate || "9999-12-31")) || titleCompare;
+    }
     if (mode === "recent") {
       return (Number(right.lastViewedAt) - Number(left.lastViewedAt)) || titleCompare;
     }

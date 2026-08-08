@@ -58,6 +58,50 @@
       .replaceAll("'", "&#039;");
   }
 
+  function metadataValues(value) {
+    let source = value;
+    if (typeof source === "string" && source.trim().startsWith("[")) {
+      try {
+        source = JSON.parse(source);
+      } catch {
+        source = [source];
+      }
+    }
+    const values = Array.isArray(source) ? source : [source];
+    return Array.from(new Set(values
+      .flatMap(item => String(item || "").split(/[、,，/;；]+/))
+      .map(item => item.trim())
+      .filter(Boolean)));
+  }
+
+  function metadataAttribute(value) {
+    return escapeHtml(JSON.stringify(metadataValues(value)));
+  }
+
+  function readCardMetadata(card, key) {
+    return metadataValues(card?.dataset?.[key] || []);
+  }
+
+  function writeCardMetadata(card, key, values) {
+    if (!card) return;
+    card.dataset[key] = JSON.stringify(metadataValues(values));
+  }
+
+  function mergeMovieMetadata(card, movie) {
+    if (!card || !movie) return;
+    writeCardMetadata(card, "homeLanguages", [
+      ...readCardMetadata(card, "homeLanguages"),
+      ...metadataValues(movie.language)
+    ]);
+    writeCardMetadata(card, "homeFormats", [
+      ...readCardMetadata(card, "homeFormats"),
+      ...metadataValues(movie.formats || movie.format)
+    ]);
+    if (!card.dataset.homeReleaseDate && movie.releaseDate) {
+      card.dataset.homeReleaseDate = String(movie.releaseDate).slice(0, 10);
+    }
+  }
+
   function normalizeTitle(value) {
     return window.HKCinemaHomeDiscoveryCore.normalizeTitle(value);
   }
@@ -153,6 +197,7 @@
         <div>
           <span data-home-filter-result>全部條件</span>
           <button type="button" data-home-filter-reset hidden>重設</button>
+          <button type="button" class="home-filter-toggle" data-home-filter-toggle aria-expanded="true">收起</button>
         </div>
       </div>
       <div class="home-filter-row">
@@ -305,6 +350,9 @@
         data-provider="${provider}"
         data-source-id="${escapeHtml(movie.sourceId)}"
         data-booking-url="${escapeHtml(movie.bookingUrl || "")}"
+        data-home-languages="${metadataAttribute(movie.language)}"
+        data-home-formats="${metadataAttribute(movie.formats || movie.format)}"
+        data-home-release-date="${escapeHtml(movie.releaseDate || "")}"
         ${openAttr}
         role="button"
         tabindex="0"
@@ -566,6 +614,9 @@
       title,
       parsed,
       tags: parsed.tags,
+      languages: readCardMetadata(card, "homeLanguages"),
+      formats: readCardMetadata(card, "homeFormats"),
+      releaseDate: String(card.dataset.homeReleaseDate || ""),
       providers: cardProviders(card),
       broadwaySourceId: providerData.broadwaySourceId || null,
       mclSourceId: providerData.mclSourceId || null,
@@ -624,6 +675,9 @@
         bySignature.set(signature, {
           title: variant.title,
           tags: [...variant.tags],
+          languages: [...variant.languages],
+          formats: [...variant.formats],
+          releaseDate: variant.releaseDate || null,
           providers: [],
           broadwaySourceId: null,
           mclSourceId: null,
@@ -644,6 +698,9 @@
       }
       if (!combined.poster && variant.poster) combined.poster = variant.poster;
       if (!combined.matchId && variant.matchId) combined.matchId = variant.matchId;
+      combined.languages = Array.from(new Set([...combined.languages, ...variant.languages]));
+      combined.formats = Array.from(new Set([...combined.formats, ...variant.formats]));
+      if (!combined.releaseDate && variant.releaseDate) combined.releaseDate = variant.releaseDate;
       combined.providers = PROVIDER_OPTIONS
         .filter(provider => Boolean(combined[`${provider.key}SourceId`]))
         .map(provider => provider.label);
@@ -684,6 +741,9 @@
         .map(provider => provider.label);
       const tags = Array.from(new Set(variants.flatMap(variant => variant.tags)));
       const groupedVariants = coalesceVariants(groupId, title, variants);
+      const groupedLanguages = Array.from(new Set(variants.flatMap(variant => variant.languages)));
+      const groupedFormats = Array.from(new Set(variants.flatMap(variant => variant.formats)));
+      const groupedReleaseDates = variants.map(variant => variant.releaseDate).filter(Boolean).sort();
 
       groupRecords.set(groupId, {
         id: groupId,
@@ -703,6 +763,11 @@
       primary.card.dataset.movieGroupId = groupId;
       primary.card.classList.add("movie-group-card");
       primary.card.setAttribute("aria-label", `查看 ${title} 的 ${groupedVariants.length} 個版本`);
+      writeCardMetadata(primary.card, "homeLanguages", groupedLanguages);
+      writeCardMetadata(primary.card, "homeFormats", groupedFormats);
+      primary.card.dataset.homeReleaseDate = getActiveTab() === "coming"
+        ? groupedReleaseDates[0] || ""
+        : groupedReleaseDates.at(-1) || "";
       setCardProviders(primary.card, providerLabels);
 
       const info = primary.card.querySelector(".movie-info");
@@ -755,6 +820,7 @@
         const matchingCard = byTitle.get(key);
         if (matchingCard) {
           matchingCard.dataset.mclSourceId = movie.sourceId;
+          mergeMovieMetadata(matchingCard, movie);
           continue;
         }
 
@@ -770,6 +836,7 @@
         const matchingCard = byTitle.get(key);
         if (matchingCard) {
           matchingCard.dataset.emperorSourceId = movie.sourceId;
+          mergeMovieMetadata(matchingCard, movie);
           continue;
         }
 
@@ -831,6 +898,32 @@
   window.addEventListener("hkcinema:emperor-catalogue", event => {
     emperorCatalogue = event.detail;
     applyCatalogue();
+  });
+
+  window.addEventListener("hkcinema:movie-metadata", event => {
+    const detail = event.detail || {};
+    const sourceId = String(detail.sourceId || "");
+    if (!sourceId) return;
+    const sourceKey = `${detail.provider || ""}SourceId`;
+    for (const card of grid.querySelectorAll(".movie-card")) {
+      const directSource = card.dataset.sourceId === sourceId && card.dataset.provider === detail.provider;
+      const matchedSource = card.dataset[sourceKey] === sourceId;
+      if (!directSource && !matchedSource) continue;
+      mergeMovieMetadata(card, {
+        language: detail.languages,
+        formats: detail.formats,
+        releaseDate: detail.releaseDate
+      });
+      if (card.dataset.groupMemberOf) {
+        const primary = grid.querySelector(`[data-movie-group-id='${CSS.escape(card.dataset.groupMemberOf)}']`);
+        mergeMovieMetadata(primary, {
+          language: detail.languages,
+          formats: detail.formats,
+          releaseDate: detail.releaseDate
+        });
+      }
+    }
+    window.HKCinemaHomeLibrary?.apply?.();
   });
 
   document.addEventListener("click", event => {

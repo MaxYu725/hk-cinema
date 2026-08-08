@@ -669,6 +669,9 @@
     const match = getMatch(matchId);
     if (!match || activeProviders(match).length < 2) return false;
     loadInitial(match);
+    window.dispatchEvent(new CustomEvent("hkcinema:provider-compare-open", {
+      detail: { matchId }
+    }));
     return true;
   }
 

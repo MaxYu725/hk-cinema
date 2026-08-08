@@ -120,6 +120,37 @@ button {
   transform: scale(0.96);
 }
 
+.icon-button:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.icon-button.is-loading {
+  animation: refresh-spin .85s linear infinite;
+}
+
+.icon-button.is-complete {
+  position: relative;
+  border-color: rgba(47,157,98,.2);
+  background: #e7f7ef;
+  color: transparent;
+}
+
+.icon-button.is-complete::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #23734a;
+  content: "✓";
+  font-size: 18px;
+  font-weight: 800;
+}
+
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 .tabs {
   display: flex;
   gap: 8px;
@@ -268,14 +299,22 @@ button {
 }
 
 .movie-info {
+  display: flex;
+  min-height: 126px;
   padding: 13px;
+  flex-direction: column;
 }
 
 .movie-info h3 {
+  display: -webkit-box;
+  min-height: 40px;
   margin: 0;
+  overflow: hidden;
 
   font-size: 15px;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .movie-info p {
@@ -388,6 +427,11 @@ footer {
   -webkit-box-orient: vertical;
 
   overflow: hidden;
+}
+
+.movie-info .provider-badges {
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .movie-meta {

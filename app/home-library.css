@@ -195,9 +195,23 @@
 
 @media (max-width: 640px) {
   .home-library-tools {
+    position: sticky;
+    z-index: 48;
+    top: max(8px, env(safe-area-inset-top));
     gap: 8px;
     margin-bottom: 10px;
     padding: 10px;
+    transition: box-shadow .18s ease, border-color .18s ease;
+  }
+
+  .home-library-tools.is-stuck {
+    border-color: rgba(23,25,29,.14);
+    box-shadow: 0 12px 28px rgba(20,25,30,.14);
+  }
+
+  .home-library-tools.is-stuck .home-library-filter-options,
+  .home-library-tools.is-stuck .home-library-footer {
+    display: none;
   }
 
   .home-library-primary {
