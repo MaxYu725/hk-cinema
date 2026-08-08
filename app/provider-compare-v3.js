@@ -511,7 +511,7 @@
           ? `<div class="provider-compare-timeline">${sessions.map(renderTimelineItem).join("")}</div>`
           : `<div class="provider-compare-empty"><strong>這一天暫時沒有可比較場次</strong><span>可選擇其他日期，或稍後重新載入。</span></div>`}
         <p class="provider-compare-note">
-          場次按時間排序；票價顯示各院線目前提供的標準／成人場次價格。點場次會前往所屬院線官方購票頁。Emperor 座位為總座位與已售數推算，MCL 仍會在接近畫面時 lazy loading SeatPlan。
+          場次按時間排序；票價顯示各院線目前提供的標準／成人場次價格。座位數字會在資料齊全時開啟所屬院線唯讀座位圖，其餘位置則前往官方購票頁；MCL 摘要仍會在接近畫面時自動更新。
         </p>
       </section>
     `;

@@ -13,6 +13,10 @@
   display: none;
 }
 
+.mcl-seatmap-panel:focus-within {
+  border-color: #c9ced6;
+}
+
 .mcl-seatmap-heading,
 .mcl-seatmap-footer {
   display: flex;
@@ -33,6 +37,10 @@
   font-size: 1.05rem;
 }
 
+.mcl-seatmap-heading .eyebrow {
+  margin: 0 0 3px;
+}
+
 .mcl-seatmap-heading span,
 .mcl-seatmap-footer p,
 .mcl-seatmap-loading span {
@@ -48,6 +56,13 @@
   background: #f0f2f5;
   font: inherit;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.mcl-seatmap-close:focus-visible,
+.mcl-seatmap-stage:focus-visible {
+  outline: 3px solid rgba(35, 111, 71, .28);
+  outline-offset: 2px;
 }
 
 .mcl-seat-legend {
@@ -125,6 +140,11 @@
   padding: 4px 0 12px;
 }
 
+.mcl-seatmap-viewport {
+  position: relative;
+  min-width: 0;
+}
+
 .mcl-seatmap-stage.is-scrollable {
   overflow-x: auto;
   overflow-y: hidden;
@@ -141,6 +161,7 @@
 
 .mcl-seat-screen {
   box-sizing: border-box;
+  min-height: 30px;
   margin: 0 auto 14px;
   padding: 7px 12px;
   border-radius: 50% 50% 8px 8px / 100% 100% 8px 8px;
@@ -149,6 +170,31 @@
   color: #707680;
   font-size: .8rem;
   letter-spacing: .15em;
+}
+
+.mcl-seatmap-fixed-rows {
+  position: absolute;
+  inset: 0 auto 12px 0;
+  z-index: 4;
+  width: 26px;
+  pointer-events: none;
+  background: linear-gradient(90deg, #fff 72%, rgba(255, 255, 255, 0));
+}
+
+.mcl-seatmap-fixed-row {
+  position: absolute;
+  left: 0;
+  width: 20px;
+  transform: translateY(-50%);
+  color: #737984;
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
+.mcl-seatmap-stage.is-scrollable .mcl-seat-cell.label {
+  visibility: hidden;
 }
 
 .mcl-seat-areas {
@@ -239,6 +285,23 @@
 
 .mcl-seatmap-loading.error .detail-action {
   margin-top: 8px;
+}
+
+.mcl-seatmap-loading.error strong {
+  color: #954343;
+}
+
+.mcl-seatmap-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mcl-seatmap-error-actions .detail-action {
+  margin-top: 0;
 }
 
 /* Legacy parser fallback only. */
