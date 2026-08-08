@@ -363,6 +363,7 @@
     section.dataset.phase6mNoDates = "true";
 
     const empty = emptyContainer("");
+    empty.dataset.phase6mEmpty = "true";
     addEmptyCopy(
       empty,
       errors.length ? "暫未取得可售日期" : "目前沒有可售日期",
