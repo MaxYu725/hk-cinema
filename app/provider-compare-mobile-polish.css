@@ -148,6 +148,7 @@
 
   .provider-compare-reset {
     top: calc(20px + env(safe-area-inset-top));
+    min-height: 42px;
   }
 
   .provider-compare-hero {
@@ -172,6 +173,14 @@
     padding: 11px 13px;
   }
 
+  .provider-compare-control-group button {
+    min-height: 40px;
+  }
+
+  .provider-compare-cinema-control select {
+    min-height: 46px;
+  }
+
   .provider-compare-section {
     margin-top: 14px;
   }
@@ -191,15 +200,15 @@
   }
 
   .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-sources {
-    gap: 4px;
+    gap: 5px;
   }
 
   .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main strong {
-    display: none;
+    font-size: .68rem;
   }
 
-  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge::before {
-    content: attr(data-provider-label);
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge {
+    padding-inline: 6px;
   }
 }
 
@@ -212,7 +221,12 @@
     font-size: .79rem;
   }
 
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main {
+    gap: 3px;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main strong,
   .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge {
-    padding-inline: 6px;
+    font-size: .62rem;
   }
 }
