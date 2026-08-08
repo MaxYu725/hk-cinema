@@ -70,7 +70,8 @@
   gap: 6px;
 }
 
-.provider-compare-control-group > span {
+.provider-compare-control-group > span,
+.provider-compare-cinema-control > span {
   margin-right: 2px;
   color: #747a83;
   font-size: .68rem;
@@ -97,9 +98,32 @@
   color: #fff;
 }
 
-.provider-compare-control-group button:focus-visible {
+.provider-compare-control-group button:focus-visible,
+.provider-compare-cinema-control select:focus-visible {
   outline: 3px solid rgba(23, 25, 29, .18);
   outline-offset: 2px;
+}
+
+.provider-compare-cinema-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.provider-compare-cinema-control select {
+  appearance: auto;
+  min-width: 0;
+  width: min(100%, 420px);
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #dfe2e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #353a42;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 700;
 }
 
 .provider-compare-insight-note {
@@ -148,7 +172,19 @@
     gap: 9px;
   }
 
-  .provider-compare-control-group {
+  .provider-compare-control-group,
+  .provider-compare-cinema-control {
     width: 100%;
+  }
+
+  .provider-compare-cinema-control {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .provider-compare-cinema-control select {
+    width: 100%;
+    max-width: none;
   }
 }
