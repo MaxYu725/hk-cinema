@@ -1,0 +1,382 @@
+/* Phase 6M: final mobile interaction, edge-case and long-list polish. */
+
+.provider-compare-hero img {
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+.provider-compare-show.phase6m-show-card {
+  color: inherit;
+  text-decoration: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 68px;
+  cursor: default;
+}
+
+.provider-compare-show-actions {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.provider-compare-show-actions .provider-compare-show-price {
+  width: 100%;
+  text-align: center;
+}
+
+.provider-compare-booking {
+  display: inline-flex;
+  min-height: 32px;
+  padding: 5px 7px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfd4da;
+  border-radius: 9px;
+  background: #fff;
+  color: #252a31;
+  font-size: .59rem;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.provider-compare-booking:hover,
+.provider-compare-booking:focus-visible {
+  border-color: #9ca4ae;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(65, 74, 86, .12);
+}
+
+.provider-compare-seat.seatmap-launch {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 30px;
+  padding: 4px 7px;
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.provider-compare-seat.seatmap-launch:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.phase6m-active-filters {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  margin-top: 7px;
+}
+
+.phase6m-active-filter-count {
+  color: #686f78;
+  font-size: .6rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.phase6m-active-filter-chips {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 1px 1px 3px;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.phase6m-active-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.phase6m-filter-chip {
+  appearance: none;
+  min-height: 30px;
+  padding: 5px 9px;
+  flex: 0 0 auto;
+  border: 1px solid #cfd4da;
+  border-radius: 999px;
+  background: #f7f8fa;
+  color: #343941;
+  font: inherit;
+  font-size: .6rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.phase6m-filter-chip:focus-visible {
+  outline: 2px solid #69717c;
+  outline-offset: 2px;
+}
+
+.phase6m-filter-shortcut {
+  display: none;
+  appearance: none;
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid #d7dbe0;
+  border-radius: 11px;
+  background: #fff;
+  color: #343941;
+  font: inherit;
+  font-size: .62rem;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.phase6m-filter-shortcut.active {
+  border-color: #7d8793;
+  background: #eef1f4;
+}
+
+.provider-compare-insight.phase6m-missing {
+  background: #f6f7f8;
+}
+
+.provider-compare-insight.phase6m-missing strong,
+.provider-compare-insight.phase6m-missing small {
+  color: #8a9098;
+}
+
+.phase6m-filter-empty {
+  min-height: 92px;
+  margin: 0 0 8px;
+}
+
+.phase6m-filter-empty button,
+.phase6m-empty-actions button {
+  appearance: none;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #d3d8de;
+  border-radius: 10px;
+  background: #fff;
+  color: #353a42;
+  font: inherit;
+  font-size: .64rem;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.phase6m-filter-empty button {
+  margin-top: 8px;
+}
+
+.phase6m-empty-context {
+  margin-top: 5px;
+  color: #767d86;
+}
+
+.phase6m-empty-actions {
+  display: flex;
+  margin-top: 9px;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.phase6m-empty-section {
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  .provider-compare-sheet {
+    scroll-padding-top: calc(62px + env(safe-area-inset-top));
+  }
+
+  /* Keep date switching immediately available on long showtime lists. The
+     compact filter shortcut shares the same rail rather than pinning a second
+     full toolbar and consuming another row of screen height. */
+  .provider-compare-date-rail {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    margin: -6px -5px 0;
+    padding: 6px 48px 6px 5px;
+    border-bottom: 1px solid rgba(218, 222, 227, .9);
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 6px 14px rgba(24, 28, 34, .055);
+    backdrop-filter: blur(10px);
+  }
+
+  .phase6m-filter-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .provider-compare-controls {
+    scroll-margin-top: calc(64px + env(safe-area-inset-top));
+  }
+
+  .phase6m-active-filters {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .phase6m-active-filter-count {
+    padding-left: 2px;
+  }
+
+  .phase6m-filter-chip {
+    min-height: 34px;
+    padding-inline: 10px;
+  }
+
+  .provider-compare-show.phase6m-show-card {
+    grid-template-columns: 48px minmax(0, 1fr) 52px;
+  }
+
+  .provider-compare-booking {
+    min-height: 36px;
+  }
+
+  .provider-compare-seat.seatmap-launch {
+    min-height: 34px;
+  }
+}
+
+@media (max-width: 390px) {
+  .provider-compare-date-rail {
+    padding-right: 46px;
+  }
+
+  .provider-compare-filter-toggle strong {
+    max-width: none;
+  }
+
+  .provider-compare-show.phase6m-show-card {
+    grid-template-columns: 45px minmax(0, 1fr) 50px;
+  }
+}
+
+@media (max-width: 360px) {
+  .provider-compare-date-rail {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 44px;
+  }
+
+  .provider-compare-date-label {
+    display: none;
+  }
+
+  .provider-compare-date {
+    min-width: 80px;
+    padding-inline: 7px;
+  }
+
+  .phase6m-filter-shortcut {
+    min-width: 48px;
+    padding-inline: 7px;
+  }
+
+  .provider-compare-show.phase6m-show-card {
+    grid-template-columns: 42px minmax(0, 1fr) 48px;
+    gap: 5px;
+    padding: 8px 7px;
+  }
+
+  .provider-compare-show-topline {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .provider-compare-show-topline strong {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .provider-compare-show-main p {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .provider-compare-show-time {
+    font-size: .82rem;
+  }
+
+  .provider-compare-show-actions {
+    gap: 4px;
+  }
+
+  .provider-compare-booking {
+    min-height: 34px;
+    padding-inline: 5px;
+  }
+
+  .provider-compare-filter-bar {
+    grid-template-columns: minmax(0, 1fr) 54px;
+  }
+
+  .provider-compare-filter-toggle {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+
+  .provider-compare-filter-toggle strong {
+    font-size: .6rem;
+  }
+}
+
+@media (max-width: 330px) {
+  .provider-compare-sheet {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .provider-compare-section {
+    padding-inline: 7px;
+  }
+
+  .provider-compare-date-rail {
+    margin-inline: -3px;
+    padding-right: 42px;
+  }
+
+  .provider-compare-date {
+    min-width: 76px;
+  }
+
+  .provider-compare-insight {
+    padding: 8px;
+  }
+
+  .provider-compare-insight strong {
+    font-size: 1rem;
+  }
+
+  .provider-compare-show.phase6m-show-card {
+    grid-template-columns: 40px minmax(0, 1fr) 46px;
+  }
+
+  .provider-compare-source {
+    padding-inline: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .provider-compare-controls,
+  .provider-compare-date-rail {
+    scroll-behavior: auto;
+  }
+}

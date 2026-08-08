@@ -6,21 +6,46 @@ on:
       - main
     paths:
       - "app/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/pages.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "tests/**"
+      - "package.json"
       - ".github/workflows/pages.yml"
 
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.event_name }}-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        run: npm test
+
   deploy:
+    if: github.event_name != 'pull_request'
+    needs: test
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
