@@ -297,6 +297,15 @@ function renderMovieCard(movie) {
         ${poster}
         ${badge}
 
+        <button
+          type="button"
+          class="movie-favorite-button"
+          data-movie-favorite
+          aria-label="收藏${escapeHtml(titleZh)}"
+          aria-pressed="false"
+          title="收藏"
+        ></button>
+
         <div class="poster-placeholder">
           HK Cinema
         </div>
