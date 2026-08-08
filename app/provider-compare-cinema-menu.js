@@ -96,9 +96,9 @@
 
     const option = event.target.closest?.("[data-cinema-portal-value]");
     if (option) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
+      // Do not cancel pointerdown here. On Android/Edge, preventing the
+      // pointerdown suppresses the following click, so the option only
+      // appears pressed without applying the cinema selection.
       return;
     }
 
