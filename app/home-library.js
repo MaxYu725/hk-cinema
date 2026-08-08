@@ -14,7 +14,11 @@
   const state = {
     query: "",
     view: "all",
-    sort: loadSort()
+    sort: loadSort(),
+    facets: {
+      language: new Set(),
+      format: new Set()
+    }
   };
   let favorites = loadRecords(FAVORITES_KEY, "favoritedAt");
   let recent = loadRecords(RECENT_KEY, "lastViewedAt");
@@ -115,7 +119,31 @@
     `;
     heading.insertAdjacentElement("afterend", tools);
     tools.querySelector("[data-home-movie-sort]").value = state.sort;
+    ensureFacetFilters();
     return tools;
+  }
+
+  function ensureFacetFilters() {
+    const filters = document.querySelector("#homeProviderFilters");
+    if (!filters || filters.querySelector("[data-home-facet-category]")) return filters;
+
+    const labels = { language: "語言", format: "版本" };
+    for (const [category, definitions] of Object.entries(core.facetDefinitions)) {
+      filters.insertAdjacentHTML("beforeend", `
+        <div class="home-filter-row" data-home-facet-category="${category}">
+          <span class="home-filter-row-label">${labels[category]}</span>
+          <div class="home-facet-filter-options" role="group" aria-label="選擇${labels[category]}">
+            <button type="button" data-home-facet="${category}" data-home-facet-value="all" aria-pressed="true">全部</button>
+            ${definitions.map(definition => `
+              <button type="button" data-home-facet="${category}" data-home-facet-value="${definition.key}" aria-pressed="false">
+                ${definition.label} <span data-facet-count="${category}:${definition.key}">0</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `);
+    }
+    return filters;
   }
 
   function currentCards() {
@@ -157,6 +185,52 @@
 
   function providerKeys(card) {
     return String(card.dataset.providers || "").split(",").filter(Boolean);
+  }
+
+  function facetSelectionsEmpty() {
+    return Object.values(state.facets).every(values => values.size === 0);
+  }
+
+  function syncFacetFilters(items, visibleCount) {
+    const filters = ensureFacetFilters();
+    if (!filters) return;
+    const providerSelected = window.HKCinemaHomeProviderFilters?.selected?.() || [];
+    const activeLabels = [];
+
+    for (const [category, definitions] of Object.entries(core.facetDefinitions)) {
+      const selected = state.facets[category];
+      const otherCategory = category === "language" ? "format" : "language";
+      const countBase = items.filter(item => (
+        item.card.dataset.providerVisible !== "false" &&
+        core.searchMatches(item.searchValues, state.query) &&
+        viewMatches(item.key) &&
+        (!state.facets[otherCategory].size || item.facets[otherCategory].some(value => state.facets[otherCategory].has(value)))
+      ));
+
+      filters.querySelectorAll(`[data-home-facet='${category}']`).forEach(button => {
+        const value = button.dataset.homeFacetValue;
+        const active = value === "all" ? selected.size === 0 : selected.has(value);
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+
+      for (const definition of definitions) {
+        const facetCount = countBase.filter(item => item.facets[category].includes(definition.key)).length;
+        filters.querySelector(`[data-facet-count='${category}:${definition.key}']`)?.replaceChildren(String(facetCount));
+        const button = filters.querySelector(`[data-home-facet='${category}'][data-home-facet-value='${definition.key}']`);
+        if (button) button.hidden = facetCount === 0 && !selected.has(definition.key);
+        if (selected.has(definition.key)) activeLabels.push(definition.label);
+      }
+    }
+
+    const providerLabels = providerSelected.map(value => (
+      value === "broadway" ? "Broadway" : value === "mcl" ? "MCL" : value === "emperor" ? "Emperor" : value
+    ));
+    const result = filters.querySelector("[data-home-filter-result]");
+    const labels = [...providerLabels, ...activeLabels];
+    if (result) result.textContent = `${labels.length ? labels.join(" + ") : "全部條件"} · ${visibleCount} 部`;
+    const reset = filters.querySelector("[data-home-filter-reset]");
+    if (reset) reset.hidden = providerSelected.length === 0 && facetSelectionsEmpty();
   }
 
   function syncFavoriteButton(card, key) {
@@ -217,10 +291,13 @@
       if (!card.dataset.homeDefaultOrder) card.dataset.homeDefaultOrder = String(index + 1);
       const key = cardKey(card);
       syncFavoriteButton(card, key);
+      const searchValues = cardSearchValues(card);
       return {
         card,
         key,
         title: cardTitle(card),
+        searchValues,
+        facets: core.extractFacets(searchValues),
         providerCount: providerKeys(card).length,
         defaultOrder: Number(card.dataset.homeDefaultOrder),
         favoritedAt: favorites.get(key)?.favoritedAt || 0,
@@ -229,7 +306,9 @@
     });
     const providerCandidates = items.filter(item => item.card.dataset.providerVisible !== "false");
     const visible = providerCandidates.filter(item => (
-      core.searchMatches(cardSearchValues(item.card), state.query) && viewMatches(item.key)
+      core.searchMatches(item.searchValues, state.query) &&
+      viewMatches(item.key) &&
+      core.facetMatches(item.facets, state.facets)
     ));
     const visibleKeys = new Set(visible.map(item => item.key));
 
@@ -268,6 +347,7 @@
     }
     const clearRecent = tools.querySelector("[data-home-recent-clear]");
     if (clearRecent) clearRecent.hidden = state.view !== "recent" || recentCount === 0;
+    syncFacetFilters(items, visible.length);
 
     count.textContent = `${visible.length} 部`;
     renderEmpty(providerCandidates, visible);
@@ -320,6 +400,7 @@
         query: state.query,
         view: state.view,
         sort: state.sort,
+        facets: Object.fromEntries(Object.entries(state.facets).map(([category, values]) => [category, Array.from(values)])),
         favorites: Array.from(favorites.values()),
         recent: Array.from(recent.values())
       };
@@ -369,6 +450,30 @@
       event.preventDefault();
       state.view = viewButton.dataset.homeLibraryView;
       apply();
+      return;
+    }
+
+    const facetButton = event.target.closest?.("[data-home-facet]");
+    if (facetButton) {
+      event.preventDefault();
+      const category = facetButton.dataset.homeFacet;
+      const value = facetButton.dataset.homeFacetValue;
+      if (!state.facets[category]) return;
+      if (value === "all") state.facets[category].clear();
+      else if (state.facets[category].has(value)) state.facets[category].delete(value);
+      else state.facets[category].add(value);
+      apply();
+      return;
+    }
+
+    if (event.target.closest?.("[data-home-filter-reset]")) {
+      event.preventDefault();
+      Object.values(state.facets).forEach(values => values.clear());
+      window.HKCinemaHomeProviderFilters?.clear?.();
+      apply();
+      document.querySelectorAll(".home-provider-filter-options, .home-facet-filter-options").forEach(options => {
+        options.scrollTo({ left: 0, behavior: "smooth" });
+      });
       return;
     }
 

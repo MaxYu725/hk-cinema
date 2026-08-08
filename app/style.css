@@ -59,16 +59,15 @@ button {
 
 .topbar {
   min-height: 72px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  gap: 20px;
+  gap: 14px;
+  position: relative;
+  z-index: 60;
 }
 
 .topbar h1,
-.hero h2,
 .section-heading h2 {
   margin: 0;
 }
@@ -77,6 +76,17 @@ button {
   margin-top: 2px;
   font-size: 26px;
   line-height: 1.1;
+}
+
+.topbar-brand {
+  min-width: 0;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
 }
 
 .eyebrow {
@@ -90,8 +100,9 @@ button {
 }
 
 .icon-button {
-  width: 44px;
-  height: 44px;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
 
   border: 1px solid var(--border);
   border-radius: 50%;
@@ -101,57 +112,19 @@ button {
 
   cursor: pointer;
 
-  box-shadow: var(--shadow);
-
-  font-size: 24px;
+  box-shadow: 0 5px 18px rgba(20, 25, 30, 0.07);
+  font-size: 22px;
 }
 
 .icon-button:active {
   transform: scale(0.96);
 }
 
-.hero {
-  margin-top: 30px;
-  padding: 32px;
-
-  border-radius: var(--radius-large);
-
-  background:
-    linear-gradient(
-      145deg,
-      #17191d 0%,
-      #292d34 100%
-    );
-
-  color: white;
-
-  box-shadow: var(--shadow);
-}
-
-.hero h2 {
-  font-size: clamp(30px, 7vw, 48px);
-  line-height: 1.1;
-}
-
-.hero p {
-  max-width: 580px;
-
-  margin:
-    14px
-    0
-    0;
-
-  color: rgba(255, 255, 255, 0.72);
-
-  font-size: 15px;
-  line-height: 1.65;
-}
-
 .tabs {
   display: flex;
   gap: 8px;
 
-  margin-top: 22px;
+  margin-top: 12px;
   padding: 5px;
 
   background: var(--surface-soft);

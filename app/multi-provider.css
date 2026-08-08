@@ -68,6 +68,12 @@
   margin-bottom: 9px;
 }
 
+.home-provider-filter-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .home-provider-filter-heading strong {
   font-size: 13px;
 }
@@ -77,13 +83,48 @@
   font-size: 11px;
 }
 
+.home-provider-filter-heading button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8c4a55;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.home-filter-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.home-filter-row + .home-filter-row {
+  margin-top: 8px;
+}
+
+.home-filter-row-label {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
 .home-provider-filter-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
 }
 
-.home-provider-filter-options button {
+.home-facet-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.home-provider-filter-options button,
+.home-facet-filter-options button {
   min-width: 0;
   padding: 9px 8px;
   border: 1px solid transparent;
@@ -96,13 +137,15 @@
   white-space: nowrap;
 }
 
-.home-provider-filter-options button span {
+.home-provider-filter-options button span,
+.home-facet-filter-options button span {
   margin-left: 3px;
   opacity: .58;
   font-size: 10px;
 }
 
-.home-provider-filter-options button.active {
+.home-provider-filter-options button.active,
+.home-facet-filter-options button.active {
   border-color: rgba(23,25,29,.12);
   background: var(--accent);
   color: #fff;
@@ -300,23 +343,8 @@ body.movie-group-open {
     min-height: 60px;
   }
 
-  .hero {
-    margin-top: 16px;
-    padding: 24px;
-  }
-
-  .hero h2 {
-    font-size: 34px;
-  }
-
-  .hero p {
-    margin-top: 10px;
-    font-size: 13px;
-    line-height: 1.55;
-  }
-
   .tabs {
-    margin-top: 14px;
+    margin-top: 8px;
   }
 
   .section-heading {
@@ -330,17 +358,23 @@ body.movie-group-open {
 
   .home-provider-filter-options {
     display: flex;
-    margin-right: -10px;
-    padding-right: 10px;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  .home-provider-filter-options::-webkit-scrollbar {
+  .home-facet-filter-options {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .home-provider-filter-options::-webkit-scrollbar,
+  .home-facet-filter-options::-webkit-scrollbar {
     display: none;
   }
 
-  .home-provider-filter-options button {
+  .home-provider-filter-options button,
+  .home-facet-filter-options button {
     flex: 0 0 auto;
     min-width: 76px;
   }

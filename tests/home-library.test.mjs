@@ -45,6 +45,26 @@ test("home sorting supports provider coverage, titles and recent activity", asyn
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "recent"))[0].title, "A");
 });
 
+test("language and presentation facets compose across categories", async () => {
+  const core = await loadCore();
+  const facets = core.extractFacets([
+    "劇場版 CHIIKAWA 人魚島的秘密（日語版）",
+    "IMAX2D with Laser"
+  ]);
+
+  assert.deepEqual(Array.from(facets.language), ["japanese"]);
+  assert.ok(facets.format.includes("2d"));
+  assert.ok(facets.format.includes("imax"));
+  assert.equal(core.facetMatches(facets, {
+    language: new Set(["japanese"]),
+    format: new Set(["imax"])
+  }), true);
+  assert.equal(core.facetMatches(facets, {
+    language: new Set(["cantonese"]),
+    format: new Set(["imax"])
+  }), false);
+});
+
 test("Phase 6I search, library and card actions stay wired", async () => {
   const [index, app, multiProvider, library, styles] = await Promise.all([
     source("app/index.html"),
@@ -54,13 +74,31 @@ test("Phase 6I search, library and card actions stay wired", async () => {
     source("app/home-library.css")
   ]);
 
-  assert.ok(index.indexOf("home-library-core.js?v=6i1") < index.indexOf("home-library.js?v=6i3"));
-  assert.ok(index.indexOf("multi-provider.js?v=6i1") < index.indexOf("home-library-core.js?v=6i1"));
+  assert.ok(index.indexOf("home-library-core.js?v=6j1") < index.indexOf("home-library.js?v=6j2"));
+  assert.ok(index.indexOf("multi-provider.js?v=6j1") < index.indexOf("home-library-core.js?v=6j1"));
   assert.match(app, /data-movie-favorite/);
   assert.match(multiProvider, /providerVisible/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
   assert.match(library, /data-home-movie-search/);
   assert.match(library, /data-home-library-view/);
   assert.match(library, /data-home-recent-clear/);
+  assert.match(library, /data-home-facet/);
+  assert.match(library, /HKCinemaHomeProviderFilters/);
   assert.match(styles, /\.movie-favorite-button/);
+});
+
+test("Phase 6J removes the temporary hero and moves compact health into the topbar", async () => {
+  const [index, health, healthStyles] = await Promise.all([
+    source("app/index.html"),
+    source("app/data-health.js"),
+    source("app/data-health.css")
+  ]);
+
+  assert.doesNotMatch(index, /今晚睇咩戲/);
+  assert.doesNotMatch(index, /class="hero"/);
+  assert.match(index, /id="topbarActions"/);
+  assert.match(health, /data-health-lights/);
+  assert.match(health, /topbarActions\.insertBefore/);
+  assert.match(healthStyles, /\.data-health-light\.fresh/);
+  assert.match(healthStyles, /\.has-data-health \.status-card/);
 });
