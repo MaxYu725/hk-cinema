@@ -1,41 +1,60 @@
 .provider-compare-cinema-control select[data-insight-cinema] {
   touch-action: manipulation;
-  overscroll-behavior: contain;
 }
 
-.provider-compare-cinema-control select[data-inline-cinema-expanded="true"] {
-  min-height: 0;
-  max-height: min(42vh, 320px);
-  padding: 4px;
-  border-radius: 14px;
+.provider-compare-cinema-portal {
+  position: fixed;
+  z-index: 9999;
+  padding: 6px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #dfe2e6;
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 12px 30px rgba(20, 22, 28, .12);
+  box-shadow: 0 16px 38px rgba(20, 22, 28, .2);
 }
 
-.provider-compare-cinema-control select[data-inline-cinema-expanded="true"] option {
-  min-height: 42px;
+.provider-compare-cinema-portal-option {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 44px;
   padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: #353a42;
-  background: #fff;
   font: inherit;
-  font-size: .72rem;
+  font-size: .74rem;
   font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
 }
 
-.provider-compare-cinema-control select[data-inline-cinema-expanded="true"] option:checked {
-  color: #fff;
+.provider-compare-cinema-portal-option + .provider-compare-cinema-portal-option {
+  margin-top: 2px;
+}
+
+.provider-compare-cinema-portal-option.active,
+.provider-compare-cinema-portal-option[aria-selected="true"] {
   background: #17191d;
+  color: #fff;
+}
+
+.provider-compare-cinema-portal-option:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .18);
+  outline-offset: -2px;
 }
 
 @media (max-width: 700px) {
-  .provider-compare-cinema-control select[data-inline-cinema-expanded="true"] {
-    width: 100%;
-    max-width: none;
-    max-height: 42vh;
+  .provider-compare-cinema-portal {
+    border-radius: 16px;
   }
 
-  .provider-compare-cinema-control select[data-inline-cinema-expanded="true"] option {
-    font-size: .76rem;
+  .provider-compare-cinema-portal-option {
+    min-height: 48px;
+    font-size: .78rem;
   }
 }
