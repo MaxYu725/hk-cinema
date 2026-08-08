@@ -37,9 +37,20 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "5C",
+        phase: "6G",
+        status: "operational",
+        providers: {
+          broadway: "catalogue-shows-seats",
+          mcl: "ticketing-seats",
+          emperor: "catalogue-shows-seats"
+        },
+        freshness: {
+          catalogueFallbackMaxAgeSeconds: 86400,
+          comparisonFreshSeconds: 900,
+          comparisonStaleSeconds: 7200
+        },
         time: new Date().toISOString()
-      });
+      }, 200, { "cache-control": "no-store" });
     }
 
     if (url.pathname === "/api/broadway/movies") {

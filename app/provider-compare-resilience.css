@@ -77,6 +77,14 @@
   background: rgba(255, 190, 92, .14);
 }
 
+.provider-resilience-source.degraded .provider-resilience-badge {
+  background: rgba(255, 190, 92, .14);
+}
+
+.provider-resilience-source.stale .provider-resilience-badge {
+  background: rgba(255, 102, 102, .14);
+}
+
 .provider-resilience-source.error .provider-resilience-badge {
   background: rgba(255, 102, 102, .14);
 }

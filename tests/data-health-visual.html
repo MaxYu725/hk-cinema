@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 6G Data Health Visual Test</title>
+  <link rel="stylesheet" href="../app/style.css">
+  <link rel="stylesheet" href="../app/data-health.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">PHASE 6G TEST</p>
+      <h2>故障降級預覽</h2>
+      <p>用於核對離線、備用及失效來源的手機顯示。</p>
+    </section>
+    <section class="status-card" id="systemStatus">
+      <div class="status-dot"></div>
+      <div>
+        <strong>可用內容保持顯示</strong>
+        <p>來源失效時不會清空已載入資料。</p>
+      </div>
+    </section>
+  </main>
+  <script src="../app/data-health.js"></script>
+  <script>
+    const now = Date.now();
+    HKCinemaDataHealth.report("broadway", {
+      status: "fresh",
+      source: "network",
+      updatedAt: now - 5 * 60 * 1000
+    });
+    HKCinemaDataHealth.report("mcl", {
+      status: "degraded",
+      source: "cache",
+      updatedAt: now - 45 * 60 * 1000
+    });
+    HKCinemaDataHealth.report("emperor", {
+      status: "error",
+      source: "network",
+      updatedAt: null
+    });
+    HKCinemaDataHealth.setOnline(false);
+  </script>
+</body>
+</html>

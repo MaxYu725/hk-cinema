@@ -54,6 +54,26 @@
     return `現正上映 ${catalogue.now.length} 部 · 即將上映 ${catalogue.coming.length} 部 · 特別節目 ${catalogue.festival.length} 部`;
   }
 
+  function catalogueUpdatedAt(catalogue) {
+    return catalogue?.meta?.updatedAt || catalogue?.meta?.cacheSavedAt || null;
+  }
+
+  function reportHealth(status, source, catalogue, detail) {
+    window.HKCinemaDataHealth?.report?.("mcl", {
+      status,
+      source,
+      updatedAt: catalogueUpdatedAt(catalogue),
+      detail
+    });
+  }
+
+  function updatedText(catalogue) {
+    const value = catalogueUpdatedAt(catalogue);
+    return value
+      ? `${window.HKCinemaDataHealth?.formatAge?.(value) || "最近"}更新`
+      : "尚未更新";
+  }
+
   function formatCacheAge(ageMs) {
     if (!Number.isFinite(ageMs) || ageMs < 0) {
       return "上次成功資料";
@@ -92,6 +112,7 @@
         "MCL 未連接",
         "MCL provider 未能載入。"
       );
+      reportHealth("error", "network", null, "Provider 未能載入");
       return;
     }
 
@@ -107,6 +128,7 @@
         "MCL 已載入 · 更新中",
         `${catalogueSummary(cached)} · ${formatCacheAge(cached.meta?.cacheAgeMs)}`
       );
+      reportHealth("loading", "cache", cached, "顯示備用資料並更新中");
     } else {
       setCardState(
         card,
@@ -114,6 +136,7 @@
         "MCL 連接中",
         "正在取得 MCL 最新電影資料；失敗時會自動重試一次。"
       );
+      reportHealth("loading", "network", null, "首次載入中");
     }
 
     try {
@@ -126,8 +149,9 @@
         card,
         "ready",
         "MCL 已連接",
-        catalogueSummary(catalogue)
+        `${catalogueSummary(catalogue)} · ${updatedText(catalogue)}`
       );
+      reportHealth("fresh", "network", catalogue, "完整資料已更新");
     } catch (error) {
       if (cached) {
         const reason =
@@ -141,6 +165,7 @@
           "MCL 使用快取資料",
           `${catalogueSummary(cached)} · ${reason}，稍後可再更新`
         );
+        reportHealth("degraded", "cache", cached, reason);
       } else {
         const message =
           error?.name === "AbortError"
@@ -153,6 +178,7 @@
           "MCL 暫時無法連接",
           message
         );
+        reportHealth("error", "network", null, message);
       }
     } finally {
       refreshInFlight = false;

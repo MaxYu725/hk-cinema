@@ -30,6 +30,11 @@
       broadway: null,
       mcl: null,
       emperor: null
+    },
+    freshness: {
+      broadway: null,
+      mcl: null,
+      emperor: null
     }
   };
 
@@ -213,7 +218,15 @@
       );
 
       if (response.status === 404) {
-        return { availableDates: [], selectedDate: date, sessions: [] };
+        return {
+          availableDates: [],
+          selectedDate: date,
+          sessions: [],
+          _health: {
+            updatedAt: new Date().toISOString(),
+            source: "network"
+          }
+        };
       }
 
       let result = null;
@@ -226,7 +239,13 @@
       if (!response.ok || !result?.ok || !result?.data) {
         throw new Error(result?.error?.message || `${provider} HTTP ${response.status}`);
       }
-      return result.data;
+      return {
+        ...result.data,
+        _health: {
+          updatedAt: result.meta?.updatedAt || new Date().toISOString(),
+          source: result.meta?.cache ? "cache" : "network"
+        }
+      };
     } catch (error) {
       if (lifecycle.timedOut()) {
         const label = provider === "emperor" ? "Emperor" : "Broadway";
@@ -280,12 +299,19 @@
     if (provider === "mcl") {
       const mcl = window.HKCinemaProviders?.mcl;
       if (!mcl?.getTicketing) throw new Error("MCL ticketing provider 未能載入");
-      return await guardPromise(
+      const result = await guardPromise(
         mcl.getTicketing(sourceId, date),
         signal,
         TIMEOUTS.mcl,
         "MCL 場次讀取逾時，請稍後重試。"
       );
+      return {
+        ...result,
+        _health: {
+          updatedAt: result?.source?.updatedAt || new Date().toISOString(),
+          source: result?.source?.cache ? "cache" : "network"
+        }
+      };
     }
 
     return await fetchWorkerShows(provider, sourceId, date, signal);
@@ -586,6 +612,7 @@
       const hasDate = state.availableDates[key].includes(date);
       if (result.status === "fulfilled") {
         state.data[key] = result.value;
+        if (result.value?._health) state.freshness[key] = { ...result.value._health };
         if (hasDate) state.errors[key] = null;
       } else {
         state.data[key] = null;
@@ -609,6 +636,7 @@
       state.availableDates[provider.key] = [];
       state.data[provider.key] = null;
       state.errors[provider.key] = null;
+      state.freshness[provider.key] = null;
     }
     render();
 
@@ -623,6 +651,7 @@
       const key = providers[index].key;
       if (result.status === "fulfilled") {
         state.data[key] = result.value;
+        if (result.value?._health) state.freshness[key] = { ...result.value._health };
         state.availableDates[key] = uniqueDates(result.value?.availableDates || []);
       } else {
         state.errors[key] = errorMessage(result.reason);
@@ -655,6 +684,9 @@
           emperor: [...state.availableDates.emperor]
         },
         errors: { ...state.errors },
+        freshness: Object.fromEntries(
+          Object.entries(state.freshness).map(([key, value]) => [key, value ? { ...value } : null])
+        ),
         request: {
           token: requestToken,
           active: Boolean(activeRequestController && !activeRequestController.signal.aborted)

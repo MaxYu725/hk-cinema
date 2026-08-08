@@ -1,0 +1,137 @@
+.data-health {
+  margin: 0 0 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.data-health-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.data-health-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.data-health-heading span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.data-health-heading strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.data-health-heading small {
+  color: var(--text-secondary);
+  line-height: 1.4;
+  text-align: right;
+}
+
+.data-health-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.data-health-source {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 9px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.data-health-source-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: #77808b;
+  box-shadow: 0 0 0 4px rgba(119,128,139,.12);
+}
+
+.data-health-source > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.data-health-source strong,
+.data-health-source small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-health-source strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.data-health-source small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.data-health-source.fresh .data-health-source-dot {
+  background: #50d890;
+  box-shadow: 0 0 0 4px rgba(80,216,144,.12);
+}
+
+.data-health-source.aging .data-health-source-dot,
+.data-health-source.degraded .data-health-source-dot,
+.data-health-source.loading .data-health-source-dot {
+  background: #f2b75a;
+  box-shadow: 0 0 0 4px rgba(242,183,90,.12);
+}
+
+.data-health-source.stale .data-health-source-dot,
+.data-health-source.error .data-health-source-dot {
+  background: #f06b6b;
+  box-shadow: 0 0 0 4px rgba(240,107,107,.12);
+}
+
+.data-health[data-status="degraded"] {
+  border-color: rgba(216,154,38,.28);
+}
+
+.data-health[data-status="error"] {
+  border-color: rgba(201,75,75,.3);
+}
+
+@media (max-width: 640px) {
+  .data-health {
+    padding: 14px;
+  }
+
+  .data-health-heading {
+    display: grid;
+    gap: 4px;
+  }
+
+  .data-health-heading small {
+    text-align: left;
+  }
+
+  .data-health-sources {
+    grid-template-columns: 1fr;
+  }
+
+  .data-health-source strong,
+  .data-health-source small {
+    white-space: normal;
+  }
+}

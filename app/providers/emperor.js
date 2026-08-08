@@ -129,16 +129,28 @@
       fetchEndpoint("/api/emperor/upcoming")
     ]);
 
+    const cached = getCachedCatalogue();
+
     if (nowResult.status === "rejected" && comingResult.status === "rejected") {
       throw nowResult.reason || comingResult.reason || new Error("Emperor catalogue unavailable");
     }
 
     const now = nowResult.status === "fulfilled"
       ? nowResult.value.data.map(movie => normalizeMovie(movie, "now-showing"))
-      : [];
+      : cached?.now || [];
     const coming = comingResult.status === "fulfilled"
       ? comingResult.value.data.map(movie => normalizeMovie(movie, "coming-soon"))
-      : [];
+      : cached?.coming || [];
+    const fallbackSections = {
+      now: nowResult.status === "rejected" && Boolean(cached?.now),
+      coming: comingResult.status === "rejected" && Boolean(cached?.coming)
+    };
+    const updateTimes = [
+      nowResult.status === "fulfilled" ? nowResult.value.meta?.updatedAt : cached?.meta?.updatedAt,
+      comingResult.status === "fulfilled" ? comingResult.value.meta?.updatedAt : cached?.meta?.updatedAt
+    ]
+      .map(value => Date.parse(value || ""))
+      .filter(Number.isFinite);
 
     const catalogue = {
       now,
@@ -146,8 +158,9 @@
       meta: {
         provider: "emperor",
         transport: "worker-signed-api",
-        cache: false,
+        cache: fallbackSections.now || fallbackSections.coming,
         partial: nowResult.status === "rejected" || comingResult.status === "rejected",
+        fallbackSections,
         errors: {
           now: nowResult.status === "rejected"
             ? String(nowResult.reason?.message || nowResult.reason || "Emperor now-showing failed")
@@ -160,11 +173,15 @@
           now: now.length,
           coming: coming.length
         },
-        updatedAt: new Date().toISOString()
+        updatedAt: updateTimes.length
+          ? new Date(Math.min(...updateTimes)).toISOString()
+          : new Date().toISOString()
       }
     };
 
-    saveCachedCatalogue(catalogue);
+    if (!catalogue.meta.partial) {
+      saveCachedCatalogue(catalogue);
+    }
     return catalogue;
   }
 
