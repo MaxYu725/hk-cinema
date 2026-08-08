@@ -5,6 +5,9 @@ import {
   getEmperorMovieShows,
   probeEmperor
 } from "./providers/emperor.js";
+import {
+  getEmperorMovieDetail
+} from "./providers/emperor-detail.js";
 
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
@@ -24,6 +27,10 @@ function errorResponse(error, fallbackCode) {
       message: error instanceof Error ? error.message : String(error)
     }
   }, Number.isFinite(error?.status) ? error.status : 502);
+}
+
+function validFilmId(value) {
+  return /^[A-Za-z0-9_-]{4,80}$/.test(String(value || ""));
 }
 
 export default {
@@ -87,6 +94,40 @@ export default {
       }
     }
 
+    const detailMatch = url.pathname.match(
+      /^\/api\/emperor\/movies\/([^/]+)\/detail$/
+    );
+
+    if (detailMatch) {
+      const filmUniqueId = decodeURIComponent(detailMatch[1]);
+
+      if (!validFilmId(filmUniqueId)) {
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_EMPEROR_FILM_ID",
+            message: "filmUniqueId is invalid"
+          }
+        }, 400);
+      }
+
+      try {
+        const result = await getEmperorMovieDetail(filmUniqueId);
+        return json({
+          ok: true,
+          data: result.movie,
+          meta: {
+            provider: "emperor",
+            filmUniqueId,
+            source: result.source,
+            updatedAt: new Date().toISOString()
+          }
+        }, 200, { "cache-control": "public, max-age=600" });
+      } catch (error) {
+        return errorResponse(error, "EMPEROR_DETAIL_ERROR");
+      }
+    }
+
     const showMatch = url.pathname.match(
       /^\/api\/emperor\/movies\/([^/]+)\/shows$/
     );
@@ -95,7 +136,7 @@ export default {
       const filmUniqueId = decodeURIComponent(showMatch[1]);
       const date = url.searchParams.get("date");
 
-      if (!/^[A-Za-z0-9_-]{4,80}$/.test(filmUniqueId)) {
+      if (!validFilmId(filmUniqueId)) {
         return json({
           ok: false,
           error: {
