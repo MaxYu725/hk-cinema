@@ -171,9 +171,13 @@
     for (const item of items) {
       if (!matchesProviderAndRegion(item)) continue;
 
+      const periodMatches = matchesPeriod(item);
       const existing = map.get(item.cinemaKey);
       if (existing) {
-        existing.shows += 1;
+        existing.totalShows += 1;
+        if (periodMatches) {
+          existing.shows += 1;
+        }
         continue;
       }
 
@@ -184,7 +188,8 @@
         canonical: item.canonicalCinema,
         district: item.district,
         region: item.region,
-        shows: 1
+        shows: periodMatches ? 1 : 0,
+        totalShows: 1
       });
     }
 
@@ -388,7 +393,7 @@
         </div>
 
         <p class="provider-compare-insight-note">
-          戲院選單只列出目前電影及日期、院線與地區下實際有場次的戲院；切換院線或地區後會自動更新。地區按 Broadway 與 MCL 官方戲院位置建立；東涌屬離島，因此與新界合併為「新界/離島」。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
+          戲院選單只列出目前電影及日期、院線與地區下實際有場次的戲院；每間戲院的場次數會跟隨目前時段即時重算，沒有該時段場次的戲院會保留並顯示 0 場。切換院線或地區後亦會自動更新。地區按 Broadway 與 MCL 官方戲院位置建立；東涌屬離島，因此與新界合併為「新界/離島」。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
         </p>
       </div>
     `;
