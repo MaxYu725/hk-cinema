@@ -128,6 +128,10 @@
     `;
   }
 
+  function providerDot(provider, state) {
+    return `<span class="provider-resilience-mini-dot ${escapeHtml(state.status)}" role="img" aria-label="${escapeHtml(`${provider.label}：${state.label}`)}"></span>`;
+  }
+
   function update() {
     scheduled = false;
     const compare = window.HKCinemaProviderCompare;
@@ -159,23 +163,32 @@
     overlay.classList.toggle("provider-compare-is-partial", partial);
     overlay.dataset.compareDataState = overall.status;
 
+    const disclosureOpen = Boolean(panel.querySelector(".provider-resilience-disclosure")?.open);
     panel.innerHTML = `
-      <div class="provider-resilience-heading">
-        <div>
-          <span>DATA STATUS</span>
+      <details class="provider-resilience-disclosure">
+        <summary class="provider-resilience-compact ${escapeHtml(overall.status)}">
+          <span class="provider-resilience-overall-dot" aria-hidden="true"></span>
           <strong>${escapeHtml(overall.label)}</strong>
+          <span class="provider-resilience-mini-dots">
+            ${providers.map(provider => providerDot(provider, states[provider.key])).join("")}
+          </span>
+          <small>${escapeHtml(overall.detail)}</small>
+          <em aria-hidden="true">⌄</em>
+        </summary>
+        <div class="provider-resilience-detail">
+          <div class="provider-resilience-sources provider-count-${providers.length}">
+            ${providers.map(provider => providerHtml(provider, states[provider.key])).join("")}
+          </div>
+          ${partial ? `
+            <p class="provider-resilience-partial-note">
+              摘要及推薦暫停；時間線仍會使用成功載入的院線資料。
+            </p>
+          ` : ""}
         </div>
-        <small>${escapeHtml(overall.detail)}</small>
-      </div>
-      <div class="provider-resilience-sources provider-count-${providers.length}">
-        ${providers.map(provider => providerHtml(provider, states[provider.key])).join("")}
-      </div>
-      ${partial ? `
-        <p class="provider-resilience-partial-note">
-          全院線摘要及 Smart Picks 已暫停；時間線及篩選仍可使用目前成功載入且有標明更新時間的院線資料。
-        </p>
-      ` : ""}
+      </details>
     `;
+    const disclosure = panel.querySelector(".provider-resilience-disclosure");
+    if (disclosure) disclosure.open = disclosureOpen;
   }
 
   function schedule() {

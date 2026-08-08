@@ -11,7 +11,8 @@
     region: "all",
     cinema: "all",
     period: "all",
-    sort: "time"
+    sort: "time",
+    expanded: false
   };
 
   let observer = null;
@@ -247,6 +248,11 @@
     const unknownNote = unknownCount
       ? `另有 ${unknownCount} 場戲院名稱尚未匹配 registry，只會在「全部地區」顯示。`
       : "目前場次的戲院均已匹配 cinema registry。";
+    const providerLabel = uiState.provider === "all" ? "全部院線" : PROVIDER_LABELS[uiState.provider] || "全部院線";
+    const regionLabel = uiState.region === "hk" ? "港島" : uiState.region === "kln" ? "九龍" : uiState.region === "nt-islands" ? "新界/離島" : "全港";
+    const periodLabel = uiState.period === "morning" ? "早場" : uiState.period === "afternoon" ? "下午" : uiState.period === "evening" ? "晚場" : "全日";
+    const selectedCinema = uiState.cinema === "all" ? "" : ` · ${selectedCinemaLabel(allItems)}`;
+    const activeFilterSummary = `${providerLabel} · ${regionLabel}${selectedCinema} · ${periodLabel}`;
 
     return `
       <div class="provider-compare-insights" data-provider-insights>
@@ -273,7 +279,16 @@
           </article>
         </div>
 
-        <div class="provider-compare-controls" aria-label="場次篩選及排序">
+        <div class="provider-compare-filter-bar">
+          <button type="button" class="provider-compare-filter-toggle" data-provider-filter-toggle aria-expanded="${uiState.expanded}">
+            <span>篩選</span>
+            <strong>${escapeHtml(activeFilterSummary)}</strong>
+            <em aria-hidden="true">⌄</em>
+          </button>
+          <button type="button" class="provider-compare-reset" data-provider-compare-reset aria-label="重設比較篩選">重設</button>
+        </div>
+
+        <div class="provider-compare-controls" aria-label="場次篩選及排序" ${uiState.expanded ? "" : "hidden"}>
           <div class="provider-compare-control-group">
             <span>院線</span>
             <button type="button" data-insight-provider="all" class="${uiState.provider === "all" ? "active" : ""}">全部</button>
@@ -309,11 +324,11 @@
             <button type="button" data-insight-sort="price" class="${uiState.sort === "price" ? "active" : ""}">價格</button>
             <button type="button" data-insight-sort="seats" class="${uiState.sort === "seats" ? "active" : ""}">座位</button>
           </div>
+          <details class="provider-compare-insight-note">
+            <summary>篩選定義</summary>
+            <p>戲院及場次數會跟隨院線、地區與時段即時重算。早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。${escapeHtml(unknownNote)}</p>
+          </details>
         </div>
-
-        <p class="provider-compare-insight-note">
-          戲院選單按目前電影、日期、院線及地區建立；場次數會跟隨時段即時重算。地區依三院線香港戲院位置建立；東涌歸入新界/離島。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
-        </p>
       </div>
     `;
   }
@@ -429,6 +444,14 @@
   };
 
   document.addEventListener("click", event => {
+    const filterToggle = event.target.closest("[data-provider-filter-toggle]");
+    if (filterToggle) {
+      event.preventDefault();
+      event.stopPropagation();
+      uiState.expanded = !uiState.expanded;
+      enhance();
+      return;
+    }
     const providerButton = event.target.closest("[data-insight-provider]");
     if (providerButton) {
       event.preventDefault();
