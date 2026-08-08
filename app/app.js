@@ -1,6 +1,9 @@
 const API_BASE =
   "https://hk-cinema-api.max-yu-jp.workers.dev";
 
+const BROADWAY_CACHE_KEY = "hkcinema:broadway-catalogue:v1";
+const BROADWAY_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 const state = {
   tab: "now",
   showingMovies: [],
@@ -13,6 +16,10 @@ const state = {
   updatedAt: {
     now: null,
     coming: null
+  },
+  cache: {
+    now: false,
+    coming: false
   },
   detail: {
     open: false,
@@ -31,6 +38,62 @@ const elements = {
   refreshButton: document.querySelector("#refreshButton"),
   systemStatus: document.querySelector("#systemStatus")
 };
+
+function readBroadwayCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BROADWAY_CACHE_KEY) || "null");
+    if (!parsed || typeof parsed !== "object") return { now: null, coming: null };
+
+    const validate = entry => {
+      const savedAt = Number(entry?.savedAt);
+      const age = Date.now() - savedAt;
+      if (!Number.isFinite(savedAt) || age < 0 || age > BROADWAY_CACHE_MAX_AGE_MS) return null;
+      if (!Array.isArray(entry?.data)) return null;
+      return entry;
+    };
+
+    return {
+      now: validate(parsed.now),
+      coming: validate(parsed.coming)
+    };
+  } catch {
+    return { now: null, coming: null };
+  }
+}
+
+function writeBroadwayCache(entries) {
+  try {
+    if (!entries.now && !entries.coming) {
+      localStorage.removeItem(BROADWAY_CACHE_KEY);
+      return;
+    }
+    localStorage.setItem(BROADWAY_CACHE_KEY, JSON.stringify(entries));
+  } catch {
+    // Storage can be unavailable in private or restricted browsing modes.
+  }
+}
+
+function oldestBroadwayUpdate() {
+  const times = [state.updatedAt.now, state.updatedAt.coming]
+    .map(value => Date.parse(value || ""))
+    .filter(Number.isFinite);
+  return times.length ? new Date(Math.min(...times)).toISOString() : null;
+}
+
+function reportBroadway(status, source, detail) {
+  window.HKCinemaDataHealth?.report?.("broadway", {
+    status,
+    source,
+    updatedAt: oldestBroadwayUpdate(),
+    detail
+  });
+}
+
+function broadwayAgeText() {
+  const updatedAt = oldestBroadwayUpdate();
+  if (!updatedAt) return "尚未更新";
+  return `${window.HKCinemaDataHealth?.formatAge?.(updatedAt) || "最近"}更新`;
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -89,9 +152,13 @@ function getVisibleMovies() {
 }
 
 function getCurrentError() {
-  return state.tab === "now"
+  const error = state.tab === "now"
     ? state.errors.now
     : state.errors.coming;
+  const hasUsableData = state.tab === "now"
+    ? state.showingMovies.length > 0 || state.cache.now
+    : state.upcomingMovies.length > 0 || state.cache.coming;
+  return hasUsableData ? null : error;
 }
 
 function getPresaleIds() {
@@ -319,40 +386,69 @@ function updateStatusSummary() {
   const presaleCount = getPresaleMovies().length;
   const upcomingCount = getUpcomingMovies().length;
 
-  if (state.errors.now && state.errors.coming) {
+  const hasUsableData = state.showingMovies.length > 0 || state.upcomingMovies.length > 0 || state.cache.now || state.cache.coming;
+  const usingCache = state.cache.now || state.cache.coming;
+  const counts = `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部 · 即將上映 ${upcomingCount} 部`;
+
+  if (state.errors.now && state.errors.coming && !hasUsableData) {
     setStatus(
       "error",
-      "資料暫時無法更新",
-      "Broadway 上映及即將上映資料目前均不可用。"
+      "Broadway 資料暫時無法更新",
+      "目前沒有可用的 Broadway 資料；MCL 及 Emperor 不受影響。"
     );
+    reportBroadway("error", "network", "沒有可用資料");
     return;
   }
 
   if (state.errors.now || state.errors.coming) {
     setStatus(
       "loading",
-      "Broadway 部分資料已連接",
-      `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部 · 即將上映 ${upcomingCount} 部`
+      usingCache ? "Broadway 使用備用資料" : "Broadway 部分資料已連接",
+      `${counts} · ${broadwayAgeText()}`
     );
+    reportBroadway("degraded", usingCache ? "cache" : "network", "部分資料未能更新");
     return;
   }
 
   setStatus(
     "ready",
     "Broadway 已連接",
-    `現正上映 ${nowCount} 部 · 預售 ${presaleCount} 部 · 即將上映 ${upcomingCount} 部`
+    `${counts} · ${broadwayAgeText()}`
   );
+  reportBroadway("fresh", "network", "完整資料已更新");
 }
 
 async function loadMovies() {
-  state.loading = true;
+  const cacheEntries = readBroadwayCache();
+  const hasCachedData = Boolean(cacheEntries.now || cacheEntries.coming);
+
+  if (cacheEntries.now) {
+    state.showingMovies = cacheEntries.now.data;
+    state.updatedAt.now = cacheEntries.now.updatedAt || new Date(cacheEntries.now.savedAt).toISOString();
+    state.cache.now = true;
+  }
+  if (cacheEntries.coming) {
+    state.upcomingMovies = cacheEntries.coming.data;
+    state.updatedAt.coming = cacheEntries.coming.updatedAt || new Date(cacheEntries.coming.savedAt).toISOString();
+    state.cache.coming = true;
+  }
+
+  state.loading = !hasCachedData;
   state.errors.now = null;
   state.errors.coming = null;
 
   setStatus(
     "loading",
     "正在更新",
-    "正在取得 Broadway 最新上映及即將上映資料。"
+    hasCachedData
+      ? `已先顯示備用資料 · ${broadwayAgeText()}，正在背景更新。`
+      : "正在取得 Broadway 最新上映及即將上映資料。"
+  );
+
+  reportBroadway(
+    "loading",
+    hasCachedData ? "cache" : "network",
+    hasCachedData ? "顯示備用資料並更新中" : "首次載入中"
   );
 
   render();
@@ -367,8 +463,18 @@ async function loadMovies() {
     state.showingMovies = showingResult.value.data;
     state.updatedAt.now =
       showingResult.value.meta?.updatedAt || null;
+    state.cache.now = false;
+    cacheEntries.now = {
+      savedAt: Date.now(),
+      updatedAt: state.updatedAt.now,
+      data: state.showingMovies
+    };
   } else {
-    state.showingMovies = [];
+    if (!cacheEntries.now) {
+      state.showingMovies = [];
+      state.updatedAt.now = null;
+      state.cache.now = false;
+    }
     state.errors.now =
       showingResult.reason instanceof Error
         ? showingResult.reason.message
@@ -379,14 +485,25 @@ async function loadMovies() {
     state.upcomingMovies = upcomingResult.value.data;
     state.updatedAt.coming =
       upcomingResult.value.meta?.updatedAt || null;
+    state.cache.coming = false;
+    cacheEntries.coming = {
+      savedAt: Date.now(),
+      updatedAt: state.updatedAt.coming,
+      data: state.upcomingMovies
+    };
   } else {
-    state.upcomingMovies = [];
+    if (!cacheEntries.coming) {
+      state.upcomingMovies = [];
+      state.updatedAt.coming = null;
+      state.cache.coming = false;
+    }
     state.errors.coming =
       upcomingResult.reason instanceof Error
         ? upcomingResult.reason.message
         : String(upcomingResult.reason);
   }
 
+  writeBroadwayCache(cacheEntries);
   state.loading = false;
   updateStatusSummary();
   render();

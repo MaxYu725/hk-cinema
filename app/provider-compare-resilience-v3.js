@@ -44,13 +44,38 @@
     const error = snapshot?.errors?.[provider] || null;
     const dates = snapshot?.availableDates?.[provider] || [];
     if (error) return { status: "error", label: "暫時失敗", detail: error };
-    if (dates.length) return { status: "ready", label: "正常", detail: `${dates.length} 個可售日期` };
+    if (dates.length) {
+      const freshness = snapshot?.freshness?.[provider] || {};
+      const health = window.HKCinemaDataHealth?.classify?.({
+        status: "fresh",
+        source: freshness.source || "network",
+        updatedAt: freshness.updatedAt
+      });
+      const age = freshness.updatedAt
+        ? window.HKCinemaDataHealth?.formatAge?.(freshness.updatedAt)
+        : null;
+      if (health?.level === "stale") {
+        return { status: "stale", label: "資料過期", detail: `${dates.length} 個可售日期 · ${age || "較早更新"}` };
+      }
+      if (["aging", "degraded"].includes(health?.level)) {
+        return { status: "degraded", label: "較早資料", detail: `${dates.length} 個可售日期 · ${age || "較早更新"}` };
+      }
+      return { status: "ready", label: age || "正常", detail: `${dates.length} 個可售日期${age ? ` · ${age}更新` : ""}` };
+    }
     if (loading) return { status: "loading", label: "更新中", detail: "正在取得可售日期及場次" };
     return { status: "empty", label: "暫無場次", detail: "目前未取得可售日期" };
   }
 
   function overallState(snapshot, loading, providers) {
     const errors = providers.filter(provider => snapshot?.errors?.[provider.key]);
+    const stale = providers.filter(provider => {
+      const freshness = snapshot?.freshness?.[provider.key] || {};
+      return window.HKCinemaDataHealth?.classify?.({
+        status: "fresh",
+        source: freshness.source || "network",
+        updatedAt: freshness.updatedAt
+      })?.level === "stale";
+    });
     if (errors.length === providers.length) {
       return {
         status: "error",
@@ -58,11 +83,13 @@
         detail: `${providers.length} 個院線來源目前都未能更新`
       };
     }
-    if (errors.length) {
+    if (errors.length || stale.length) {
       return {
         status: "partial",
-        label: "部分資料",
-        detail: `目前有 ${providers.length - errors.length}/${providers.length} 個院線資料可用`
+        label: errors.length ? "部分資料" : "部分資料已過期",
+        detail: errors.length
+          ? `目前有 ${providers.length - errors.length}/${providers.length} 個院線資料可用`
+          : `${stale.length} 個院線資料超過 2 小時未更新`
       };
     }
     if (loading) {
@@ -119,7 +146,15 @@
     const states = Object.fromEntries(
       providers.map(provider => [provider.key, providerState(snapshot, provider.key, loading)])
     );
-    const partial = providers.some(provider => Boolean(snapshot.errors?.[provider.key]));
+    const partial = providers.some(provider => {
+      if (snapshot.errors?.[provider.key]) return true;
+      const freshness = snapshot?.freshness?.[provider.key] || {};
+      return window.HKCinemaDataHealth?.classify?.({
+        status: "fresh",
+        source: freshness.source || "network",
+        updatedAt: freshness.updatedAt
+      })?.level === "stale";
+    });
 
     overlay.classList.toggle("provider-compare-is-partial", partial);
     overlay.dataset.compareDataState = overall.status;
@@ -137,7 +172,7 @@
       </div>
       ${partial ? `
         <p class="provider-resilience-partial-note">
-          全院線摘要及 Smart Picks 已暫停；時間線及篩選仍可使用目前成功載入的院線資料。
+          全院線摘要及 Smart Picks 已暫停；時間線及篩選仍可使用目前成功載入且有標明更新時間的院線資料。
         </p>
       ` : ""}
     `;
