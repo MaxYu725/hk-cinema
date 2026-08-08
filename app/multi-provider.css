@@ -27,11 +27,27 @@
   color: #23734a;
 }
 
-.mcl-only-card {
+.provider-emperor {
+  background: #f5ecec;
+  color: #7b3434;
+}
+
+.mcl-only-card,
+.emperor-only-card {
   cursor: pointer;
 }
 
 .mcl-only-card:focus-visible {
   outline: 3px solid rgba(35, 115, 74, 0.25);
   outline-offset: 3px;
+}
+
+.emperor-only-card:focus-visible {
+  outline: 3px solid rgba(123, 52, 52, 0.24);
+  outline-offset: 3px;
+}
+
+.provider-badge[data-mcl-open],
+.provider-badge[data-emperor-open] {
+  cursor: pointer;
 }
