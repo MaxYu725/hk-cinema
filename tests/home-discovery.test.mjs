@@ -98,7 +98,7 @@ test("Phase 6H home discovery controls and version chooser stay wired", async ()
     source("app/provider-compare-v3.js")
   ]);
 
-  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=6j1"));
+  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=6k1"));
   assert.match(multiProvider, /data-home-provider/);
   assert.match(multiProvider, /applyVariantGrouping/);
   assert.match(multiProvider, /data-movie-group-provider/);

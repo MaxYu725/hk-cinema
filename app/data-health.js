@@ -6,6 +6,7 @@
   ];
   const FRESH_MAX_AGE_MS = 15 * 60 * 1000;
   const AGING_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+  const REFRESH_BUSY_MAX_MS = 35 * 1000;
   const OPEN_PREFERENCE_KEY = "hkcinema:data-health-open:v3";
 
   const state = {
@@ -20,6 +21,12 @@
       }
     ]))
   };
+  let refreshWasLoading = true;
+  let refreshCompleteTimer = null;
+  let refreshHoldUntil = 0;
+  let refreshHoldTimer = null;
+  let refreshCycleStartedAt = Date.now();
+  let refreshSafetyTimer = null;
 
   function timestamp(value) {
     if (value instanceof Date) return value.getTime();
@@ -169,6 +176,29 @@
       .replaceAll("'", "&#039;");
   }
 
+  function syncRefreshButton() {
+    const button = document.querySelector("#refreshButton");
+    if (!button) return;
+    const records = Object.values(state.records);
+    const rawLoading = records.some(record => record.status === "loading");
+    const loading = (
+      rawLoading && Date.now() - refreshCycleStartedAt < REFRESH_BUSY_MAX_MS
+    ) || Date.now() < refreshHoldUntil;
+    const completed = records.every(record => record.updatedAt || record.status === "error");
+    button.disabled = loading;
+    button.classList.toggle("is-loading", loading);
+    button.setAttribute("aria-busy", String(loading));
+    button.setAttribute("aria-label", loading ? "正在更新三院線資料" : "重新整理三院線資料");
+    button.title = loading ? "正在更新" : "重新整理";
+
+    if (refreshWasLoading && !loading && completed) {
+      button.classList.add("is-complete");
+      clearTimeout(refreshCompleteTimer);
+      refreshCompleteTimer = setTimeout(() => button.classList.remove("is-complete"), 1400);
+    }
+    refreshWasLoading = loading;
+  }
+
   function render() {
     if (typeof document === "undefined") return;
     const summary = summarize();
@@ -215,6 +245,7 @@
         </div>
       </div>
     `;
+    syncRefreshButton();
   }
 
   function report(provider, next = {}) {
@@ -260,6 +291,19 @@
   }
 
   if (typeof document !== "undefined") {
+    if (typeof setTimeout === "function") {
+      refreshSafetyTimer = setTimeout(syncRefreshButton, REFRESH_BUSY_MAX_MS + 50);
+    }
+    document.addEventListener("click", event => {
+      if (!event.target.closest?.("#refreshButton")) return;
+      refreshCycleStartedAt = Date.now();
+      refreshHoldUntil = Date.now() + 700;
+      clearTimeout(refreshHoldTimer);
+      clearTimeout(refreshSafetyTimer);
+      refreshHoldTimer = setTimeout(syncRefreshButton, 710);
+      refreshSafetyTimer = setTimeout(syncRefreshButton, REFRESH_BUSY_MAX_MS + 50);
+      syncRefreshButton();
+    });
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", render, { once: true });
     } else {

@@ -93,6 +93,18 @@
   font-weight: 750;
 }
 
+.home-provider-filter-heading .home-filter-toggle {
+  color: var(--text-secondary);
+}
+
+.home-provider-filters.collapsed .home-provider-filter-heading {
+  margin-bottom: 0;
+}
+
+.home-provider-filters.collapsed .home-filter-row {
+  display: none;
+}
+
 .home-filter-row {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
@@ -111,20 +123,31 @@
   letter-spacing: .08em;
 }
 
+.home-filter-row-label small {
+  display: block;
+  margin-top: 2px;
+  color: #949aa3;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
 .home-provider-filter-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
 }
 
-.home-facet-filter-options {
+.home-facet-filter-options,
+.home-region-filter-options {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
 .home-provider-filter-options button,
-.home-facet-filter-options button {
+.home-facet-filter-options button,
+.home-region-filter-options button {
   min-width: 0;
   padding: 9px 8px;
   border: 1px solid transparent;
@@ -138,14 +161,16 @@
 }
 
 .home-provider-filter-options button span,
-.home-facet-filter-options button span {
+.home-facet-filter-options button span,
+.home-region-filter-options button span {
   margin-left: 3px;
   opacity: .58;
   font-size: 10px;
 }
 
 .home-provider-filter-options button.active,
-.home-facet-filter-options button.active {
+.home-facet-filter-options button.active,
+.home-region-filter-options button.active {
   border-color: rgba(23,25,29,.12);
   background: var(--accent);
   color: #fff;
@@ -359,24 +384,38 @@ body.movie-group-open {
   .home-provider-filter-options {
     display: flex;
     overflow-x: auto;
+    padding-right: 18px;
+    scroll-padding-inline: 4px 18px;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
   }
 
-  .home-facet-filter-options {
+  .home-facet-filter-options,
+  .home-region-filter-options {
     flex-wrap: nowrap;
     overflow-x: auto;
+    padding-right: 18px;
+    scroll-padding-inline: 4px 18px;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
   }
 
   .home-provider-filter-options::-webkit-scrollbar,
-  .home-facet-filter-options::-webkit-scrollbar {
+  .home-facet-filter-options::-webkit-scrollbar,
+  .home-region-filter-options::-webkit-scrollbar {
     display: none;
   }
 
   .home-provider-filter-options button,
-  .home-facet-filter-options button {
+  .home-facet-filter-options button,
+  .home-region-filter-options button {
     flex: 0 0 auto;
     min-width: 76px;
+    scroll-snap-align: start;
   }
 
   .movie-group-sheet {

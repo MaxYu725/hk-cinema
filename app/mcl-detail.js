@@ -148,6 +148,28 @@
     `;
   }
 
+  function reportMovieMetadata(movie, ticketing) {
+    const sessions = ticketing?.allSessions || ticketing?.sessions || [];
+    const languages = Array.from(new Set(sessions
+      .flatMap(session => String(session.language || "").split(/[、,，/;；·]+/))
+      .map(value => value.trim())
+      .filter(Boolean)));
+    const formats = Array.from(new Set(sessions
+      .flatMap(session => String(session.format || "").split(/[、,，/;；·]+/))
+      .map(value => value.trim())
+      .filter(Boolean)));
+    const releaseDate = (ticketing?.availableDates || []).slice().sort()[0] || null;
+    window.dispatchEvent(new CustomEvent("hkcinema:movie-metadata", {
+      detail: {
+        provider: "mcl",
+        sourceId: String(movie?.sourceId || ""),
+        languages,
+        formats,
+        releaseDate
+      }
+    }));
+  }
+
   function render() {
     const overlay = getOverlay();
     const content = getContent();
@@ -302,6 +324,7 @@
         movie.sourceId,
         selectedDate
       );
+      reportMovieMetadata(movie, state.ticketing);
     } catch (error) {
       state.error =
         error?.name === "AbortError"
