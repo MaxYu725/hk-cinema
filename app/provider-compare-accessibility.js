@@ -182,14 +182,9 @@
 
     const resilience = overlay.querySelector("[data-provider-resilience]");
     if (resilience) {
-      resilience.setAttribute(
-        "role",
-        overlay.dataset.compareDataState === "error" ? "alert" : "status"
-      );
-      resilience.setAttribute(
-        "aria-live",
-        overlay.dataset.compareDataState === "error" ? "assertive" : "polite"
-      );
+      const isError = overlay.dataset.compareDataState === "error";
+      resilience.setAttribute("role", isError ? "alert" : "status");
+      resilience.setAttribute("aria-live", isError ? "assertive" : "polite");
       resilience.setAttribute("aria-atomic", "true");
     }
 
@@ -251,18 +246,25 @@
       const hiddenChanged = records.some(record =>
         record.type === "attributes" && record.attributeName === "hidden"
       );
-      if (!hiddenChanged) return;
+      const stateChanged = records.some(record =>
+        record.type === "attributes" &&
+        record.attributeName === "data-compare-data-state"
+      );
 
-      if (overlay.hidden) {
-        closeOverlay(overlay);
-      } else {
-        openOverlay(overlay);
+      if (hiddenChanged) {
+        if (overlay.hidden) {
+          closeOverlay(overlay);
+        } else {
+          openOverlay(overlay);
+        }
       }
+
+      if (stateChanged) enhanceAria();
     });
 
     overlayObserver.observe(overlay, {
       attributes: true,
-      attributeFilter: ["hidden"]
+      attributeFilter: ["hidden", "data-compare-data-state"]
     });
 
     if (!overlay.hidden) openOverlay(overlay);
