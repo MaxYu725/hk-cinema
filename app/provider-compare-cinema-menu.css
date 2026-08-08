@@ -9,6 +9,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   border: 1px solid #dfe2e6;
   border-radius: 14px;
   background: #fff;
@@ -31,6 +32,7 @@
   line-height: 1.35;
   text-align: left;
   cursor: pointer;
+  touch-action: pan-y;
 }
 
 .provider-compare-cinema-portal-option + .provider-compare-cinema-portal-option {
