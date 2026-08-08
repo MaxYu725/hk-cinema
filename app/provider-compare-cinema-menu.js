@@ -1,8 +1,10 @@
 (() => {
   const SELECTOR = "select[data-insight-cinema]";
   const PORTAL_ID = "providerCompareCinemaPortal";
+  const TAP_SLOP_PX = 12;
 
   let activeSelect = null;
+  let pointerGesture = null;
   let suppressClickUntil = 0;
 
   function getPortal() {
@@ -12,6 +14,7 @@
   function closePortal() {
     getPortal()?.remove();
     activeSelect = null;
+    pointerGesture = null;
   }
 
   function optionLabel(option) {
@@ -112,15 +115,56 @@
 
     const option = event.target.closest?.("[data-cinema-portal-value]");
     if (option) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      applySelection(option.dataset.cinemaPortalValue || "all");
+      pointerGesture = {
+        pointerId: event.pointerId,
+        value: option.dataset.cinemaPortalValue || "all",
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false
+      };
       return;
     }
 
     if (getPortal() && !event.target.closest?.(`#${PORTAL_ID}`)) {
       closePortal();
+    }
+  }, true);
+
+  document.addEventListener("pointermove", event => {
+    const gesture = pointerGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId || gesture.moved) return;
+
+    const distance = Math.hypot(
+      event.clientX - gesture.startX,
+      event.clientY - gesture.startY
+    );
+
+    if (distance > TAP_SLOP_PX) {
+      gesture.moved = true;
+    }
+  }, true);
+
+  document.addEventListener("pointerup", event => {
+    const gesture = pointerGesture;
+    pointerGesture = null;
+
+    if (!gesture || gesture.pointerId !== event.pointerId || gesture.moved) return;
+
+    const option = event.target.closest?.("[data-cinema-portal-value]");
+    if (!option) return;
+
+    const value = option.dataset.cinemaPortalValue || "all";
+    if (value !== gesture.value) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    applySelection(value);
+  }, true);
+
+  document.addEventListener("pointercancel", event => {
+    if (pointerGesture?.pointerId === event.pointerId) {
+      pointerGesture = null;
     }
   }, true);
 
