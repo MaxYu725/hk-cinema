@@ -35,7 +35,7 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   ]);
 
   assert.match(phase6m, /data-phase6m-active-filters/);
-  assert.match(phase6m, /dataPhase6mClearFilter/);
+  assert.match(phase6m, /phase6mClearFilter/);
   assert.match(phase6m, /data-phase6m-filter-shortcut/);
   assert.match(phase6m, /沒有符合目前篩選的場次/);
   assert.match(phase6m, /data-provider-compare-reset/);
