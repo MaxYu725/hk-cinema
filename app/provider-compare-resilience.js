@@ -39,24 +39,23 @@
     return panel;
   }
 
-  function providerState(snapshot, provider) {
+  function isLoadingView() {
+    return Boolean(
+      document.querySelector(
+        "#providerCompareContent .provider-compare-loading"
+      )
+    );
+  }
+
+  function providerState(snapshot, provider, loading) {
     const error = snapshot?.errors?.[provider] || null;
     const dates = snapshot?.availableDates?.[provider] || [];
-    const active = Boolean(snapshot?.request?.active);
 
     if (error) {
       return {
         status: "error",
         label: "暫時失敗",
         detail: error
-      };
-    }
-
-    if (active && !dates.length) {
-      return {
-        status: "loading",
-        label: "更新中",
-        detail: "正在取得可售日期及場次"
       };
     }
 
@@ -68,11 +67,11 @@
       };
     }
 
-    if (active) {
+    if (loading) {
       return {
         status: "loading",
         label: "更新中",
-        detail: "正在整理場次"
+        detail: "正在取得可售日期及場次"
       };
     }
 
@@ -83,7 +82,7 @@
     };
   }
 
-  function overallState(snapshot) {
+  function overallState(snapshot, loading) {
     const errors = PROVIDERS.filter(
       provider => snapshot?.errors?.[provider.key]
     );
@@ -104,7 +103,7 @@
       };
     }
 
-    if (snapshot?.request?.active) {
+    if (loading) {
       return {
         status: "loading",
         label: "更新中",
@@ -112,10 +111,22 @@
       };
     }
 
+    const hasAnyDates = PROVIDERS.some(
+      provider => (snapshot?.availableDates?.[provider.key] || []).length
+    );
+
+    if (!hasAnyDates) {
+      return {
+        status: "empty",
+        label: "暫無場次",
+        detail: "兩個院線目前均未有可售日期"
+      };
+    }
+
     return {
       status: "ready",
       label: "資料完整",
-      detail: "Broadway 與 MCL 均沒有讀取錯誤"
+      detail: "Broadway 與 MCL 均已完成更新"
     };
   }
 
@@ -154,11 +165,12 @@
     const panel = ensurePanel();
     if (!panel) return;
 
-    const overall = overallState(snapshot);
+    const loading = isLoadingView();
+    const overall = overallState(snapshot, loading);
     const states = Object.fromEntries(
       PROVIDERS.map(provider => [
         provider.key,
-        providerState(snapshot, provider.key)
+        providerState(snapshot, provider.key, loading)
       ])
     );
     const partial = Boolean(
