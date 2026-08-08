@@ -6,7 +6,7 @@
   ];
   const FRESH_MAX_AGE_MS = 15 * 60 * 1000;
   const AGING_MAX_AGE_MS = 2 * 60 * 60 * 1000;
-  const OPEN_PREFERENCE_KEY = "hkcinema:data-health-open:v2";
+  const OPEN_PREFERENCE_KEY = "hkcinema:data-health-open:v3";
 
   const state = {
     online: typeof navigator === "undefined" || navigator.onLine !== false,
@@ -118,8 +118,9 @@
   function ensurePanel(defaultOpen = false) {
     let panel = document.querySelector("#dataHealth");
     if (panel) return panel;
+    const topbarActions = document.querySelector("#topbarActions");
     const broadwayStatus = document.querySelector("#systemStatus");
-    if (!broadwayStatus) return null;
+    if (!topbarActions && !broadwayStatus) return null;
     panel = document.createElement("details");
     panel.id = "dataHealth";
     panel.className = "data-health";
@@ -137,8 +138,26 @@
         // Storage can be unavailable in restricted/private contexts.
       }
     });
-    broadwayStatus.insertAdjacentElement("beforebegin", panel);
+    if (topbarActions) {
+      topbarActions.insertBefore(panel, document.querySelector("#refreshButton"));
+    } else {
+      broadwayStatus.insertAdjacentElement("beforebegin", panel);
+    }
+    document.body.classList.add("has-data-health");
+    document.addEventListener("click", event => {
+      if (panel.open && !panel.contains(event.target)) panel.open = false;
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && panel.open) panel.open = false;
+    });
     return panel;
+  }
+
+  function compactLabel(level) {
+    if (level === "fresh") return "資料正常";
+    if (level === "loading") return "更新中";
+    if (level === "error") return "資料離線";
+    return "部分異常";
   }
 
   function escapeHtml(value) {
@@ -158,17 +177,30 @@
     panel.dataset.status = summary.level;
     panel.innerHTML = `
       <summary class="data-health-heading">
-        <div>
-          <span>資料狀態</span>
-          <strong>${escapeHtml(summary.label)}</strong>
-          <small>${escapeHtml(summary.detail)}</small>
+        <div class="data-health-lights" aria-label="三院線資料狀態">
+          ${summary.values.map(({ provider, health }) => `
+            <span
+              class="data-health-light ${escapeHtml(health.level)}"
+              role="img"
+              aria-label="${escapeHtml(provider.label)}：${escapeHtml(health.label)}"
+              title="${escapeHtml(provider.label)}：${escapeHtml(health.label)}"
+            ></span>
+          `).join("")}
         </div>
-        <span class="data-health-toggle" aria-hidden="true">
-          <span class="data-health-toggle-more">詳情</span>
-          <span class="data-health-toggle-less">收起</span>
+        <span class="data-health-compact">
+          <strong>${escapeHtml(compactLabel(summary.level))}</strong>
+          <small>${summary.usable}/${summary.total}</small>
         </span>
+        <span class="data-health-chevron" aria-hidden="true"></span>
       </summary>
       <div class="data-health-body">
+        <div class="data-health-body-heading">
+          <div>
+            <span>資料狀態</span>
+            <strong>${escapeHtml(summary.label)}</strong>
+          </div>
+          <small>${escapeHtml(summary.detail)}</small>
+        </div>
         <div class="data-health-sources">
           ${summary.values.map(({ provider, record, health }) => `
             <div class="data-health-source ${escapeHtml(health.level)}" data-data-health-provider="${provider.key}">

@@ -149,18 +149,24 @@
     filters.setAttribute("aria-label", "院線篩選");
     filters.innerHTML = `
       <div class="home-provider-filter-heading">
-        <strong>院線</strong>
-        <span data-home-filter-result>全部院線</span>
+        <strong>篩選</strong>
+        <div>
+          <span data-home-filter-result>全部條件</span>
+          <button type="button" data-home-filter-reset hidden>重設</button>
+        </div>
       </div>
-      <div class="home-provider-filter-options" role="group" aria-label="選擇院線">
-        <button type="button" data-home-provider="all" aria-pressed="true">
-          全部 <span data-provider-count="all">0</span>
-        </button>
-        ${PROVIDER_OPTIONS.map(provider => `
-          <button type="button" data-home-provider="${provider.key}" aria-pressed="false">
-            ${provider.label} <span data-provider-count="${provider.key}">0</span>
+      <div class="home-filter-row">
+        <span class="home-filter-row-label">院線</span>
+        <div class="home-provider-filter-options" role="group" aria-label="選擇院線">
+          <button type="button" data-home-provider="all" aria-pressed="true">
+            全部 <span data-provider-count="all">0</span>
           </button>
-        `).join("")}
+          ${PROVIDER_OPTIONS.map(provider => `
+            <button type="button" data-home-provider="${provider.key}" aria-pressed="false">
+              ${provider.label} <span data-provider-count="${provider.key}">0</span>
+            </button>
+          `).join("")}
+        </div>
       </div>
     `;
     heading.insertAdjacentElement("afterend", filters);
@@ -251,6 +257,17 @@
     saveProviderFilters();
     applyProviderFilters();
   }
+
+  window.HKCinemaHomeProviderFilters = {
+    clear() {
+      selectedProviders.clear();
+      saveProviderFilters();
+      applyProviderFilters();
+    },
+    selected() {
+      return Array.from(selectedProviders);
+    }
+  };
 
   function movieTitle(movie) {
     return movie?.title?.zh || movie?.title?.en || "未命名電影";
