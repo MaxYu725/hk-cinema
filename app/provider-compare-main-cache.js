@@ -39,7 +39,6 @@
       return null;
     }
 
-    // Refresh insertion order so frequently reused dates are retained.
     cache.delete(key);
     cache.set(key, entry);
     return entry.value;
@@ -140,6 +139,18 @@
     return `${id}:${selectedDate || "initial"}`;
   }
 
+  function broadwayUrl(movieId, selectedDate) {
+    const id = String(movieId || "").replace(/^broadway:/, "");
+    if (!id) return null;
+
+    const url = new URL(
+      `/api/broadway/movies/${encodeURIComponent(id)}/shows`,
+      WORKER_ORIGIN
+    );
+    if (selectedDate) url.searchParams.set("date", selectedDate);
+    return url.toString();
+  }
+
   function installMCLCache() {
     const provider = window.HKCinemaProviders?.mcl;
     if (!provider?.getTicketing) return false;
@@ -164,6 +175,31 @@
     return true;
   }
 
+  async function prefetchBroadway(movieId, selectedDate) {
+    const url = broadwayUrl(movieId, selectedDate);
+    if (!url) return false;
+    if (read(broadwayCache, url)) return true;
+
+    const response = await window.fetch(url, { cache: "no-store" });
+    if (!response.ok) return false;
+
+    await response.text();
+    return Boolean(read(broadwayCache, url));
+  }
+
+  async function prefetchMCL(movieSetId, selectedDate) {
+    if (!installMCLCache()) return false;
+
+    const key = mclKey(movieSetId, selectedDate);
+    if (read(mclCache, key)) return true;
+
+    const provider = window.HKCinemaProviders?.mcl;
+    if (!provider?.getTicketing) return false;
+
+    const data = await provider.getTicketing(movieSetId, selectedDate);
+    return Boolean(data && read(mclCache, key));
+  }
+
   if (!installMCLCache()) {
     window.addEventListener("DOMContentLoaded", installMCLCache, { once: true });
   }
@@ -179,6 +215,8 @@
 
   window.HKCinemaProviderCompareMainCache = {
     clear,
+    prefetchBroadway,
+    prefetchMCL,
     getStats() {
       prune(broadwayCache);
       prune(mclCache);
