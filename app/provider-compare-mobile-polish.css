@@ -1,0 +1,218 @@
+/* Phase 5E-4: mobile-first comparison UI polish. Data behaviour is unchanged. */
+
+.provider-compare-sheet {
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Ready state should confirm health without consuming the first screen. */
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-compare-resilience {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading {
+  flex: 1 1 auto;
+  align-items: center;
+  margin: 0;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading > div {
+  display: block;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading span,
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading small {
+  display: none;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading strong {
+  font-size: .84rem;
+  white-space: nowrap;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading strong::before {
+  content: "●";
+  margin-right: 7px;
+  color: #2d9b68;
+  font-size: .72em;
+  vertical-align: .08em;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-sources {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  background: transparent;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main {
+  display: flex;
+  margin: 0;
+  gap: 5px;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main strong {
+  font-size: .72rem;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source small {
+  display: none;
+}
+
+.provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge {
+  padding: 3px 7px;
+  font-size: .66rem;
+}
+
+/* Dates are a touch carousel on phones; hide the desktop-style scrollbar. */
+.provider-compare-dates {
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.provider-compare-date {
+  min-height: 62px;
+  scroll-snap-align: start;
+  touch-action: manipulation;
+}
+
+.provider-compare-close,
+.provider-compare-reset,
+.provider-compare-control-group button,
+.provider-resilience-source button,
+.provider-compare-recommendation,
+.provider-compare-show {
+  touch-action: manipulation;
+}
+
+/* Loading keeps layout stable and adds a subtle skeleton cue. */
+.provider-compare-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-compare-loading::before {
+  content: "";
+  width: min(310px, 78%);
+  height: 8px;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #eceef2 0%,
+    #f7f8fa 42%,
+    #eceef2 78%
+  );
+  background-size: 220% 100%;
+  animation: providerCompareSkeleton 1.35s ease-in-out infinite;
+}
+
+.provider-compare-empty {
+  min-height: 104px;
+  padding: 14px;
+  border: 1px dashed #dfe3e8;
+  border-radius: 16px;
+  background: #fafbfc;
+}
+
+@keyframes providerCompareSkeleton {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .provider-compare-loading::before {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .provider-compare-sheet {
+    padding-top: calc(54px + env(safe-area-inset-top));
+    padding-bottom: max(30px, calc(20px + env(safe-area-inset-bottom)));
+  }
+
+  .provider-compare-reset {
+    top: calc(20px + env(safe-area-inset-top));
+  }
+
+  .provider-compare-hero {
+    padding-top: 20px;
+    padding-bottom: 24px;
+  }
+
+  .provider-compare-dates {
+    margin-right: -14px;
+    padding-right: 14px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .provider-compare-dates::-webkit-scrollbar {
+    display: none;
+  }
+
+  .provider-compare-date {
+    min-width: 108px;
+    min-height: 66px;
+    padding: 11px 13px;
+  }
+
+  .provider-compare-section {
+    margin-top: 14px;
+  }
+
+  .provider-compare-loading,
+  .provider-compare-empty {
+    min-height: 108px;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-compare-resilience {
+    margin: 8px 14px 0;
+    padding: 9px 10px;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading {
+    display: flex;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-sources {
+    gap: 4px;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-source-main strong {
+    display: none;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge::before {
+    content: attr(data-provider-label);
+  }
+}
+
+@media (max-width: 430px) {
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-compare-resilience {
+    gap: 8px;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-heading strong {
+    font-size: .79rem;
+  }
+
+  .provider-compare-overlay[data-compare-data-state="ready"] .provider-resilience-badge {
+    padding-inline: 6px;
+  }
+}
