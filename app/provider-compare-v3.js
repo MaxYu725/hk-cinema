@@ -458,14 +458,8 @@
     const activeCount = activeProviders().length;
 
     return `
-      <section class="provider-compare-section provider-compare-dates-section">
-        <div class="provider-compare-section-heading">
-          <div>
-            <p class="eyebrow">DATES</p>
-            <h2>可售日期</h2>
-          </div>
-          <small>優先選擇最多院線同時有場次的日期</small>
-        </div>
+      <div class="provider-compare-date-rail">
+        <span class="provider-compare-date-label">日期</span>
         <div class="provider-compare-dates" data-provider-count="${activeCount}">
           ${dates.map(date => {
             const availability = dateProviders(date);
@@ -477,7 +471,7 @@
             `;
           }).join("")}
         </div>
-      </section>
+      </div>
     `;
   }
 
@@ -526,6 +520,7 @@
 
     return `
       <section class="provider-compare-section provider-compare-timeline-section">
+        ${renderDates()}
         <div class="provider-compare-section-heading">
           <div>
             <p class="eyebrow">${escapeHtml(formatDate(state.selectedDate))}</p>
@@ -536,9 +531,10 @@
         ${sessions.length
           ? `<div class="provider-compare-timeline">${sessions.map(renderTimelineItem).join("")}</div>`
           : `<div class="provider-compare-empty"><strong>這一天暫時沒有可比較場次</strong><span>可選擇其他日期，或稍後重新載入。</span></div>`}
-        <p class="provider-compare-note">
-          場次按時間排序；票價顯示各院線目前提供的標準／成人場次價格。座位數字會在資料齊全時開啟所屬院線唯讀座位圖，其餘位置則前往官方購票頁；MCL 摘要仍會在接近畫面時自動更新。
-        </p>
+        <details class="provider-compare-note">
+          <summary>票價及座位說明</summary>
+          <p>場次按目前選擇排序；票價為院線提供的標準／成人價。座位數字可開啟唯讀座位圖，其餘位置會前往官方購票頁。</p>
+        </details>
       </section>
     `;
   }
@@ -564,7 +560,7 @@
           </div>
         </section>
       `
-      : `${providerErrorHtml()}${renderDates()}${renderTimeline()}`;
+      : `${providerErrorHtml()}${renderTimeline()}`;
 
     content.innerHTML = `
       <div class="provider-compare-hero">
@@ -575,8 +571,8 @@
           <p class="eyebrow">${escapeHtml(labels.join(" × ").toUpperCase())}</p>
           <h1>${escapeHtml(match.title)}</h1>
           <div class="provider-compare-status">
-            <span>已配對</span>
-            <small>${matchLabel} · ${labels.length} 院線 · 信心 ${Math.round((match.confidence || 0) * 100)}%</small>
+            <span>${labels.length} 院線</span>
+            <small>${matchLabel} · 信心 ${Math.round((match.confidence || 0) * 100)}%</small>
           </div>
         </div>
       </div>

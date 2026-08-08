@@ -137,25 +137,6 @@
     }
   }
 
-  function ensureResetButton(overlay) {
-    const sheet = overlay?.querySelector(".provider-compare-sheet");
-    if (!sheet || sheet.querySelector("[data-provider-compare-reset]")) return;
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "provider-compare-reset";
-    button.dataset.providerCompareReset = "true";
-    button.textContent = "重設篩選";
-    button.setAttribute("aria-label", "重設比較篩選");
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      resetFilters(button);
-    });
-
-    sheet.appendChild(button);
-  }
-
   function observeContent(overlay) {
     contentObserver?.disconnect();
     const content = overlay.querySelector("#providerCompareContent");
@@ -175,7 +156,6 @@
   }
 
   function attachOverlay(overlay) {
-    ensureResetButton(overlay);
     observeContent(overlay);
 
     overlayObserver?.disconnect();
@@ -185,7 +165,6 @@
         restoredForOpen = false;
         return;
       }
-      ensureResetButton(overlay);
       restoreSavedFilters();
     });
 
@@ -196,6 +175,14 @@
 
     if (!overlay.hidden) restoreSavedFilters();
   }
+
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.("[data-provider-compare-reset]");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resetFilters(button);
+  }, true);
 
   function install() {
     const existing = document.querySelector("#providerCompareOverlay");

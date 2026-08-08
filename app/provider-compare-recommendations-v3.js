@@ -207,9 +207,10 @@
         ${cardHtml("全院線平衡推薦", pick, "balanced")}
       </div>
       ${providerPicksHtml}
-      <p class="provider-compare-recommendation-note">
-        平衡推薦＝價格 50% + 可用座位比例 35% + 較早時間 15%。Broadway、MCL、Emperor 與全院線推薦共用同一評分尺度；只顯示目前篩選結果內實際存在的院線。MCL SeatPlan lazy loading 後會自動重新評分。
-      </p>
+      <details class="provider-compare-recommendation-note">
+        <summary>推薦計算方式</summary>
+        <p>平衡推薦以價格 50%、可用座位 35% 及較早時間 15% 計算；座位資料更新後會自動重新評分。</p>
+      </details>
     `;
 
     let panel = section.querySelector("[data-provider-recommendations]");
