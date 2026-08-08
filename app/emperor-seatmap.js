@@ -274,7 +274,7 @@
       if (!rows.has(seat.rowName) || top < rows.get(seat.rowName)) rows.set(seat.rowName, top);
     }
     return Array.from(rows.entries()).map(([rowName, rawTop]) => {
-      const top = rawTop - Number(section.bounds?.minTop || 0) + 28;
+      const top = rawTop - Number(section.bounds?.minTop || 0) + 36;
       return `<span class="emperor-seatmap-row-label" style="top:${top}px">${escapeHtml(rowName)}</span>`;
     }).join("");
   }
@@ -299,14 +299,27 @@
           <span>${escapeHtml((section.seats || []).length)} 個座位</span>
         </div>
         ${renderAreas(section)}
-        <div class="emperor-seatmap-scroll" tabindex="0" aria-label="可左右捲動座位圖">
-          <div class="emperor-seatmap-canvas" style="width:${width}px;height:${height}px">
+        <div class="emperor-seatmap-viewport">
+          <div class="emperor-seatmap-scroll" tabindex="0" aria-label="可左右捲動座位圖">
+            <div class="emperor-seatmap-canvas" style="width:${width}px;height:${height}px">
+              ${(section.seats || []).map(seat => renderSeat(seat, section.bounds)).join("")}
+            </div>
+          </div>
+          <div class="emperor-seatmap-row-labels" style="height:${height}px" aria-hidden="true">
             ${renderRows(section)}
-            ${(section.seats || []).map(seat => renderSeat(seat, section.bounds)).join("")}
           </div>
         </div>
       </section>
     `;
+  }
+
+  function centerSeatMapViews(content) {
+    requestAnimationFrame(() => {
+      content.querySelectorAll(".emperor-seatmap-scroll").forEach(scroll => {
+        const maximumScroll = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+        scroll.scrollLeft = Math.round(maximumScroll / 2);
+      });
+    });
   }
 
   function renderLoading(session) {
@@ -379,6 +392,7 @@
         座位位置直接使用 Emperor getSeatMap 的 left/top geometry。綠色代表官方 status=1 可售；其他狀態只標示為不可選、停用或隔離，不推測個別座位是否已售。此座位圖只供查看，不會鎖位或提交訂單。
       </p>
     `;
+    centerSeatMapViews(content);
   }
 
   async function fetchSeatMap(session, signal) {
