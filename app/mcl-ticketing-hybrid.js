@@ -1,46 +1,17 @@
 (() => {
   const WORKER_API =
     "https://hk-cinema-api.max-yu-jp.workers.dev";
-  const STALE_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+  const WORKER_TIMEOUT_MS = 8000;
 
-  function cacheKey(movieSetId, selectedDate) {
-    return `hkcinema:mcl-ticketing:last-good:${movieSetId}:${selectedDate || "default"}:v1`;
+  function messageOf(error) {
+    return error instanceof Error
+      ? error.message
+      : String(error || "");
   }
 
-  function writeLastGood(movieSetId, selectedDate, data) {
-    try {
-      localStorage.setItem(
-        cacheKey(movieSetId, selectedDate),
-        JSON.stringify({ savedAt: Date.now(), data })
-      );
-    } catch {
-      // Storage is optional.
-    }
-  }
-
-  function readLastGood(movieSetId, selectedDate) {
-    try {
-      const raw = localStorage.getItem(
-        cacheKey(movieSetId, selectedDate)
-      );
-      if (!raw) return null;
-
-      const cached = JSON.parse(raw);
-      const age = Date.now() - Number(cached?.savedAt);
-      if (
-        !cached?.data ||
-        !Number.isFinite(age) ||
-        age < 0 ||
-        age > STALE_CACHE_MAX_AGE_MS
-      ) {
-        localStorage.removeItem(cacheKey(movieSetId, selectedDate));
-        return null;
-      }
-
-      return cached.data;
-    } catch {
-      return null;
-    }
+  function isFormatMismatch(error) {
+    return /場次格式未能識別|grid=|GetNowShowingGrid|MCL 場次格式/i
+      .test(messageOf(error));
   }
 
   async function getWorkerTicketing(
@@ -60,8 +31,8 @@
 
     const controller = new AbortController();
     const timer = setTimeout(
-      () => controller.abort(),
-      18000
+      () => controller.abort("timeout"),
+      WORKER_TIMEOUT_MS
     );
 
     try {
@@ -75,13 +46,10 @@
       );
 
       let result = null;
-
       try {
         result = await response.json();
       } catch {
-        throw new Error(
-          `Worker HTTP ${response.status}`
-        );
+        throw new Error(`Worker HTTP ${response.status}`);
       }
 
       if (
@@ -89,15 +57,19 @@
         !result?.ok ||
         !result?.data
       ) {
-        throw new Error(
-          `Worker HTTP ${response.status}`
-        );
+        throw new Error(`Worker HTTP ${response.status}`);
       }
 
       return result.data;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  function unsupportedVpnError() {
+    return new Error(
+      "MCL 場次暫不支援 VPN／Proxy 網絡。MCL 在這類網絡下可能回傳異常或不完整資料，請關閉 VPN／Proxy 後重新載入比較。"
+    );
   }
 
   function install() {
@@ -121,67 +93,45 @@
     ) => {
       const id = String(movieSetId || "")
         .replace(/^mcl:/, "");
-      let browserError = null;
 
       try {
-        const data = await browserGetTicketing(
+        return await browserGetTicketing(
           id,
           selectedDate
         );
-        writeLastGood(id, selectedDate, data);
-        return data;
-      } catch (error) {
-        browserError = error;
-      }
-
-      try {
-        const data = await getWorkerTicketing(
-          id,
-          selectedDate
-        );
-
-        const result = {
-          ...data,
-          source: {
-            ...(data?.source || {}),
-            fallbackFrom:
-              "browser-direct-mclwebapi2"
-          }
-        };
-
-        writeLastGood(id, selectedDate, result);
-        return result;
-      } catch {
-        const cached = readLastGood(id, selectedDate);
-        if (cached) {
-          return {
-            ...cached,
-            source: {
-              ...(cached?.source || {}),
-              staleFallback: true,
-              staleReason: "network-or-vpn"
-            }
-          };
+      } catch (browserError) {
+        // A fast HTTP 200 response containing the wrong MCL payload is the
+        // recurring VPN / proxy failure mode. Do not enter a long fallback
+        // chain or return stale partial showtimes in this case.
+        if (isFormatMismatch(browserError)) {
+          throw unsupportedVpnError();
         }
 
-        const browserMessage = browserError instanceof Error
-          ? browserError.message
-          : String(browserError || "");
-        const looksLikeVpnMismatch =
-          /場次格式未能識別|grid=|timeout|abort|failed to fetch|network/i
-            .test(browserMessage);
+        try {
+          const data = await getWorkerTicketing(
+            id,
+            selectedDate
+          );
 
-        throw new Error(
-          looksLikeVpnMismatch
-            ? "MCL 場次在目前網絡下暫時無法更新。VPN／Proxy 可能會令 MCL 回傳異常資料，請暫時關閉 VPN 後重試。"
-            : "MCL 場次暫時無法更新，請稍後重試；如正在使用 VPN／Proxy，請先關閉後再試。"
-        );
+          return {
+            ...data,
+            source: {
+              ...(data?.source || {}),
+              fallbackFrom:
+                "browser-direct-mclwebapi2"
+            }
+          };
+        } catch {
+          throw new Error(
+            "MCL 場次暫時無法更新。請檢查網絡後重試；如正在使用 VPN／Proxy，請關閉後再試。"
+          );
+        }
       }
     };
 
     provider.ticketingHybridInstalled = true;
     provider.ticketingTransport =
-      "hybrid-webapi2-worker-v3";
+      "hybrid-webapi2-worker-v4-fast-fail";
 
     return true;
   }
