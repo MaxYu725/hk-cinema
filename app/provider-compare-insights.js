@@ -1,6 +1,7 @@
 (() => {
   const uiState = {
     provider: "all",
+    region: "all",
     period: "all",
     sort: "time"
   };
@@ -78,6 +79,19 @@
       card.querySelector(".provider-compare-show-price")?.textContent
     );
     const seats = parseSeats(card);
+    const registry = window.HKCinemaCinemaRegistry;
+    const cinemaMeta = registry?.resolve?.(provider, cinema) || {
+      canonical: cinema,
+      region: "unknown",
+      district: null
+    };
+
+    card.dataset.cinemaRegion = cinemaMeta.region || "unknown";
+    if (cinemaMeta.district) {
+      card.dataset.cinemaDistrict = cinemaMeta.district;
+    } else {
+      delete card.dataset.cinemaDistrict;
+    }
 
     return {
       card,
@@ -87,6 +101,9 @@
       time,
       timeValue: timeValue(time),
       cinema,
+      cinemaMeta,
+      region: cinemaMeta.region || "unknown",
+      district: cinemaMeta.district || null,
       price,
       seats,
       seatAvailable: seats?.available ?? null,
@@ -116,8 +133,11 @@
     const providerMatches =
       uiState.provider === "all" ||
       item.provider === uiState.provider;
+    const regionMatches =
+      uiState.region === "all" ||
+      item.region === uiState.region;
 
-    return providerMatches && matchesPeriod(item);
+    return providerMatches && regionMatches && matchesPeriod(item);
   }
 
   function cheapest(items, provider = null) {
@@ -166,12 +186,13 @@
       .replaceAll("'", "&#039;");
   }
 
-  function renderSummary(items) {
+  function renderSummary(items, allItems) {
     const lowest = cheapest(items);
     const first = earliest(items);
     const broadway = cheapest(items, "broadway");
     const mcl = cheapest(items, "mcl");
     const seats = mostAvailable(items);
+    const unknownCount = allItems.filter(item => item.region === "unknown").length;
 
     let differenceValue = "—";
     let differenceDetail = "目前篩選結果未同時包含兩院線票價";
@@ -188,6 +209,10 @@
         differenceDetail = `MCL 最低價便宜 $${difference}`;
       }
     }
+
+    const unknownNote = unknownCount
+      ? `另有 ${unknownCount} 場戲院名稱尚未匹配 registry，只會在「全部地區」顯示。`
+      : "目前場次的戲院均已匹配 cinema registry。";
 
     return `
       <div class="provider-compare-insights" data-provider-insights>
@@ -226,6 +251,14 @@
           </div>
 
           <div class="provider-compare-control-group">
+            <span>地區</span>
+            <button type="button" data-insight-region="all" class="${uiState.region === "all" ? "active" : ""}">全部</button>
+            <button type="button" data-insight-region="hk" class="${uiState.region === "hk" ? "active" : ""}">港島</button>
+            <button type="button" data-insight-region="kln" class="${uiState.region === "kln" ? "active" : ""}">九龍</button>
+            <button type="button" data-insight-region="nt-islands" class="${uiState.region === "nt-islands" ? "active" : ""}">新界/離島</button>
+          </div>
+
+          <div class="provider-compare-control-group">
             <span>時段</span>
             <button type="button" data-insight-period="all" class="${uiState.period === "all" ? "active" : ""}">全日</button>
             <button type="button" data-insight-period="morning" class="${uiState.period === "morning" ? "active" : ""}">早場</button>
@@ -242,7 +275,7 @@
         </div>
 
         <p class="provider-compare-insight-note">
-          時段定義：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前院線與時段篩選結果重新計算；座位排序按可選比例由高至低。
+          地區按 Broadway 與 MCL 官方戲院位置建立；東涌屬離島，因此與新界合併為「新界/離島」。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
         </p>
       </div>
     `;
@@ -295,11 +328,18 @@
     }
 
     if (result) {
-      const filterLabel = uiState.provider === "all"
+      const providerLabel = uiState.provider === "all"
         ? "全部院線"
         : uiState.provider === "mcl"
           ? "MCL"
           : "Broadway";
+      const regionLabel = uiState.region === "hk"
+        ? "港島"
+        : uiState.region === "kln"
+          ? "九龍"
+          : uiState.region === "nt-islands"
+            ? "新界/離島"
+            : "全部地區";
       const periodLabel = uiState.period === "morning"
         ? "早場"
         : uiState.period === "afternoon"
@@ -312,7 +352,7 @@
         : uiState.sort === "seats"
           ? "可選比例由高至低"
           : "時間由早至晚";
-      result.textContent = `${filterLabel} · ${periodLabel} · ${visible} 場 · ${sortLabel}`;
+      result.textContent = `${providerLabel} · ${regionLabel} · ${periodLabel} · ${visible} 場 · ${sortLabel}`;
     }
 
     return visibleItems;
@@ -342,7 +382,7 @@
       const visibleItems = items.filter(matchesFilters);
       const heading = section.querySelector(".provider-compare-section-heading");
       if (heading && items.length) {
-        heading.insertAdjacentHTML("afterend", renderSummary(visibleItems));
+        heading.insertAdjacentHTML("afterend", renderSummary(visibleItems, items));
       }
 
       applyFilterAndSort(timeline, items);
@@ -394,6 +434,15 @@
       event.preventDefault();
       event.stopPropagation();
       uiState.provider = providerButton.dataset.insightProvider || "all";
+      enhance();
+      return;
+    }
+
+    const regionButton = event.target.closest("[data-insight-region]");
+    if (regionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      uiState.region = regionButton.dataset.insightRegion || "all";
       enhance();
       return;
     }
