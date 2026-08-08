@@ -1,0 +1,38 @@
+/* Phase 5E-5: accessibility/focus polish only. */
+
+.provider-compare-sheet:focus {
+  outline: none;
+}
+
+.provider-compare-overlay :is(
+  button,
+  a,
+  select,
+  [tabindex]
+):focus-visible,
+#providerCompareCinemaPortal button:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .24);
+  outline-offset: 3px;
+}
+
+.provider-compare-show:focus-visible,
+.provider-compare-recommendation:focus-visible {
+  border-color: #9da4ae;
+  background: #fff;
+}
+
+.provider-compare-date:focus-visible {
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .provider-compare-overlay :is(
+    button,
+    a,
+    select,
+    [tabindex]
+  ):focus-visible,
+  #providerCompareCinemaPortal button:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
