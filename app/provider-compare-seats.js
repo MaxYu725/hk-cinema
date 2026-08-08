@@ -2,14 +2,25 @@
   const API_BASE =
     "https://hk-cinema-api.max-yu-jp.workers.dev";
   const CACHE_MAX_AGE_MS = 90 * 1000;
+  const REQUEST_TIMEOUT_MS = 15000;
   const MAX_CONCURRENT = 2;
 
   const cache = new Map();
-  const queuedKeys = new Set();
+  const queuedByKey = new Map();
+  const inFlight = new Map();
   const queue = [];
+
   let active = 0;
+  let generation = 0;
   let intersectionObserver = null;
   let mutationObserver = null;
+
+  function normalizeCinemaCode(value) {
+    const raw = String(value || "");
+    return /^\d{1,4}$/.test(raw)
+      ? raw.padStart(3, "0")
+      : raw;
+  }
 
   function getIdentifiers(card) {
     const href = card?.getAttribute("href");
@@ -17,23 +28,26 @@
 
     try {
       const url = new URL(href, window.location.href);
-      const cinemaCode =
+      const cinemaCode = normalizeCinemaCode(
         url.searchParams.get("ci") ||
-        url.searchParams.get("cinemaCode");
-      const sessionId =
+        url.searchParams.get("cinemaCode")
+      );
+      const sessionId = String(
         url.searchParams.get("si") ||
-        url.searchParams.get("filmSessionId");
+        url.searchParams.get("filmSessionId") ||
+        ""
+      );
 
       if (
-        !/^\d{1,4}$/.test(String(cinemaCode || "")) ||
-        !/^\d+$/.test(String(sessionId || ""))
+        !/^\d{1,4}$/.test(cinemaCode) ||
+        !/^\d+$/.test(sessionId)
       ) {
         return null;
       }
 
       return {
-        cinemaCode: String(cinemaCode),
-        sessionId: String(sessionId),
+        cinemaCode,
+        sessionId,
         key: `${cinemaCode}:${sessionId}`
       };
     } catch {
@@ -91,6 +105,8 @@
       : `${available} 個可選`;
 
     card.dataset.seatLoaded = "true";
+    delete card.dataset.seatLoading;
+    delete card.dataset.seatError;
     card.dataset.seatAvailable = String(available);
     if (Number.isFinite(total)) card.dataset.seatTotal = String(total);
     if (Number.isFinite(sold)) card.dataset.seatSold = String(sold);
@@ -119,6 +135,12 @@
     seat.classList.add("loading");
     seat.textContent = "正在取得座位…";
     card.dataset.seatLoading = "true";
+    delete card.dataset.seatError;
+  }
+
+  function clearLoading(card) {
+    if (!card?.isConnected) return;
+    delete card.dataset.seatLoading;
   }
 
   function setError(card) {
@@ -133,9 +155,10 @@
     card.dataset.seatError = "true";
   }
 
-  async function fetchSummary(identifiers) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+  async function fetchSummary(identifiers, controller) {
+    const timer = setTimeout(() => {
+      controller.abort("timeout");
+    }, REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(
@@ -167,28 +190,67 @@
     }
   }
 
+  function currentCards(cards) {
+    return Array.from(cards || []).filter(card =>
+      card?.isConnected &&
+      card.dataset.seatLoaded !== "true"
+    );
+  }
+
   async function runJob(job) {
-    const { card, identifiers } = job;
+    const { identifiers, generation: jobGeneration } = job;
     const cached = getCached(identifiers.key);
 
     if (cached) {
-      updateCard(card, cached, true);
+      for (const card of currentCards(job.cards)) {
+        updateCard(card, cached, true);
+      }
       return;
     }
 
-    setLoading(card);
+    for (const card of currentCards(job.cards)) {
+      setLoading(card);
+    }
+
+    const controller = new AbortController();
+    const entry = {
+      controller,
+      cards: job.cards,
+      generation: jobGeneration
+    };
+    inFlight.set(identifiers.key, entry);
 
     try {
-      const data = await fetchSummary(identifiers);
+      const data = await fetchSummary(identifiers, controller);
+
+      if (jobGeneration !== generation) return;
+
       cache.set(identifiers.key, {
         savedAt: Date.now(),
         data
       });
-      updateCard(card, data, false);
-    } catch {
-      setError(card);
+
+      for (const card of currentCards(job.cards)) {
+        updateCard(card, data, false);
+      }
+    } catch (error) {
+      const lifecycleCancelled =
+        jobGeneration !== generation ||
+        controller.signal.reason === "lifecycle";
+
+      if (!lifecycleCancelled) {
+        for (const card of currentCards(job.cards)) {
+          setError(card);
+        }
+      }
     } finally {
-      delete card.dataset.seatLoading;
+      for (const card of job.cards) {
+        clearLoading(card);
+      }
+
+      if (inFlight.get(identifiers.key) === entry) {
+        inFlight.delete(identifiers.key);
+      }
     }
   }
 
@@ -197,19 +259,22 @@
       const job = queue.shift();
       if (!job) break;
 
-      queuedKeys.delete(job.identifiers.key);
+      queuedByKey.delete(job.identifiers.key);
 
-      if (
-        !job.card?.isConnected ||
-        job.card.dataset.seatLoaded === "true"
-      ) {
+      if (job.generation !== generation) {
         continue;
       }
 
+      const cards = currentCards(job.cards);
+      if (!cards.length) {
+        continue;
+      }
+
+      job.cards = new Set(cards);
       active++;
       runJob(job)
         .finally(() => {
-          active--;
+          active = Math.max(0, active - 1);
           pumpQueue();
         });
     }
@@ -219,7 +284,6 @@
     if (
       !card?.isConnected ||
       card.dataset.seatLoaded === "true" ||
-      card.dataset.seatLoading === "true" ||
       card.dataset.seatError === "true"
     ) {
       return;
@@ -234,11 +298,49 @@
       return;
     }
 
-    if (queuedKeys.has(identifiers.key)) return;
+    const running = inFlight.get(identifiers.key);
+    if (running?.generation === generation) {
+      running.cards.add(card);
+      setLoading(card);
+      return;
+    }
 
-    queuedKeys.add(identifiers.key);
-    queue.push({ card, identifiers });
+    const queued = queuedByKey.get(identifiers.key);
+    if (queued?.generation === generation) {
+      queued.cards.add(card);
+      return;
+    }
+
+    const job = {
+      identifiers,
+      cards: new Set([card]),
+      generation
+    };
+
+    queuedByKey.set(identifiers.key, job);
+    queue.push(job);
     pumpQueue();
+  }
+
+  function cancelPendingWork() {
+    generation++;
+
+    queue.splice(0, queue.length);
+    queuedByKey.clear();
+
+    for (const entry of inFlight.values()) {
+      try {
+        entry.controller.abort("lifecycle");
+      } catch {
+        entry.controller.abort();
+      }
+    }
+
+    for (const card of document.querySelectorAll(
+      "#providerCompareContent .provider-compare-show[data-seat-loading='true']"
+    )) {
+      clearLoading(card);
+    }
   }
 
   function isMCLCard(card) {
@@ -263,14 +365,15 @@
     note.className = "provider-compare-seat-lazy-note";
     note.dataset.mclSeatLazyNote = "true";
     note.textContent =
-      "MCL 座位會在場次接近畫面時自動更新；每次最多同時讀取 2 個 SeatPlan，避免一次請求全日所有場次。";
+      "MCL 座位會在場次接近畫面時自動更新；每次最多同時讀取 2 個 SeatPlan，切換日期或關閉比較時會自動取消舊請求。";
 
     timeline.insertAdjacentElement("beforebegin", note);
   }
 
   function observeCards() {
     const content = document.querySelector("#providerCompareContent");
-    if (!content || !intersectionObserver) return;
+    const overlay = document.querySelector("#providerCompareOverlay");
+    if (!content || !intersectionObserver || overlay?.hidden) return;
 
     ensureLazyNote(content);
 
@@ -319,8 +422,38 @@
       subtree: true
     });
 
+    window.addEventListener(
+      "hkcinema:provider-compare-lifecycle",
+      event => {
+        const type = event.detail?.type;
+        if (
+          type === "open" ||
+          type === "date-change" ||
+          type === "close" ||
+          type === "reload"
+        ) {
+          cancelPendingWork();
+        }
+      }
+    );
+
     observeCards();
   }
+
+  window.HKCinemaProviderCompareSeats = {
+    cancelPendingWork,
+    getStats() {
+      return {
+        generation,
+        active,
+        queued: queue.length,
+        inFlight: inFlight.size,
+        cacheEntries: cache.size,
+        maxConcurrent: MAX_CONCURRENT,
+        cacheMaxAgeMs: CACHE_MAX_AGE_MS
+      };
+    }
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", install, { once: true });
