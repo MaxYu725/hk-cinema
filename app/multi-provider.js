@@ -1,16 +1,11 @@
 (() => {
-  let catalogue =
-    window.HKCinemaMCLCatalogue || null;
+  let mclCatalogue = window.HKCinemaMCLCatalogue || null;
+  let emperorCatalogue = window.HKCinemaEmperorCatalogue || null;
 
-  const grid =
-    document.querySelector("#movieGrid");
+  const grid = document.querySelector("#movieGrid");
+  const count = document.querySelector("#movieCount");
 
-  const count =
-    document.querySelector("#movieCount");
-
-  if (!grid || !count) {
-    return;
-  }
+  if (!grid || !count) return;
 
   const matchRecords = new Map();
 
@@ -43,134 +38,129 @@
   }
 
   function getActiveTab() {
-    return (
-      document.querySelector(".tab.active")
-        ?.dataset.tab || "now"
-    );
+    return document.querySelector(".tab.active")?.dataset.tab || "now";
   }
 
   function getMCLMovies() {
-    if (!catalogue) {
-      return [];
-    }
-
+    if (!mclCatalogue) return [];
     return getActiveTab() === "coming"
-      ? catalogue.coming || []
-      : catalogue.now || [];
+      ? mclCatalogue.coming || []
+      : mclCatalogue.now || [];
+  }
+
+  function getEmperorMovies() {
+    if (!emperorCatalogue) return [];
+    return getActiveTab() === "coming"
+      ? emperorCatalogue.coming || []
+      : emperorCatalogue.now || [];
   }
 
   function findMCLMovie(sourceId) {
-    if (!catalogue) return null;
-
+    if (!mclCatalogue) return null;
     return [
-      ...(catalogue.now || []),
-      ...(catalogue.coming || []),
-      ...(catalogue.festival || [])
-    ].find(movie =>
-      String(movie.sourceId) === String(sourceId)
-    ) || null;
+      ...(mclCatalogue.now || []),
+      ...(mclCatalogue.coming || []),
+      ...(mclCatalogue.festival || [])
+    ].find(movie => String(movie.sourceId) === String(sourceId)) || null;
   }
 
-  function providerBadges(
-    labels,
-    mclSourceId = null,
-    matchId = null
-  ) {
-    return `
-      <div class="provider-badges">
-        ${labels
-          .map(label => {
-            const isMCL = label === "MCL";
-            const attrs =
-              isMCL && mclSourceId
-                ? ` data-mcl-open="${escapeHtml(mclSourceId)}" title="查看 MCL 場次"`
-                : "";
+  function findEmperorMovie(sourceId) {
+    if (!emperorCatalogue) return null;
+    return [
+      ...(emperorCatalogue.now || []),
+      ...(emperorCatalogue.coming || [])
+    ].find(movie => String(movie.sourceId) === String(sourceId)) || null;
+  }
 
-            return `<span class="provider-badge provider-${label.toLowerCase()}"${attrs}>${escapeHtml(label)}</span>`;
-          })
-          .join("")}
-        ${
-          matchId
-            ? `<button type="button" class="provider-compare" data-compare-open="${escapeHtml(matchId)}" aria-label="比較 Broadway 與 MCL 場次及票價">比較</button>`
-            : ""
-        }
+  function providerBadges(labels, options = {}) {
+    const { mclSourceId = null, emperorSourceId = null, matchId = null } = options;
+
+    return `
+      <div class="provider-badges" data-multi-provider="true">
+        ${labels.map(label => {
+          const key = label.toLowerCase();
+          let attrs = "";
+
+          if (label === "MCL" && mclSourceId) {
+            attrs = ` data-mcl-open="${escapeHtml(mclSourceId)}" title="查看 MCL 場次"`;
+          } else if (label === "Emperor" && emperorSourceId) {
+            attrs = ` data-emperor-open="${escapeHtml(emperorSourceId)}" title="查看 Emperor 官方資料"`;
+          }
+
+          return `<span class="provider-badge provider-${key}"${attrs}>${escapeHtml(label)}</span>`;
+        }).join("")}
+        ${matchId
+          ? `<button type="button" class="provider-compare" data-compare-open="${escapeHtml(matchId)}" aria-label="比較 Broadway 與 MCL 場次及票價">比較</button>`
+          : ""}
       </div>
     `;
   }
 
-  function renderMCLCard(movie) {
-    const title =
-      movie.title?.zh ||
-      movie.title?.en ||
-      "未命名電影";
+  function movieTitle(movie) {
+    return movie?.title?.zh || movie?.title?.en || "未命名電影";
+  }
 
+  function renderProviderOnlyCard(movie, provider) {
+    const title = movieTitle(movie);
+    const isMCL = provider === "mcl";
+    const label = isMCL ? "MCL" : "Emperor";
+    const providerClass = isMCL ? "mcl-only-card" : "emperor-only-card";
+    const openAttr = isMCL
+      ? `data-mcl-open="${escapeHtml(movie.sourceId)}"`
+      : `data-emperor-open="${escapeHtml(movie.sourceId)}"`;
     const poster = movie.poster
       ? `
         <img
           src="${escapeHtml(movie.poster)}"
           alt="${escapeHtml(title)}"
           loading="lazy"
-          onerror="
-            this.style.display='none';
-            this.parentElement.classList.add('poster-error');
-          "
+          onerror="this.style.display='none';this.parentElement.classList.add('poster-error');"
         >
       `
       : "";
-
-    const upcomingBadge =
-      getActiveTab() === "coming"
-        ? `
-          <div class="movie-badges">
-            <span class="movie-badge coming">MCL 即將上映</span>
-          </div>
-        `
-        : "";
+    const upcomingBadge = getActiveTab() === "coming"
+      ? `
+        <div class="movie-badges">
+          <span class="movie-badge coming">${label} 即將上映</span>
+        </div>
+      `
+      : "";
 
     return `
       <article
-        class="movie-card mcl-only-card"
-        data-provider="mcl"
+        class="movie-card ${providerClass}"
+        data-provider="${provider}"
         data-source-id="${escapeHtml(movie.sourceId)}"
-        data-booking-url="${escapeHtml(movie.bookingUrl || "") }"
+        data-booking-url="${escapeHtml(movie.bookingUrl || "")}"
+        ${openAttr}
         role="button"
         tabindex="0"
-        aria-label="查看 MCL ${escapeHtml(title)} 詳情及場次"
+        aria-label="查看 ${label} ${escapeHtml(title)}${isMCL ? " 詳情及場次" : " 官方資料"}"
       >
         <div class="movie-poster">
           ${poster}
           ${upcomingBadge}
-          <div class="poster-placeholder">MCL</div>
+          <div class="poster-placeholder">${label}</div>
         </div>
-
         <div class="movie-info">
           <h3>${escapeHtml(title)}</h3>
-          ${providerBadges(["MCL"], movie.sourceId)}
+          ${providerBadges([label], {
+            mclSourceId: isMCL ? movie.sourceId : null,
+            emperorSourceId: isMCL ? null : movie.sourceId
+          })}
         </div>
       </article>
     `;
   }
 
   function createMatchRecord(card, mclMovie) {
-    const broadwaySourceId =
-      String(card.dataset.sourceId || "").trim();
-    const mclSourceId =
-      String(mclMovie?.sourceId || "").trim();
+    const broadwaySourceId = String(card.dataset.sourceId || "").trim();
+    const mclSourceId = String(mclMovie?.sourceId || "").trim();
+    if (!broadwaySourceId || !mclSourceId) return null;
 
-    if (!broadwaySourceId || !mclSourceId) {
-      return null;
-    }
-
-    const title =
-      card.querySelector("h3")?.textContent?.trim() ||
-      mclMovie.title?.zh ||
-      mclMovie.title?.en ||
-      "未命名電影";
-
+    const title = card.querySelector("h3")?.textContent?.trim() || movieTitle(mclMovie);
     const normalizedTitle = normalizeTitle(title);
-    const matchId =
-      `broadway:${broadwaySourceId}|mcl:${mclSourceId}`;
-
+    const matchId = `broadway:${broadwaySourceId}|mcl:${mclSourceId}`;
     const record = {
       id: matchId,
       title,
@@ -187,7 +177,8 @@
         provider: "mcl",
         sourceId: mclSourceId,
         movie: mclMovie
-      }
+      },
+      emperor: null
     };
 
     matchRecords.set(matchId, record);
@@ -195,247 +186,203 @@
     return record;
   }
 
-  function markMatchedCard(card, mclMovie) {
-    if (!mclMovie) return;
-
-    card.dataset.mclSourceId = mclMovie.sourceId;
-
-    const match = createMatchRecord(card, mclMovie);
-    if (!match) return;
-
-    if (
-      card.querySelector(
-        ".provider-badges[data-multi-provider]"
-      )
-    ) {
-      return;
+  function cardProviders(card) {
+    const labels = [];
+    if (card.classList.contains("mcl-only-card")) {
+      labels.push("MCL");
+    } else if (card.classList.contains("emperor-only-card")) {
+      labels.push("Emperor");
+    } else {
+      labels.push("Broadway");
     }
+    if (card.dataset.mclSourceId && !labels.includes("MCL")) labels.push("MCL");
+    if (card.dataset.emperorSourceId && !labels.includes("Emperor")) labels.push("Emperor");
+    return labels;
+  }
 
-    const info =
-      card.querySelector(".movie-info");
+  function refreshCardBadges(card) {
+    const info = card.querySelector(".movie-info");
+    if (!info) return;
 
-    if (!info) {
-      return;
-    }
-
-    const wrapper =
-      document.createElement("div");
-
-    wrapper.innerHTML =
-      providerBadges(
-        ["Broadway", "MCL"],
-        mclMovie.sourceId,
-        match.id
-      );
-
-    const badges = wrapper.firstElementChild;
-    badges.dataset.multiProvider = "true";
-    info.appendChild(badges);
+    info.querySelector(".provider-badges[data-multi-provider]")?.remove();
+    const labels = cardProviders(card);
+    const matchId = card.dataset.providerMatchId || null;
+    info.insertAdjacentHTML("beforeend", providerBadges(labels, {
+      mclSourceId: card.dataset.mclSourceId || (card.classList.contains("mcl-only-card") ? card.dataset.sourceId : null),
+      emperorSourceId: card.dataset.emperorSourceId || (card.classList.contains("emperor-only-card") ? card.dataset.sourceId : null),
+      matchId
+    }));
   }
 
   function openMCL(sourceId) {
     const movie = findMCLMovie(sourceId);
-
-    if (!movie) {
-      return false;
-    }
-
+    if (!movie) return false;
     const detail = window.HKCinemaMCLDetail;
+    if (detail?.open) return detail.open(movie) !== false;
+    window.dispatchEvent(new CustomEvent("hkcinema:mcl-open", { detail: { movie } }));
+    return true;
+  }
 
-    if (detail?.open) {
-      return detail.open(movie) !== false;
+  function openEmperor(sourceId) {
+    const movie = findEmperorMovie(sourceId);
+    if (!movie) return false;
+
+    if (window.HKCinemaEmperorDetail?.open) {
+      return window.HKCinemaEmperorDetail.open(movie) !== false;
     }
 
-    window.dispatchEvent(
-      new CustomEvent("hkcinema:mcl-open", {
-        detail: { movie }
-      })
-    );
-
+    const url = movie.bookingUrl || "https://www.emperorcinemas.com/showtimes";
+    window.open(url, "_blank", "noopener,noreferrer");
     return true;
   }
 
   function applyCatalogue() {
-    if (!catalogue) {
-      return;
-    }
-
-    if (count.textContent.trim() === "—") {
-      return;
-    }
+    if (!mclCatalogue && !emperorCatalogue) return;
+    if (count.textContent.trim() === "—") return;
 
     observer.disconnect();
 
     try {
       matchRecords.clear();
 
-      grid
-        .querySelectorAll(".mcl-only-card")
-        .forEach(card => card.remove());
+      grid.querySelectorAll(".mcl-only-card, .emperor-only-card").forEach(card => card.remove());
+      grid.querySelectorAll(".provider-badges[data-multi-provider]").forEach(item => item.remove());
+      grid.querySelectorAll("[data-mcl-source-id]").forEach(card => delete card.dataset.mclSourceId);
+      grid.querySelectorAll("[data-emperor-source-id]").forEach(card => delete card.dataset.emperorSourceId);
+      grid.querySelectorAll("[data-provider-match-id]").forEach(card => delete card.dataset.providerMatchId);
 
-      grid
-        .querySelectorAll(
-          ".provider-badges[data-multi-provider]"
-        )
-        .forEach(item => item.remove());
-
-      grid
-        .querySelectorAll("[data-mcl-source-id]")
-        .forEach(card => delete card.dataset.mclSourceId);
-
-      grid
-        .querySelectorAll("[data-provider-match-id]")
-        .forEach(card => delete card.dataset.providerMatchId);
-
-      const broadwayCards =
-        Array.from(
-          grid.querySelectorAll(
-            ".movie-card:not(.mcl-only-card)"
-          )
-        );
-
+      const broadwayCards = Array.from(grid.querySelectorAll(
+        ".movie-card:not(.mcl-only-card):not(.emperor-only-card)"
+      ));
       const byTitle = new Map();
 
       for (const card of broadwayCards) {
-        const title =
-          card.querySelector("h3")?.textContent;
-        const key = normalizeTitle(title);
-
-        if (key && !byTitle.has(key)) {
-          byTitle.set(key, card);
-        }
+        const key = normalizeTitle(card.querySelector("h3")?.textContent);
+        if (key && !byTitle.has(key)) byTitle.set(key, card);
       }
 
-      let added = 0;
-      let matched = 0;
+      let mclMatched = 0;
+      let emperorMatched = 0;
 
       for (const movie of getMCLMovies()) {
-        const key = normalizeTitle(
-          movie.title?.zh || movie.title?.en
-        );
-
-        if (!key) {
-          continue;
-        }
+        const key = normalizeTitle(movieTitle(movie));
+        if (!key) continue;
 
         const matchingCard = byTitle.get(key);
-
         if (matchingCard) {
-          markMatchedCard(matchingCard, movie);
-          matched++;
+          matchingCard.dataset.mclSourceId = movie.sourceId;
+          if (!matchingCard.classList.contains("mcl-only-card")) {
+            const match = createMatchRecord(matchingCard, movie);
+            if (match) mclMatched++;
+          }
+          refreshCardBadges(matchingCard);
           continue;
         }
 
-        grid.insertAdjacentHTML(
-          "beforeend",
-          renderMCLCard(movie)
-        );
-        added++;
+        grid.insertAdjacentHTML("beforeend", renderProviderOnlyCard(movie, "mcl"));
+        const card = grid.lastElementChild;
+        if (card) byTitle.set(key, card);
       }
 
-      const total =
-        broadwayCards.length + added;
+      for (const movie of getEmperorMovies()) {
+        const key = normalizeTitle(movieTitle(movie));
+        if (!key) continue;
 
-      count.textContent = `${total} 部`;
-      count.title =
-        `合併後 ${total} 部 · 跨院線配對 ${matched} 部`;
-
-      window.dispatchEvent(
-        new CustomEvent("hkcinema:provider-matches", {
-          detail: {
-            matches: Array.from(matchRecords.values()),
-            count: matchRecords.size
+        const matchingCard = byTitle.get(key);
+        if (matchingCard) {
+          matchingCard.dataset.emperorSourceId = movie.sourceId;
+          const matchId = matchingCard.dataset.providerMatchId;
+          const record = matchId ? matchRecords.get(matchId) : null;
+          if (record) {
+            record.emperor = {
+              provider: "emperor",
+              sourceId: String(movie.sourceId),
+              movie
+            };
           }
-        })
-      );
+          refreshCardBadges(matchingCard);
+          emperorMatched++;
+          continue;
+        }
+
+        grid.insertAdjacentHTML("beforeend", renderProviderOnlyCard(movie, "emperor"));
+        const card = grid.lastElementChild;
+        if (card) byTitle.set(key, card);
+      }
+
+      const total = grid.querySelectorAll(".movie-card").length;
+      count.textContent = `${total} 部`;
+      count.title = `合併後 ${total} 部 · Broadway×MCL 配對 ${mclMatched} 部 · Emperor 配對 ${emperorMatched} 部`;
+
+      window.dispatchEvent(new CustomEvent("hkcinema:provider-matches", {
+        detail: {
+          matches: Array.from(matchRecords.values()),
+          count: matchRecords.size,
+          emperorMatched
+        }
+      }));
     } finally {
-      observer.observe(grid, {
-        childList: true,
-        subtree: true
-      });
+      observer.observe(grid, { childList: true, subtree: true });
     }
   }
 
   let queued = false;
-
   const observer = new MutationObserver(() => {
-    if (queued) {
-      return;
-    }
-
+    if (queued) return;
     queued = true;
-
     queueMicrotask(() => {
       queued = false;
       applyCatalogue();
     });
   });
 
-  observer.observe(grid, {
-    childList: true,
-    subtree: true
+  observer.observe(grid, { childList: true, subtree: true });
+
+  window.addEventListener("hkcinema:mcl-catalogue", event => {
+    mclCatalogue = event.detail;
+    applyCatalogue();
   });
 
-  window.addEventListener(
-    "hkcinema:mcl-catalogue",
-    event => {
-      catalogue = event.detail;
-      applyCatalogue();
-    }
-  );
+  window.addEventListener("hkcinema:emperor-catalogue", event => {
+    emperorCatalogue = event.detail;
+    applyCatalogue();
+  });
 
-  document.addEventListener(
-    "click",
-    event => {
-      const mclBadge =
-        event.target.closest("[data-mcl-open]");
-
-      if (mclBadge) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        openMCL(mclBadge.dataset.mclOpen);
-        return;
-      }
-
-      const card =
-        event.target.closest(".mcl-only-card");
-
-      if (!card) {
-        return;
-      }
-
+  document.addEventListener("click", event => {
+    const mclTarget = event.target.closest("[data-mcl-open]");
+    if (mclTarget) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      openMCL(card.dataset.sourceId);
-    },
-    true
-  );
-
-  document.addEventListener(
-    "keydown",
-    event => {
-      if (
-        event.key !== "Enter" &&
-        event.key !== " "
-      ) {
-        return;
-      }
-
-      const card =
-        event.target.closest(".mcl-only-card");
-
-      if (!card) {
-        return;
-      }
-
-      event.preventDefault();
-      openMCL(card.dataset.sourceId);
+      openMCL(mclTarget.dataset.mclOpen || mclTarget.dataset.sourceId);
+      return;
     }
-  );
 
-  if (catalogue) {
-    applyCatalogue();
-  }
+    const emperorTarget = event.target.closest("[data-emperor-open]");
+    if (emperorTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      openEmperor(emperorTarget.dataset.emperorOpen || emperorTarget.dataset.sourceId);
+    }
+  }, true);
+
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    const mclCard = event.target.closest(".mcl-only-card");
+    if (mclCard) {
+      event.preventDefault();
+      openMCL(mclCard.dataset.sourceId);
+      return;
+    }
+
+    const emperorCard = event.target.closest(".emperor-only-card");
+    if (emperorCard) {
+      event.preventDefault();
+      openEmperor(emperorCard.dataset.sourceId);
+    }
+  });
+
+  if (mclCatalogue || emperorCatalogue) applyCatalogue();
 })();
