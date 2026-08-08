@@ -3,7 +3,6 @@
   const PORTAL_ID = "providerCompareCinemaPortal";
 
   let activeSelect = null;
-  let pointerGesture = null;
   let suppressClickUntil = 0;
 
   function getPortal() {
@@ -13,7 +12,6 @@
   function closePortal() {
     getPortal()?.remove();
     activeSelect = null;
-    pointerGesture = null;
   }
 
   function optionLabel(option) {
@@ -90,7 +88,7 @@
     const selectTarget = activeSelect;
     if (!selectTarget?.isConnected) {
       closePortal();
-      return;
+      return false;
     }
 
     const nextValue = value || "all";
@@ -99,19 +97,20 @@
 
     if (!optionExists) {
       closePortal();
-      return;
+      return false;
     }
 
     selectTarget.value = nextValue;
 
-    // Fire both events before removing the portal. The comparison insights
-    // module listens to change; input is emitted as an additional mobile-safe
-    // signal for any future consumers.
+    // The comparison module owns the actual filter state and listens to
+    // change. Dispatch synchronously while the current select is still in
+    // the live comparison DOM; enhance() may replace it immediately.
     selectTarget.dispatchEvent(new Event("input", { bubbles: true }));
     selectTarget.dispatchEvent(new Event("change", { bubbles: true }));
 
-    suppressClickUntil = performance.now() + 500;
+    suppressClickUntil = performance.now() + 700;
     closePortal();
+    return true;
   }
 
   document.addEventListener("pointerdown", event => {
@@ -127,42 +126,19 @@
 
     const option = event.target.closest?.("[data-cinema-portal-value]");
     if (option) {
-      pointerGesture = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        value: option.dataset.cinemaPortalValue || "all"
-      };
+      // Mobile browsers have repeatedly suppressed the later pointerup/click
+      // inside this overlay. pointerdown is the one event confirmed to reach
+      // the option (the pressed highlight is visible), so apply immediately.
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      applySelection(option.dataset.cinemaPortalValue || "all");
       return;
     }
 
     if (getPortal() && !event.target.closest?.(`#${PORTAL_ID}`)) {
       closePortal();
     }
-  }, true);
-
-  document.addEventListener("pointerup", event => {
-    const option = event.target.closest?.("[data-cinema-portal-value]");
-    const gesture = pointerGesture;
-    pointerGesture = null;
-
-    if (!option || !gesture || gesture.pointerId !== event.pointerId) return;
-
-    const moved = Math.hypot(
-      event.clientX - gesture.x,
-      event.clientY - gesture.y
-    );
-
-    if (moved > 12) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    applySelection(gesture.value);
-  }, true);
-
-  document.addEventListener("pointercancel", () => {
-    pointerGesture = null;
   }, true);
 
   document.addEventListener("click", event => {
@@ -183,7 +159,7 @@
 
     if (performance.now() < suppressClickUntil) return;
 
-    // Desktop/mouse fallback. Mobile normally applies on pointerup above.
+    // Keyboard / desktop fallback.
     applySelection(option.dataset.cinemaPortalValue || "all");
   }, true);
 
