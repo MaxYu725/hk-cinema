@@ -261,9 +261,16 @@ body.emperor-seatmap-open {
   font-weight: 700;
 }
 
-.emperor-seatmap-scroll {
+.emperor-seatmap-viewport {
+  position: relative;
   max-width: 100%;
   margin-top: 12px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.emperor-seatmap-scroll {
+  max-width: 100%;
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -315,13 +322,24 @@ body.emperor-seatmap-open {
 
 .emperor-seatmap-row-label {
   position: absolute;
-  left: 6px;
-  width: 25px;
+  left: 0;
+  width: 30px;
   transform: translateY(-50%);
   color: #747a83;
   font-size: 9px;
   font-weight: 900;
   text-align: center;
+}
+
+.emperor-seatmap-row-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 38px;
+  max-height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, #fafbfc 0 76%, rgba(250, 251, 252, 0));
 }
 
 .emperor-seatmap-state {
@@ -397,9 +415,12 @@ body.emperor-seatmap-open {
     border-radius: 18px;
   }
 
-  .emperor-seatmap-scroll {
+  .emperor-seatmap-viewport {
     margin-left: -4px;
     margin-right: -4px;
+  }
+
+  .emperor-seatmap-scroll {
     padding: 0 4px 8px;
   }
 }
