@@ -40,6 +40,11 @@ test("special screenings group while years and festival labels remain part of ti
   const year = core.parseVariantTitle("ATEEZ : LIGHT THE WAY IN CINEMAS (2026)");
   const festival = core.parseVariantTitle("傷痕之下 (EADF2026)");
   const extended = core.parseVariantTitle("《嚇房：Everything Must Go》（加長版）");
+  const meetAndGreet = core.parseVariantTitle("【 期間限定 】《劇場版 CHIIKAWA 人魚島的秘密》 Meet & Greet 見面場");
+  const chiikawa = core.parseVariantTitle("劇場版 CHIIKAWA 人魚島的秘密");
+  const nestedBookTitle = core.parseVariantTitle("25週年魔法之旅：《哈利波特神秘的魔法石》");
+  const mclMeetAndGreet = core.parseVariantTitle("【期間限定】《劇場版 CHIIKAWA 人魚島的秘密》 Meet & Greet 見面場 日語版");
+  const emperorMeetAndGreet = core.parseVariantTitle("【期間限定】（日語版）《劇場版 CHIIKAWA 人魚島的秘密》 Meet & Greet 見面場");
 
   assert.equal(special.key, normal.key);
   assert.equal(bookSpecial.key, normal.key);
@@ -47,6 +52,12 @@ test("special screenings group while years and festival labels remain part of ti
   assert.equal(year.base, "ATEEZ : LIGHT THE WAY IN CINEMAS (2026)");
   assert.equal(festival.base, "傷痕之下 (EADF2026)");
   assert.equal(extended.base, "嚇房：Everything Must Go");
+  assert.equal(meetAndGreet.key, chiikawa.key);
+  assert.ok(meetAndGreet.tags.includes("期間限定"));
+  assert.ok(meetAndGreet.tags.includes("Meet & Greet"));
+  assert.ok(meetAndGreet.tags.includes("見面場"));
+  assert.equal(nestedBookTitle.base, "25週年魔法之旅：《哈利波特神秘的魔法石》");
+  assert.equal(core.variantSignature(mclMeetAndGreet), core.variantSignature(emperorMeetAndGreet));
 });
 
 test("provider filters use inclusive multi-select semantics", async () => {
@@ -67,6 +78,17 @@ test("equivalent language variants share a provider-independent signature", asyn
   assert.equal(core.variantSignature(core.parseVariantTitle("奧德賽")), "standard");
 });
 
+test("English language labels are treated as versions without removing release years", async () => {
+  const core = await loadCore();
+  const japanese = core.parseVariantTitle("Chiikawa The Movie (Japanese Version)");
+  const cantonese = core.parseVariantTitle("Chiikawa The Movie (Cantonese Version)");
+  const year = core.parseVariantTitle("ATEEZ: Light The Way (2026)");
+
+  assert.equal(japanese.key, cantonese.key);
+  assert.deepEqual(Array.from(japanese.tags), ["Japanese Version"]);
+  assert.equal(year.base, "ATEEZ: Light The Way (2026)");
+});
+
 test("Phase 6H home discovery controls and version chooser stay wired", async () => {
   const [index, multiProvider, styles, health, compare] = await Promise.all([
     source("app/index.html"),
@@ -76,7 +98,7 @@ test("Phase 6H home discovery controls and version chooser stay wired", async ()
     source("app/provider-compare-v3.js")
   ]);
 
-  assert.ok(index.indexOf("home-discovery-core.js?v=6h3") < index.indexOf("multi-provider.js?v=6h3"));
+  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=6i1"));
   assert.match(multiProvider, /data-home-provider/);
   assert.match(multiProvider, /applyVariantGrouping/);
   assert.match(multiProvider, /data-movie-group-provider/);

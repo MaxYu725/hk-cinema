@@ -191,6 +191,7 @@
     for (const card of cards) {
       const providers = new Set(String(card.dataset.providers || "").split(",").filter(Boolean));
       const matches = window.HKCinemaHomeDiscoveryCore.filterMatches(providers, selectedProviders);
+      card.dataset.providerVisible = String(matches);
       card.hidden = !matches;
       if (matches) visible++;
     }
@@ -230,6 +231,7 @@
       grid.insertAdjacentElement("afterend", empty);
     }
     empty.hidden = visible > 0;
+    window.HKCinemaHomeLibrary?.apply?.();
   }
 
   function toggleProviderFilter(provider) {
@@ -294,6 +296,14 @@
         <div class="movie-poster">
           ${poster}
           ${upcomingBadge}
+          <button
+            type="button"
+            class="movie-favorite-button"
+            data-movie-favorite
+            aria-label="收藏${escapeHtml(title)}"
+            aria-pressed="false"
+            title="收藏"
+          ></button>
           <div class="poster-placeholder">${label}</div>
         </div>
         <div class="movie-info">
@@ -807,6 +817,8 @@
   });
 
   document.addEventListener("click", event => {
+    if (event.target.closest("[data-movie-favorite]")) return;
+
     const filterButton = event.target.closest("[data-home-provider]");
     if (filterButton) {
       event.preventDefault();
@@ -846,6 +858,7 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      window.HKCinemaHomeLibrary?.recordCard?.(groupCard);
       openMovieGroup(groupCard.dataset.movieGroupId);
       return;
     }
@@ -855,6 +868,7 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      window.HKCinemaHomeLibrary?.recordCard?.(mclTarget.closest(".movie-card"));
       openMCL(mclTarget.dataset.mclOpen || mclTarget.dataset.sourceId);
       return;
     }
@@ -864,6 +878,7 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      window.HKCinemaHomeLibrary?.recordCard?.(emperorTarget.closest(".movie-card"));
       openEmperor(emperorTarget.dataset.emperorOpen || emperorTarget.dataset.sourceId);
     }
   }, true);
@@ -876,12 +891,14 @@
     }
 
     if (event.key !== "Enter" && event.key !== " ") return;
+    if (event.target.closest("[data-movie-favorite]")) return;
 
     const groupCard = event.target.closest(".movie-group-card");
     if (groupCard) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      window.HKCinemaHomeLibrary?.recordCard?.(groupCard);
       openMovieGroup(groupCard.dataset.movieGroupId);
       return;
     }
@@ -889,6 +906,7 @@
     const mclCard = event.target.closest(".mcl-only-card");
     if (mclCard) {
       event.preventDefault();
+      window.HKCinemaHomeLibrary?.recordCard?.(mclCard);
       openMCL(mclCard.dataset.sourceId);
       return;
     }
@@ -896,6 +914,7 @@
     const emperorCard = event.target.closest(".emperor-only-card");
     if (emperorCard) {
       event.preventDefault();
+      window.HKCinemaHomeLibrary?.recordCard?.(emperorCard);
       openEmperor(emperorCard.dataset.sourceId);
     }
   }, true);
