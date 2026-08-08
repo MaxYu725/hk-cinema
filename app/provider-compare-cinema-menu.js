@@ -148,7 +148,12 @@
     const gesture = pointerGesture;
     pointerGesture = null;
 
-    if (!gesture || gesture.pointerId !== event.pointerId || gesture.moved) return;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+
+    if (gesture.moved) {
+      suppressClickUntil = performance.now() + 700;
+      return;
+    }
 
     const option = event.target.closest?.("[data-cinema-portal-value]");
     if (!option) return;
@@ -165,6 +170,7 @@
   document.addEventListener("pointercancel", event => {
     if (pointerGesture?.pointerId === event.pointerId) {
       pointerGesture = null;
+      suppressClickUntil = performance.now() + 700;
     }
   }, true);
 
