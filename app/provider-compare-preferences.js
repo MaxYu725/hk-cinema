@@ -9,7 +9,7 @@
   };
 
   const ALLOWED = {
-    provider: new Set(["all", "broadway", "mcl"]),
+    provider: new Set(["all", "broadway", "mcl", "emperor"]),
     region: new Set(["all", "hk", "kln", "nt-islands"]),
     period: new Set(["all", "morning", "afternoon", "evening"]),
     sort: new Set(["time", "price", "seats"])
@@ -46,7 +46,6 @@
 
   function writeSaved(state = null) {
     if (restoring || !restoredForOpen) return;
-
     const current = sanitize(state || filtersApi()?.getState?.() || DEFAULTS);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
@@ -186,7 +185,6 @@
         restoredForOpen = false;
         return;
       }
-
       ensureResetButton(overlay);
       restoreSavedFilters();
     });
