@@ -85,32 +85,18 @@
   }
 
   function applySelection(value) {
-    const selectTarget = activeSelect;
-    if (!selectTarget?.isConnected) {
-      closePortal();
-      return false;
-    }
-
     const nextValue = value || "all";
-    const optionExists = Array.from(selectTarget.options)
-      .some(option => option.value === nextValue);
-
-    if (!optionExists) {
-      closePortal();
-      return false;
-    }
-
-    selectTarget.value = nextValue;
-
-    // The comparison module owns the actual filter state and listens to
-    // change. Dispatch synchronously while the current select is still in
-    // the live comparison DOM; enhance() may replace it immediately.
-    selectTarget.dispatchEvent(new Event("input", { bubbles: true }));
-    selectTarget.dispatchEvent(new Event("change", { bubbles: true }));
+    const filters = window.HKCinemaProviderCompareFilters;
 
     suppressClickUntil = performance.now() + 700;
     closePortal();
-    return true;
+
+    if (filters?.setCinema) {
+      filters.setCinema(nextValue);
+      return true;
+    }
+
+    return false;
   }
 
   document.addEventListener("pointerdown", event => {
@@ -126,9 +112,6 @@
 
     const option = event.target.closest?.("[data-cinema-portal-value]");
     if (option) {
-      // Mobile browsers have repeatedly suppressed the later pointerup/click
-      // inside this overlay. pointerdown is the one event confirmed to reach
-      // the option (the pressed highlight is visible), so apply immediately.
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -159,7 +142,6 @@
 
     if (performance.now() < suppressClickUntil) return;
 
-    // Keyboard / desktop fallback.
     applySelection(option.dataset.cinemaPortalValue || "all");
   }, true);
 
