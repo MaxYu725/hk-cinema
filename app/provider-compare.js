@@ -1,6 +1,8 @@
 (() => {
   const API_BASE =
     "https://hk-cinema-api.max-yu-jp.workers.dev";
+  const BROADWAY_TIMEOUT_MS = 12000;
+  const MCL_TIMEOUT_MS = 15000;
 
   const state = {
     match: null,
@@ -22,6 +24,7 @@
   };
 
   let requestToken = 0;
+  let activeRequestController = null;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -56,7 +59,32 @@
     return overlay;
   }
 
+  function abortActiveRequest(reason = "superseded") {
+    if (!activeRequestController) return;
+
+    try {
+      activeRequestController.abort(reason);
+    } catch {
+      activeRequestController.abort();
+    }
+
+    activeRequestController = null;
+  }
+
+  function beginRequestCycle() {
+    abortActiveRequest("superseded");
+    const token = ++requestToken;
+    const controller = new AbortController();
+    activeRequestController = controller;
+
+    return {
+      token,
+      signal: controller.signal
+    };
+  }
+
   function close() {
+    abortActiveRequest("close");
     requestToken++;
     const overlay = document.querySelector("#providerCompareOverlay");
     if (overlay) overlay.hidden = true;
@@ -133,7 +161,7 @@
     };
   }
 
-  async function fetchBroadway(match, date = null) {
+  async function fetchBroadway(match, date = null, parentSignal = null) {
     const sourceId = String(match.broadway?.sourceId || "")
       .replace(/^broadway:/, "");
 
@@ -144,38 +172,116 @@
     const query = date
       ? `?date=${encodeURIComponent(date)}`
       : "";
+    const controller = new AbortController();
+    let timedOut = false;
 
-    const response = await fetch(
-      `${API_BASE}/api/broadway/movies/${encodeURIComponent(sourceId)}/shows${query}`,
-      { cache: "no-store" }
-    );
+    const onParentAbort = () => {
+      try {
+        controller.abort(parentSignal?.reason || "lifecycle");
+      } catch {
+        controller.abort();
+      }
+    };
 
-    if (response.status === 404) {
-      return {
-        availableDates: [],
-        selectedDate: date,
-        sessions: []
-      };
+    if (parentSignal?.aborted) {
+      onParentAbort();
+    } else if (parentSignal) {
+      parentSignal.addEventListener("abort", onParentAbort, { once: true });
     }
 
-    let result = null;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        controller.abort("timeout");
+      } catch {
+        controller.abort();
+      }
+    }, BROADWAY_TIMEOUT_MS);
+
     try {
-      result = await response.json();
-    } catch {
-      throw new Error(`Broadway HTTP ${response.status}`);
-    }
-
-    if (!response.ok || !result?.ok || !result?.data) {
-      throw new Error(
-        result?.error?.message ||
-        `Broadway HTTP ${response.status}`
+      const response = await fetch(
+        `${API_BASE}/api/broadway/movies/${encodeURIComponent(sourceId)}/shows${query}`,
+        {
+          cache: "no-store",
+          signal: controller.signal
+        }
       );
-    }
 
-    return result.data;
+      if (response.status === 404) {
+        return {
+          availableDates: [],
+          selectedDate: date,
+          sessions: []
+        };
+      }
+
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error(`Broadway HTTP ${response.status}`);
+      }
+
+      if (!response.ok || !result?.ok || !result?.data) {
+        throw new Error(
+          result?.error?.message ||
+          `Broadway HTTP ${response.status}`
+        );
+      }
+
+      return result.data;
+    } catch (error) {
+      if (timedOut) {
+        throw new Error("Broadway 場次讀取逾時，請稍後重試。");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      parentSignal?.removeEventListener?.("abort", onParentAbort);
+    }
   }
 
-  async function fetchMCL(match, date = null) {
+  function guardPromise(promise, signal, timeoutMs, timeoutMessage) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer = null;
+
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener?.("abort", onAbort);
+      };
+
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(value);
+      };
+
+      const onAbort = () => {
+        const error = new Error("Comparison request cancelled");
+        error.name = "AbortError";
+        settle(reject, error);
+      };
+
+      if (signal?.aborted) {
+        onAbort();
+        return;
+      }
+
+      signal?.addEventListener?.("abort", onAbort, { once: true });
+      timer = setTimeout(() => {
+        settle(reject, new Error(timeoutMessage));
+      }, timeoutMs);
+
+      Promise.resolve(promise).then(
+        value => settle(resolve, value),
+        error => settle(reject, error)
+      );
+    });
+  }
+
+  async function fetchMCL(match, date = null, signal = null) {
     const provider = window.HKCinemaProviders?.mcl;
     if (!provider?.getTicketing) {
       throw new Error("MCL ticketing provider 未能載入");
@@ -188,7 +294,12 @@
       throw new Error("MCL 電影 ID 缺失");
     }
 
-    return await provider.getTicketing(sourceId, date);
+    return await guardPromise(
+      provider.getTicketing(sourceId, date),
+      signal,
+      MCL_TIMEOUT_MS,
+      "MCL 場次讀取逾時，請稍後重試。"
+    );
   }
 
   function normalizeBroadwaySession(session) {
@@ -488,8 +599,11 @@
     document.body.classList.add("provider-compare-open");
   }
 
-  async function loadDate(date, token = requestToken) {
+  async function loadDate(date, cycle = null) {
     if (!state.match || !date) return;
+
+    const requestCycle = cycle || beginRequestCycle();
+    const { token, signal } = requestCycle;
 
     state.selectedDate = date;
     state.loadingDate = true;
@@ -502,20 +616,27 @@
       ? Promise.resolve(null)
       : state.data.broadway?.selectedDate === date
         ? Promise.resolve(state.data.broadway)
-        : fetchBroadway(state.match, date);
+        : fetchBroadway(state.match, date, signal);
 
     const mclPromise = !hasMCL
       ? Promise.resolve(null)
       : state.data.mcl?.selectedDate === date
         ? Promise.resolve(state.data.mcl)
-        : fetchMCL(state.match, date);
+        : fetchMCL(state.match, date, signal);
 
     const [broadwayResult, mclResult] = await Promise.allSettled([
       broadwayPromise,
       mclPromise
     ]);
 
-    if (token !== requestToken || !state.match) return;
+    if (
+      token !== requestToken ||
+      signal.aborted ||
+      !state.match ||
+      state.selectedDate !== date
+    ) {
+      return;
+    }
 
     if (broadwayResult.status === "fulfilled") {
       state.data.broadway = broadwayResult.value;
@@ -538,7 +659,8 @@
   }
 
   async function loadInitial(match) {
-    const token = ++requestToken;
+    const cycle = beginRequestCycle();
+    const { token, signal } = cycle;
 
     state.match = match;
     state.loadingInitial = true;
@@ -553,11 +675,17 @@
     render();
 
     const [broadwayResult, mclResult] = await Promise.allSettled([
-      fetchBroadway(match),
-      fetchMCL(match)
+      fetchBroadway(match, null, signal),
+      fetchMCL(match, null, signal)
     ]);
 
-    if (token !== requestToken || state.match?.id !== match.id) return;
+    if (
+      token !== requestToken ||
+      signal.aborted ||
+      state.match?.id !== match.id
+    ) {
+      return;
+    }
 
     if (broadwayResult.status === "fulfilled") {
       state.data.broadway = broadwayResult.value;
@@ -581,7 +709,7 @@
     const preferredDate = firstPreferredDate();
 
     if (preferredDate) {
-      await loadDate(preferredDate, token);
+      await loadDate(preferredDate, cycle);
     } else {
       render();
     }
@@ -605,7 +733,14 @@
           broadway: [...state.availableDates.broadway],
           mcl: [...state.availableDates.mcl]
         },
-        errors: { ...state.errors }
+        errors: { ...state.errors },
+        request: {
+          token: requestToken,
+          active: Boolean(
+            activeRequestController &&
+            !activeRequestController.signal.aborted
+          )
+        }
       };
     }
   };
@@ -629,7 +764,7 @@
     const dateButton = event.target.closest("[data-provider-compare-date]");
     if (dateButton) {
       event.preventDefault();
-      loadDate(dateButton.dataset.providerCompareDate, requestToken);
+      loadDate(dateButton.dataset.providerCompareDate);
       return;
     }
 
