@@ -2,6 +2,7 @@
   const uiState = {
     provider: "all",
     region: "all",
+    cinema: "all",
     period: "all",
     sort: "time"
   };
@@ -67,6 +68,14 @@
     };
   }
 
+  function cinemaKey(provider, cinemaMeta, cinema) {
+    const registry = window.HKCinemaCinemaRegistry;
+    const canonical = cinemaMeta?.canonical || cinema || "未知戲院";
+    const normalized = registry?.normalize?.(canonical) ||
+      String(canonical).normalize("NFKC").toLowerCase().trim();
+    return `${provider}:${normalized}`;
+  }
+
   function parseCard(card, index) {
     const source = card.querySelector(".provider-compare-source");
     const provider = source?.classList.contains("mcl")
@@ -85,8 +94,10 @@
       region: "unknown",
       district: null
     };
+    const key = cinemaKey(provider, cinemaMeta, cinema);
 
     card.dataset.cinemaRegion = cinemaMeta.region || "unknown";
+    card.dataset.cinemaKey = key;
     if (cinemaMeta.district) {
       card.dataset.cinemaDistrict = cinemaMeta.district;
     } else {
@@ -102,6 +113,8 @@
       timeValue: timeValue(time),
       cinema,
       cinemaMeta,
+      cinemaKey: key,
+      canonicalCinema: cinemaMeta.canonical || cinema,
       region: cinemaMeta.region || "unknown",
       district: cinemaMeta.district || null,
       price,
@@ -129,7 +142,7 @@
     return true;
   }
 
-  function matchesFilters(item) {
+  function matchesProviderAndRegion(item) {
     const providerMatches =
       uiState.provider === "all" ||
       item.provider === uiState.provider;
@@ -137,7 +150,71 @@
       uiState.region === "all" ||
       item.region === uiState.region;
 
-    return providerMatches && regionMatches && matchesPeriod(item);
+    return providerMatches && regionMatches;
+  }
+
+  function matchesFilters(item) {
+    const cinemaMatches =
+      uiState.cinema === "all" ||
+      item.cinemaKey === uiState.cinema;
+
+    return (
+      matchesProviderAndRegion(item) &&
+      cinemaMatches &&
+      matchesPeriod(item)
+    );
+  }
+
+  function getCinemaOptions(items) {
+    const map = new Map();
+
+    for (const item of items) {
+      if (!matchesProviderAndRegion(item)) continue;
+
+      const existing = map.get(item.cinemaKey);
+      if (existing) {
+        existing.shows += 1;
+        continue;
+      }
+
+      map.set(item.cinemaKey, {
+        key: item.cinemaKey,
+        provider: item.provider,
+        providerLabel: item.providerLabel,
+        canonical: item.canonicalCinema,
+        district: item.district,
+        region: item.region,
+        shows: 1
+      });
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.provider !== b.provider) {
+        return a.provider === "broadway" ? -1 : 1;
+      }
+      return a.canonical.localeCompare(b.canonical, "zh-HK", {
+        numeric: true,
+        sensitivity: "base"
+      });
+    });
+  }
+
+  function ensureCinemaSelection(items) {
+    if (uiState.cinema === "all") return;
+
+    const valid = getCinemaOptions(items)
+      .some(option => option.key === uiState.cinema);
+
+    if (!valid) {
+      uiState.cinema = "all";
+    }
+  }
+
+  function selectedCinemaLabel(items) {
+    if (uiState.cinema === "all") return "全部戲院";
+    const option = getCinemaOptions(items)
+      .find(entry => entry.key === uiState.cinema);
+    return option?.canonical || "指定戲院";
   }
 
   function cheapest(items, provider = null) {
@@ -184,6 +261,35 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function renderCinemaOptions(allItems) {
+    const options = getCinemaOptions(allItems);
+    const allLabel = options.length
+      ? `全部戲院 (${options.length})`
+      : "全部戲院";
+
+    return `
+      <option value="all" ${uiState.cinema === "all" ? "selected" : ""}>
+        ${escapeHtml(allLabel)}
+      </option>
+      ${options.map(option => {
+        const providerPrefix = uiState.provider === "all"
+          ? `${option.providerLabel} · `
+          : "";
+        const districtSuffix = option.district &&
+          !String(option.canonical).includes(option.district)
+          ? ` · ${option.district}`
+          : "";
+        const showsSuffix = ` · ${option.shows} 場`;
+        return `
+          <option
+            value="${escapeHtml(option.key)}"
+            ${uiState.cinema === option.key ? "selected" : ""}
+          >${escapeHtml(`${providerPrefix}${option.canonical}${districtSuffix}${showsSuffix}`)}</option>
+        `;
+      }).join("")}
+    `;
   }
 
   function renderSummary(items, allItems) {
@@ -258,6 +364,13 @@
             <button type="button" data-insight-region="nt-islands" class="${uiState.region === "nt-islands" ? "active" : ""}">新界/離島</button>
           </div>
 
+          <label class="provider-compare-cinema-control">
+            <span>戲院</span>
+            <select data-insight-cinema aria-label="指定戲院">
+              ${renderCinemaOptions(allItems)}
+            </select>
+          </label>
+
           <div class="provider-compare-control-group">
             <span>時段</span>
             <button type="button" data-insight-period="all" class="${uiState.period === "all" ? "active" : ""}">全日</button>
@@ -275,7 +388,7 @@
         </div>
 
         <p class="provider-compare-insight-note">
-          地區按 Broadway 與 MCL 官方戲院位置建立；東涌屬離島，因此與新界合併為「新界/離島」。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
+          戲院選單只列出目前電影及日期、院線與地區下實際有場次的戲院；切換院線或地區後會自動更新。地區按 Broadway 與 MCL 官方戲院位置建立；東涌屬離島，因此與新界合併為「新界/離島」。時段：早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。摘要、推薦、場次數及排序均按目前篩選結果重新計算。${escapeHtml(unknownNote)}
         </p>
       </div>
     `;
@@ -340,6 +453,7 @@
           : uiState.region === "nt-islands"
             ? "新界/離島"
             : "全部地區";
+      const cinemaLabel = selectedCinemaLabel(items);
       const periodLabel = uiState.period === "morning"
         ? "早場"
         : uiState.period === "afternoon"
@@ -352,7 +466,10 @@
         : uiState.sort === "seats"
           ? "可選比例由高至低"
           : "時間由早至晚";
-      result.textContent = `${providerLabel} · ${regionLabel} · ${periodLabel} · ${visible} 場 · ${sortLabel}`;
+      const cinemaPart = uiState.cinema === "all"
+        ? ""
+        : ` · ${cinemaLabel}`;
+      result.textContent = `${providerLabel} · ${regionLabel}${cinemaPart} · ${periodLabel} · ${visible} 場 · ${sortLabel}`;
     }
 
     return visibleItems;
@@ -375,6 +492,8 @@
         timeline.querySelectorAll(":scope > .provider-compare-show")
       );
       const items = cards.map(parseCard);
+
+      ensureCinemaSelection(items);
 
       section.querySelector("[data-provider-insights]")?.remove();
       section.querySelector("[data-insight-result]")?.remove();
@@ -463,6 +582,15 @@
       uiState.sort = sortButton.dataset.insightSort || "time";
       enhance();
     }
+  }, true);
+
+  document.addEventListener("change", event => {
+    const cinemaSelect = event.target.closest("[data-insight-cinema]");
+    if (!cinemaSelect) return;
+
+    event.stopPropagation();
+    uiState.cinema = cinemaSelect.value || "all";
+    enhance();
   }, true);
 
   if (document.readyState === "loading") {
