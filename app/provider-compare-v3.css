@@ -1,0 +1,31 @@
+.provider-compare-source.emperor {
+  background: #f5e9ec;
+  color: #8f2438;
+}
+
+.provider-compare-date span.emperor {
+  color: #8f2438;
+}
+
+.provider-compare-provider-picks.provider-count-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.provider-compare-recommendation.provider.emperor {
+  background: #fbf3f5;
+  border-color: #efd9df;
+}
+
+.provider-resilience-sources.provider-count-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .provider-compare-provider-picks.provider-count-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-resilience-sources.provider-count-3 {
+    grid-template-columns: 1fr;
+  }
+}
