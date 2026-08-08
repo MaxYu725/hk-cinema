@@ -58,6 +58,20 @@
     mclCache.clear();
   }
 
+  function clearProvider(provider) {
+    if (provider === "broadway") {
+      broadwayCache.clear();
+      return true;
+    }
+
+    if (provider === "mcl") {
+      mclCache.clear();
+      return true;
+    }
+
+    return false;
+  }
+
   function requestDetails(input, init = {}) {
     const request = input instanceof Request ? input : null;
     const rawUrl = request?.url || String(input || "");
@@ -215,6 +229,7 @@
 
   window.HKCinemaProviderCompareMainCache = {
     clear,
+    clearProvider,
     prefetchBroadway,
     prefetchMCL,
     getStats() {
