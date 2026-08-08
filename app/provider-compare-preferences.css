@@ -1,0 +1,41 @@
+.provider-compare-reset {
+  position: absolute;
+  top: 23px;
+  right: 80px;
+  z-index: 3;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #dfe2e7;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  color: #4f5660;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(20, 22, 28, .06);
+}
+
+.provider-compare-reset:active {
+  transform: translateY(1px);
+}
+
+.provider-compare-reset:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .18);
+  outline-offset: 2px;
+}
+
+.provider-compare-reset:disabled {
+  cursor: default;
+  opacity: .72;
+}
+
+@media (max-width: 540px) {
+  .provider-compare-reset {
+    top: 20px;
+    right: 74px;
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: .74rem;
+  }
+}
