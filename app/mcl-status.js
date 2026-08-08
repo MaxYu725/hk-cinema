@@ -151,7 +151,7 @@
         "MCL 已連接",
         `${catalogueSummary(catalogue)} · ${updatedText(catalogue)}`
       );
-      reportHealth("fresh", "network", catalogue, "完整資料已更新");
+      reportHealth("fresh", "network", catalogue, catalogueSummary(catalogue));
     } catch (error) {
       if (cached) {
         const reason =
@@ -165,7 +165,7 @@
           "MCL 使用快取資料",
           `${catalogueSummary(cached)} · ${reason}，稍後可再更新`
         );
-        reportHealth("degraded", "cache", cached, reason);
+        reportHealth("degraded", "cache", cached, `${catalogueSummary(cached)} · ${reason}`);
       } else {
         const message =
           error?.name === "AbortError"

@@ -1,18 +1,25 @@
 .data-health {
   margin: 0 0 14px;
-  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .data-health-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.data-health-heading::-webkit-details-marker {
+  display: none;
 }
 
 .data-health-heading > div {
@@ -33,9 +40,35 @@
 }
 
 .data-health-heading small {
+  display: block;
+  margin-top: 2px;
   color: var(--text-secondary);
   line-height: 1.4;
-  text-align: right;
+}
+
+.data-health-toggle {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.data-health-toggle-less,
+.data-health[open] .data-health-toggle-more {
+  display: none;
+}
+
+.data-health[open] .data-health-toggle-less {
+  display: inline;
+}
+
+.data-health-body {
+  padding: 0 16px 16px;
 }
 
 .data-health-sources {
@@ -86,6 +119,15 @@
   font-size: 11px;
 }
 
+.data-health-source-detail {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-health-source.fresh .data-health-source-dot {
   background: #50d890;
   box-shadow: 0 0 0 4px rgba(80,216,144,.12);
@@ -112,18 +154,30 @@
   border-color: rgba(201,75,75,.3);
 }
 
+.data-health ~ .status-card {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .data-health {
-    padding: 14px;
+    margin-bottom: 12px;
   }
 
   .data-health-heading {
-    display: grid;
-    gap: 4px;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .data-health-heading strong {
+    font-size: 15px;
   }
 
   .data-health-heading small {
-    text-align: left;
+    font-size: 11px;
+  }
+
+  .data-health-body {
+    padding: 0 12px 12px;
   }
 
   .data-health-sources {

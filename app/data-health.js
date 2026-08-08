@@ -6,6 +6,7 @@
   ];
   const FRESH_MAX_AGE_MS = 15 * 60 * 1000;
   const AGING_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+  const OPEN_PREFERENCE_KEY = "hkcinema:data-health-open:v2";
 
   const state = {
     online: typeof navigator === "undefined" || navigator.onLine !== false,
@@ -114,15 +115,28 @@
     return { level: "fresh", label: "三院線資料最新", detail: `${values.length}/${values.length} 個來源已完成更新`, usable, total: values.length, values };
   }
 
-  function ensurePanel() {
+  function ensurePanel(defaultOpen = false) {
     let panel = document.querySelector("#dataHealth");
     if (panel) return panel;
     const broadwayStatus = document.querySelector("#systemStatus");
     if (!broadwayStatus) return null;
-    panel = document.createElement("section");
+    panel = document.createElement("details");
     panel.id = "dataHealth";
     panel.className = "data-health";
     panel.setAttribute("aria-live", "polite");
+    try {
+      const preference = localStorage.getItem(OPEN_PREFERENCE_KEY);
+      panel.open = preference === null ? defaultOpen : preference === "open";
+    } catch {
+      panel.open = defaultOpen;
+    }
+    panel.addEventListener("toggle", () => {
+      try {
+        localStorage.setItem(OPEN_PREFERENCE_KEY, panel.open ? "open" : "closed");
+      } catch {
+        // Storage can be unavailable in restricted/private contexts.
+      }
+    });
     broadwayStatus.insertAdjacentElement("beforebegin", panel);
     return panel;
   }
@@ -138,28 +152,35 @@
 
   function render() {
     if (typeof document === "undefined") return;
-    const panel = ensurePanel();
-    if (!panel) return;
     const summary = summarize();
+    const panel = ensurePanel(false);
+    if (!panel) return;
     panel.dataset.status = summary.level;
     panel.innerHTML = `
-      <div class="data-health-heading">
+      <summary class="data-health-heading">
         <div>
           <span>資料狀態</span>
           <strong>${escapeHtml(summary.label)}</strong>
+          <small>${escapeHtml(summary.detail)}</small>
         </div>
-        <small>${escapeHtml(summary.detail)}</small>
-      </div>
-      <div class="data-health-sources">
-        ${summary.values.map(({ provider, record, health }) => `
-          <div class="data-health-source ${escapeHtml(health.level)}" data-data-health-provider="${provider.key}">
-            <span class="data-health-source-dot" aria-hidden="true"></span>
-            <div>
-              <strong>${escapeHtml(provider.label)}</strong>
-              <small>${escapeHtml(health.label)}${Number.isFinite(health.age) ? ` · ${escapeHtml(formatAge(record.updatedAt))}` : ""}</small>
+        <span class="data-health-toggle" aria-hidden="true">
+          <span class="data-health-toggle-more">詳情</span>
+          <span class="data-health-toggle-less">收起</span>
+        </span>
+      </summary>
+      <div class="data-health-body">
+        <div class="data-health-sources">
+          ${summary.values.map(({ provider, record, health }) => `
+            <div class="data-health-source ${escapeHtml(health.level)}" data-data-health-provider="${provider.key}">
+              <span class="data-health-source-dot" aria-hidden="true"></span>
+              <div>
+                <strong>${escapeHtml(provider.label)}</strong>
+                <small>${escapeHtml(health.label)}${Number.isFinite(health.age) ? ` · ${escapeHtml(formatAge(record.updatedAt))}` : ""}</small>
+                ${record.detail ? `<span class="data-health-source-detail">${escapeHtml(record.detail)}</span>` : ""}
+              </div>
             </div>
-          </div>
-        `).join("")}
+          `).join("")}
+        </div>
       </div>
     `;
   }
