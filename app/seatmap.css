@@ -1,8 +1,17 @@
-.seat-pill {
+.seat-pill,
+.seatmap-launch {
   cursor: pointer;
 }
 
+.seatmap-launch:focus-visible {
+  outline: 3px solid rgba(35, 111, 71, 0.28);
+  outline-offset: 3px;
+}
+
 .inline-seat-map {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
   margin-top: 9px;
   padding: 16px;
 
@@ -10,6 +19,10 @@
   border-radius: 16px;
 
   background: var(--surface);
+}
+
+.inline-seat-map[hidden] {
+  display: none;
 }
 
 .seat-map-header {
@@ -22,6 +35,26 @@
 .seat-map-header h4 {
   margin: 4px 0 0;
   font-size: 18px;
+}
+
+.seat-map-close,
+.seat-map-state button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: var(--surface-soft);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.seat-map-close:focus-visible,
+.seat-map-state button:focus-visible,
+.seat-map-scroll:focus-visible {
+  outline: 3px solid rgba(35, 111, 71, 0.28);
+  outline-offset: 2px;
 }
 
 .seat-map-updated {
@@ -132,8 +165,12 @@
 }
 
 .seat-map-scroll {
+  position: relative;
   overflow-x: auto;
   padding: 4px 4px 10px;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .seat-map-grid {
@@ -151,7 +188,13 @@
 }
 
 .seat-row-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   flex: 0 0 22px;
+
+  border-radius: 5px;
+  background: var(--surface);
 
   color: var(--text-secondary);
   text-align: center;
@@ -208,6 +251,14 @@
 .seat-map-state strong,
 .seat-map-state span {
   display: block;
+}
+
+.seat-map-state button {
+  margin-top: 12px;
+}
+
+.seat-map-state.error strong {
+  color: #954343;
 }
 
 .seat-map-state strong {

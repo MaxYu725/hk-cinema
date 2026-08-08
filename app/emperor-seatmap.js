@@ -6,10 +6,12 @@
   const sessionStore = new Map();
   const seatCache = new Map();
   const triggerSessions = new WeakMap();
+  const shared = window.HKCinemaSeatMapShared;
 
   let generation = 0;
   let controller = null;
   let scheduled = false;
+  let returnFocus = null;
 
   const delegatedFetch = window.fetch.bind(window);
 
@@ -130,13 +132,10 @@
     if (!scheduleKey || !scheduleId || !cinemaLinkId || !hallId) return;
 
     seatNode.dataset.emperorSeatmapReady = "true";
-    seatNode.classList.add("emperor-seatmap-launch");
-    seatNode.setAttribute("role", "button");
-    seatNode.setAttribute("tabindex", "0");
-    seatNode.setAttribute(
-      "aria-label",
-      `查看 ${session?.cinema?.name?.zh || "Emperor"} ${session?.time || ""} 座位圖`
-    );
+    shared?.prepareTrigger(seatNode, {
+      provider: "emperor",
+      label: `查看 ${session?.cinema?.name?.zh || "Emperor"} ${session?.time || ""} 座位圖`
+    });
     triggerSessions.set(seatNode, session);
   }
 
@@ -189,6 +188,11 @@
     const overlay = document.querySelector("#emperorSeatMapOverlay");
     if (overlay) overlay.hidden = true;
     document.body.classList.remove("emperor-seatmap-open");
+    const focusTarget = returnFocus;
+    returnFocus = null;
+    if (focusTarget?.isConnected) {
+      requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
+    }
   }
 
   function cacheKey(session) {
@@ -313,15 +317,6 @@
     `;
   }
 
-  function centerSeatMapViews(content) {
-    requestAnimationFrame(() => {
-      content.querySelectorAll(".emperor-seatmap-scroll").forEach(scroll => {
-        const maximumScroll = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
-        scroll.scrollLeft = Math.round(maximumScroll / 2);
-      });
-    });
-  }
-
   function renderLoading(session) {
     const content = ensureOverlay().querySelector("#emperorSeatMapContent");
     content.innerHTML = `
@@ -392,7 +387,7 @@
         座位位置直接使用 Emperor getSeatMap 的 left/top geometry。綠色代表官方 status=1 可售；其他狀態只標示為不可選、停用或隔離，不推測個別座位是否已售。此座位圖只供查看，不會鎖位或提交訂單。
       </p>
     `;
-    centerSeatMapViews(content);
+    shared?.centerAfterRender(content, ".emperor-seatmap-scroll");
   }
 
   async function fetchSeatMap(session, signal) {
@@ -428,6 +423,8 @@
 
   async function open(session, force = false) {
     const overlay = ensureOverlay();
+    shared?.announceOpening("emperor");
+    if (overlay.hidden && !returnFocus?.isConnected) returnFocus = document.activeElement;
     overlay.hidden = false;
     document.body.classList.add("emperor-seatmap-open");
 
@@ -443,8 +440,12 @@
     const cached = force ? null : cacheGet(key);
     if (cached) {
       renderMap(session, cached);
+      controller = null;
+      requestAnimationFrame(() => overlay.querySelector(".emperor-seatmap-close")?.focus());
       return;
     }
+
+    requestAnimationFrame(() => overlay.querySelector(".emperor-seatmap-close")?.focus());
 
     const timer = setTimeout(() => requestController.abort("timeout"), REQUEST_TIMEOUT_MS);
     try {
@@ -469,6 +470,7 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      returnFocus = trigger;
       open(session);
       return;
     }
@@ -480,21 +482,54 @@
   }, true);
 
   document.addEventListener("keydown", event => {
+    const overlay = document.querySelector("#emperorSeatMapOverlay");
+    if (event.key === "Tab" && overlay && !overlay.hidden) {
+      const focusable = Array.from(overlay.querySelectorAll(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      ));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (first && (event.shiftKey && document.activeElement === first)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        last.focus();
+        return;
+      }
+      if (first && (!overlay.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last))) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        first.focus();
+        return;
+      }
+    }
+
     const trigger = event.target.closest?.(".emperor-seatmap-launch");
-    if (trigger && (event.key === "Enter" || event.key === " ")) {
+    if (trigger && shared?.isActivationKey(event)) {
       const session = triggerSessions.get(trigger);
       if (!session) return;
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
+      returnFocus = trigger;
       open(session);
       return;
     }
 
     if (event.key === "Escape" && !document.querySelector("#emperorSeatMapOverlay")?.hidden) {
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       close();
     }
   }, true);
+
+  window.addEventListener(shared?.openEvent || "hkcinema:seatmap-opening", event => {
+    if (event.detail?.provider === "emperor") return;
+    const overlay = document.querySelector("#emperorSeatMapOverlay");
+    if (overlay && !overlay.hidden) close();
+  });
 
   const observer = new MutationObserver(scheduleEnhance);
   if (document.body) {
@@ -509,11 +544,13 @@
   window.HKCinemaEmperorSeatMap = {
     open,
     close,
+    renderSection,
     getStats() {
       return {
         capturedSessions: sessionStore.size,
         cacheEntries: seatCache.size,
-        cacheTtlMs: CACHE_TTL_MS
+        cacheTtlMs: CACHE_TTL_MS,
+        requestTimeoutMs: REQUEST_TIMEOUT_MS
       };
     }
   };
