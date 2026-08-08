@@ -1,106 +1,153 @@
 (() => {
   const SELECTOR = "select[data-insight-cinema]";
-  const MAX_VISIBLE_OPTIONS = 7;
+  const PORTAL_ID = "providerCompareCinemaPortal";
 
-  function getSelect(target) {
-    if (!(target instanceof Element)) return null;
-    return target.closest(SELECTOR);
+  let activeSelect = null;
+
+  function getPortal() {
+    return document.querySelector(`#${PORTAL_ID}`);
   }
 
-  function isExpanded(select) {
-    return select?.dataset?.inlineCinemaExpanded === "true";
+  function closePortal() {
+    getPortal()?.remove();
+    activeSelect = null;
   }
 
-  function expand(select) {
-    if (!select || select.options.length <= 1 || isExpanded(select)) return;
+  function optionLabel(option) {
+    return option?.textContent?.replace(/\s+/g, " ")?.trim() || option?.value || "戲院";
+  }
 
-    const visible = Math.min(
-      Math.max(select.options.length, 2),
-      MAX_VISIBLE_OPTIONS
-    );
+  function positionPortal(portal, select) {
+    const rect = select.getBoundingClientRect();
+    const gap = 6;
+    const edge = 10;
+    const below = window.innerHeight - rect.bottom - edge - gap;
+    const above = rect.top - edge - gap;
+    const useBelow = below >= 180 || below >= above;
+    const maxHeight = Math.max(140, Math.min(360, useBelow ? below : above));
 
-    select.dataset.inlineCinemaExpanded = "true";
-    select.setAttribute("aria-expanded", "true");
-    select.size = visible;
+    portal.style.left = `${Math.max(edge, rect.left)}px`;
+    portal.style.width = `${Math.max(220, Math.min(rect.width, window.innerWidth - edge * 2))}px`;
+    portal.style.maxHeight = `${maxHeight}px`;
 
-    try {
-      select.focus({ preventScroll: true });
-    } catch {
-      select.focus();
+    if (useBelow) {
+      portal.style.top = `${Math.min(window.innerHeight - edge, rect.bottom + gap)}px`;
+      portal.style.bottom = "auto";
+    } else {
+      portal.style.top = "auto";
+      portal.style.bottom = `${Math.max(edge, window.innerHeight - rect.top + gap)}px`;
     }
   }
 
-  function collapse(select) {
-    if (!select || !isExpanded(select)) return;
+  function openPortal(select) {
+    if (!select || !select.isConnected || select.options.length <= 1) return;
 
-    delete select.dataset.inlineCinemaExpanded;
-    select.setAttribute("aria-expanded", "false");
-    select.size = 1;
-  }
+    if (activeSelect === select && getPortal()) {
+      closePortal();
+      return;
+    }
 
-  function collapseAll(except = null) {
-    document.querySelectorAll(`${SELECTOR}[data-inline-cinema-expanded="true"]`)
-      .forEach(select => {
-        if (select !== except) collapse(select);
+    closePortal();
+    activeSelect = select;
+
+    const portal = document.createElement("div");
+    portal.id = PORTAL_ID;
+    portal.className = "provider-compare-cinema-portal";
+    portal.setAttribute("role", "listbox");
+    portal.setAttribute("aria-label", "選擇戲院");
+
+    for (const option of Array.from(select.options)) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "provider-compare-cinema-portal-option";
+      button.dataset.cinemaPortalValue = option.value;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", option.selected ? "true" : "false");
+      button.textContent = optionLabel(option);
+
+      if (option.selected) {
+        button.classList.add("active");
+      }
+
+      portal.appendChild(button);
+    }
+
+    document.body.appendChild(portal);
+    positionPortal(portal, select);
+
+    requestAnimationFrame(() => {
+      portal.querySelector(".active")?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest"
       });
+    });
   }
 
   document.addEventListener("pointerdown", event => {
-    const select = getSelect(event.target);
+    const select = event.target.closest?.(SELECTOR);
 
-    if (!select) {
-      collapseAll();
+    if (select) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      openPortal(select);
       return;
     }
 
-    if (isExpanded(select)) {
+    const option = event.target.closest?.("[data-cinema-portal-value]");
+    if (option) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       return;
     }
 
-    // Prevent the mobile browser native popup. We turn the same select into
-    // an inline listbox instead, so no new DOM is inserted into the observed
-    // comparison panel and no render loop is triggered.
+    if (getPortal() && !event.target.closest?.(`#${PORTAL_ID}`)) {
+      closePortal();
+    }
+  }, true);
+
+  document.addEventListener("click", event => {
+    const select = event.target.closest?.(SELECTOR);
+    if (select) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+
+    const option = event.target.closest?.("[data-cinema-portal-value]");
+    if (!option) return;
+
     event.preventDefault();
     event.stopPropagation();
-    expand(select);
-  }, true);
+    event.stopImmediatePropagation();
 
-  document.addEventListener("change", event => {
-    const select = getSelect(event.target);
-    if (!select) return;
-    collapse(select);
-  }, true);
+    const selectTarget = activeSelect;
+    const value = option.dataset.cinemaPortalValue || "all";
+    closePortal();
 
-  document.addEventListener("focusout", event => {
-    const select = getSelect(event.target);
-    if (!select) return;
+    if (!selectTarget?.isConnected) return;
 
-    requestAnimationFrame(() => {
-      if (document.activeElement !== select) {
-        collapse(select);
-      }
-    });
+    selectTarget.value = value;
+    selectTarget.dispatchEvent(new Event("change", { bubbles: true }));
   }, true);
 
   document.addEventListener("keydown", event => {
-    const select = getSelect(event.target);
+    if (event.key !== "Escape" || !getPortal()) return;
 
-    if (event.key === "Escape") {
-      if (select) {
-        collapse(select);
-      } else {
-        collapseAll();
-      }
-      return;
-    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    closePortal();
+  }, true);
 
-    if (
-      select &&
-      !isExpanded(select) &&
-      (event.key === "Enter" || event.key === " " || event.key === "ArrowDown")
-    ) {
-      event.preventDefault();
-      expand(select);
-    }
+  window.addEventListener("resize", closePortal, { passive: true });
+  window.addEventListener("orientationchange", closePortal, { passive: true });
+
+  document.addEventListener("scroll", event => {
+    if (!getPortal()) return;
+    if (event.target?.closest?.(`#${PORTAL_ID}`)) return;
+    closePortal();
   }, true);
 })();
