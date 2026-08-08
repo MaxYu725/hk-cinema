@@ -73,7 +73,15 @@
   }
 
   function providerBadges(labels, options = {}) {
-    const { mclSourceId = null, emperorSourceId = null, matchId = null } = options;
+    const {
+      mclSourceId = null,
+      emperorSourceId = null,
+      matchId = null
+    } = options;
+
+    const compareLabel = labels.length >= 3
+      ? "比較 Broadway、MCL 與 Emperor 場次及票價"
+      : `比較 ${labels.join(" 與 ")} 場次及票價`;
 
     return `
       <div class="provider-badges" data-multi-provider="true">
@@ -84,13 +92,13 @@
           if (label === "MCL" && mclSourceId) {
             attrs = ` data-mcl-open="${escapeHtml(mclSourceId)}" title="查看 MCL 場次"`;
           } else if (label === "Emperor" && emperorSourceId) {
-            attrs = ` data-emperor-open="${escapeHtml(emperorSourceId)}" title="查看 Emperor 官方資料"`;
+            attrs = ` data-emperor-open="${escapeHtml(emperorSourceId)}" title="查看 Emperor 場次"`;
           }
 
           return `<span class="provider-badge provider-${key}"${attrs}>${escapeHtml(label)}</span>`;
         }).join("")}
         ${matchId
-          ? `<button type="button" class="provider-compare" data-compare-open="${escapeHtml(matchId)}" aria-label="比較 Broadway 與 MCL 場次及票價">比較</button>`
+          ? `<button type="button" class="provider-compare" data-compare-open="${escapeHtml(matchId)}" aria-label="${escapeHtml(compareLabel)}">比較</button>`
           : ""}
       </div>
     `;
@@ -135,7 +143,7 @@
         ${openAttr}
         role="button"
         tabindex="0"
-        aria-label="查看 ${label} ${escapeHtml(title)}${isMCL ? " 詳情及場次" : " 官方資料"}"
+        aria-label="查看 ${label} ${escapeHtml(title)} 詳情及場次"
       >
         <div class="movie-poster">
           ${poster}
@@ -153,51 +161,94 @@
     `;
   }
 
-  function createMatchRecord(card, mclMovie) {
-    const broadwaySourceId = String(card.dataset.sourceId || "").trim();
-    const mclSourceId = String(mclMovie?.sourceId || "").trim();
-    if (!broadwaySourceId || !mclSourceId) return null;
+  function cardProviderData(card) {
+    const isMCLOnly = card.classList.contains("mcl-only-card");
+    const isEmperorOnly = card.classList.contains("emperor-only-card");
 
-    const title = card.querySelector("h3")?.textContent?.trim() || movieTitle(mclMovie);
-    const normalizedTitle = normalizeTitle(title);
-    const matchId = `broadway:${broadwaySourceId}|mcl:${mclSourceId}`;
+    const broadwaySourceId = !isMCLOnly && !isEmperorOnly
+      ? String(card.dataset.sourceId || "").trim()
+      : "";
+    const mclSourceId = String(
+      card.dataset.mclSourceId ||
+      (isMCLOnly ? card.dataset.sourceId : "") ||
+      ""
+    ).trim();
+    const emperorSourceId = String(
+      card.dataset.emperorSourceId ||
+      (isEmperorOnly ? card.dataset.sourceId : "") ||
+      ""
+    ).trim();
+
+    return {
+      broadwaySourceId,
+      mclSourceId,
+      emperorSourceId
+    };
+  }
+
+  function cardProviders(card) {
+    const data = cardProviderData(card);
+    const labels = [];
+    if (data.broadwaySourceId) labels.push("Broadway");
+    if (data.mclSourceId) labels.push("MCL");
+    if (data.emperorSourceId) labels.push("Emperor");
+    return labels;
+  }
+
+  function buildMatchRecord(card) {
+    const data = cardProviderData(card);
+    const components = [];
+
+    if (data.broadwaySourceId) {
+      components.push(`broadway:${data.broadwaySourceId}`);
+    }
+    if (data.mclSourceId) {
+      components.push(`mcl:${data.mclSourceId}`);
+    }
+    if (data.emperorSourceId) {
+      components.push(`emperor:${data.emperorSourceId}`);
+    }
+
+    if (components.length < 2) {
+      delete card.dataset.providerMatchId;
+      return null;
+    }
+
+    const title = card.querySelector("h3")?.textContent?.trim() || "未命名電影";
+    const matchId = components.join("|");
     const record = {
       id: matchId,
       title,
-      normalizedTitle,
+      normalizedTitle: normalizeTitle(title),
       matchType: "exact-title",
       confidence: 1,
-      broadway: {
-        provider: "broadway",
-        sourceId: broadwaySourceId,
-        movieId: card.dataset.movieId || null,
-        poster: card.querySelector(".movie-poster img")?.src || null
-      },
-      mcl: {
-        provider: "mcl",
-        sourceId: mclSourceId,
-        movie: mclMovie
-      },
-      emperor: null
+      broadway: data.broadwaySourceId
+        ? {
+            provider: "broadway",
+            sourceId: data.broadwaySourceId,
+            movieId: card.dataset.movieId || null,
+            poster: card.querySelector(".movie-poster img")?.src || null
+          }
+        : null,
+      mcl: data.mclSourceId
+        ? {
+            provider: "mcl",
+            sourceId: data.mclSourceId,
+            movie: findMCLMovie(data.mclSourceId)
+          }
+        : null,
+      emperor: data.emperorSourceId
+        ? {
+            provider: "emperor",
+            sourceId: data.emperorSourceId,
+            movie: findEmperorMovie(data.emperorSourceId)
+          }
+        : null
     };
 
     matchRecords.set(matchId, record);
     card.dataset.providerMatchId = matchId;
     return record;
-  }
-
-  function cardProviders(card) {
-    const labels = [];
-    if (card.classList.contains("mcl-only-card")) {
-      labels.push("MCL");
-    } else if (card.classList.contains("emperor-only-card")) {
-      labels.push("Emperor");
-    } else {
-      labels.push("Broadway");
-    }
-    if (card.dataset.mclSourceId && !labels.includes("MCL")) labels.push("MCL");
-    if (card.dataset.emperorSourceId && !labels.includes("Emperor")) labels.push("Emperor");
-    return labels;
   }
 
   function refreshCardBadges(card) {
@@ -206,10 +257,12 @@
 
     info.querySelector(".provider-badges[data-multi-provider]")?.remove();
     const labels = cardProviders(card);
+    const data = cardProviderData(card);
     const matchId = card.dataset.providerMatchId || null;
+
     info.insertAdjacentHTML("beforeend", providerBadges(labels, {
-      mclSourceId: card.dataset.mclSourceId || (card.classList.contains("mcl-only-card") ? card.dataset.sourceId : null),
-      emperorSourceId: card.dataset.emperorSourceId || (card.classList.contains("emperor-only-card") ? card.dataset.sourceId : null),
+      mclSourceId: data.mclSourceId || null,
+      emperorSourceId: data.emperorSourceId || null,
       matchId
     }));
   }
@@ -261,9 +314,6 @@
         if (key && !byTitle.has(key)) byTitle.set(key, card);
       }
 
-      let mclMatched = 0;
-      let emperorMatched = 0;
-
       for (const movie of getMCLMovies()) {
         const key = normalizeTitle(movieTitle(movie));
         if (!key) continue;
@@ -271,11 +321,6 @@
         const matchingCard = byTitle.get(key);
         if (matchingCard) {
           matchingCard.dataset.mclSourceId = movie.sourceId;
-          if (!matchingCard.classList.contains("mcl-only-card")) {
-            const match = createMatchRecord(matchingCard, movie);
-            if (match) mclMatched++;
-          }
-          refreshCardBadges(matchingCard);
           continue;
         }
 
@@ -291,17 +336,6 @@
         const matchingCard = byTitle.get(key);
         if (matchingCard) {
           matchingCard.dataset.emperorSourceId = movie.sourceId;
-          const matchId = matchingCard.dataset.providerMatchId;
-          const record = matchId ? matchRecords.get(matchId) : null;
-          if (record) {
-            record.emperor = {
-              provider: "emperor",
-              sourceId: String(movie.sourceId),
-              movie
-            };
-          }
-          refreshCardBadges(matchingCard);
-          emperorMatched++;
           continue;
         }
 
@@ -310,15 +344,29 @@
         if (card) byTitle.set(key, card);
       }
 
+      let matched = 0;
+      let tripleMatched = 0;
+
+      for (const card of grid.querySelectorAll(".movie-card")) {
+        const record = buildMatchRecord(card);
+        if (record) {
+          matched++;
+          if (record.broadway && record.mcl && record.emperor) {
+            tripleMatched++;
+          }
+        }
+        refreshCardBadges(card);
+      }
+
       const total = grid.querySelectorAll(".movie-card").length;
       count.textContent = `${total} 部`;
-      count.title = `合併後 ${total} 部 · Broadway×MCL 配對 ${mclMatched} 部 · Emperor 配對 ${emperorMatched} 部`;
+      count.title = `合併後 ${total} 部 · 跨院線配對 ${matched} 部 · 三院線配對 ${tripleMatched} 部`;
 
       window.dispatchEvent(new CustomEvent("hkcinema:provider-matches", {
         detail: {
           matches: Array.from(matchRecords.values()),
           count: matchRecords.size,
-          emperorMatched
+          tripleMatched
         }
       }));
     } finally {
