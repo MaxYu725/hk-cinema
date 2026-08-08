@@ -1,0 +1,129 @@
+.provider-compare-native-cinema-hidden {
+  display: none !important;
+}
+
+.provider-compare-cinema-menu {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+}
+
+.provider-compare-cinema-menu-label {
+  padding-top: 10px;
+  color: #747a83;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.provider-compare-cinema-menu-control {
+  min-width: 0;
+}
+
+.provider-compare-cinema-menu-trigger {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100%, 420px);
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #dfe2e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #353a42;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.provider-compare-cinema-menu-trigger:focus-visible,
+.provider-compare-cinema-menu-option:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .18);
+  outline-offset: 2px;
+}
+
+.provider-compare-cinema-menu-arrow {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+
+.provider-compare-cinema-menu-trigger[aria-expanded="true"] .provider-compare-cinema-menu-arrow {
+  transform: rotate(180deg);
+}
+
+.provider-compare-cinema-menu-panel {
+  width: min(100%, 420px);
+  max-height: 320px;
+  margin-top: 6px;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #dfe2e6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(20, 22, 28, .12);
+}
+
+.provider-compare-cinema-menu-panel[hidden] {
+  display: none;
+}
+
+.provider-compare-cinema-menu-option {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #353a42;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.provider-compare-cinema-menu-option + .provider-compare-cinema-menu-option {
+  margin-top: 2px;
+}
+
+.provider-compare-cinema-menu-option.active {
+  background: #17191d;
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .provider-compare-cinema-menu {
+    display: block;
+  }
+
+  .provider-compare-cinema-menu-label {
+    display: block;
+    padding: 0 0 5px;
+  }
+
+  .provider-compare-cinema-menu-trigger,
+  .provider-compare-cinema-menu-panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .provider-compare-cinema-menu-trigger {
+    min-height: 44px;
+    font-size: .76rem;
+  }
+
+  .provider-compare-cinema-menu-panel {
+    max-height: 42vh;
+  }
+}
