@@ -1,5 +1,5 @@
 import emperorWorker from "./index-emperor.js";
-import { getEmperorSeatMap } from "./providers/emperor-seat.js";
+import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
@@ -49,6 +49,7 @@ export default {
             phase: "6E",
             provider: "emperor",
             scheduleId,
+            geometryVersion: result.geometryVersion || null,
             source: result.source,
             updatedAt: new Date().toISOString()
           }
