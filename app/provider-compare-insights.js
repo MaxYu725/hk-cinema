@@ -547,6 +547,20 @@
     enhance();
   }
 
+  window.HKCinemaProviderCompareFilters = {
+    setCinema(value) {
+      uiState.cinema = String(value || "all");
+      enhance();
+      return uiState.cinema;
+    },
+    getState() {
+      return { ...uiState };
+    },
+    refresh() {
+      enhance();
+    }
+  };
+
   document.addEventListener("click", event => {
     const providerButton = event.target.closest("[data-insight-provider]");
     if (providerButton) {
@@ -589,8 +603,7 @@
     if (!cinemaSelect) return;
 
     event.stopPropagation();
-    uiState.cinema = cinemaSelect.value || "all";
-    enhance();
+    window.HKCinemaProviderCompareFilters.setCinema(cinemaSelect.value || "all");
   }, true);
 
   if (document.readyState === "loading") {
