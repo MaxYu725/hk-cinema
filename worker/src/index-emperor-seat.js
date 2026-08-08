@@ -1,6 +1,8 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 
+const GEOMETRY_VERSION = "6e1-bounds-v2";
+
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
@@ -24,6 +26,21 @@ function errorResponse(error, fallbackCode) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/emperor/seatmap-health") {
+      return json({
+        ok: true,
+        data: {
+          provider: "emperor",
+          phase: "6E",
+          geometryVersion: GEOMETRY_VERSION
+        },
+        meta: {
+          updatedAt: new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    }
+
     const seatMatch = url.pathname.match(
       /^\/api\/emperor\/shows\/(\d+)\/seats$/
     );
@@ -49,7 +66,7 @@ export default {
             phase: "6E",
             provider: "emperor",
             scheduleId,
-            geometryVersion: result.geometryVersion || null,
+            geometryVersion: result.geometryVersion || GEOMETRY_VERSION,
             source: result.source,
             updatedAt: new Date().toISOString()
           }
