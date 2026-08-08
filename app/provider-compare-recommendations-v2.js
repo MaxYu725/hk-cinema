@@ -102,16 +102,21 @@
       )[0] || null;
   }
 
-  function balanced(items) {
-    const eligible = items.filter(entry =>
+  function eligibleForBalanced(items) {
+    return items.filter(entry =>
       Number.isFinite(entry.price) &&
       Number.isFinite(entry.timeMinutes) &&
       entry.seats
     );
-    if (!eligible.length) return null;
+  }
 
-    const prices = eligible.map(entry => entry.price);
-    const times = eligible.map(entry => entry.timeMinutes);
+  function balanced(items, referenceItems = items) {
+    const eligible = eligibleForBalanced(items);
+    const reference = eligibleForBalanced(referenceItems);
+    if (!eligible.length || !reference.length) return null;
+
+    const prices = reference.map(entry => entry.price);
+    const times = reference.map(entry => entry.timeMinutes);
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
     const minTime = Math.min(...times);
@@ -221,14 +226,31 @@
 
     const saving = cheapest(entries);
     const roomy = roomiest(entries);
-    const pick = balanced(entries);
-    const broadwayPick = balanced(entries.filter(entry => entry.provider === "broadway"));
-    const mclPick = balanced(entries.filter(entry => entry.provider === "mcl"));
+    const pick = balanced(entries, entries);
+    const broadwayEntries = entries.filter(entry => entry.provider === "broadway");
+    const mclEntries = entries.filter(entry => entry.provider === "mcl");
+    const providers = new Set(entries.map(entry => entry.provider));
+    const showProviderPicks = providers.size > 1;
+    const broadwayPick = showProviderPicks
+      ? balanced(broadwayEntries, entries)
+      : null;
+    const mclPick = showProviderPicks
+      ? balanced(mclEntries, entries)
+      : null;
 
     timeline.querySelectorAll(".is-balanced-pick").forEach(card => {
       card.classList.remove("is-balanced-pick");
     });
     pick?.card?.classList.add("is-balanced-pick");
+
+    const providerPicksHtml = showProviderPicks
+      ? `
+        <div class="provider-compare-provider-picks">
+          ${cardHtml("Broadway 平衡推薦", broadwayPick, "provider broadway")}
+          ${cardHtml("MCL 平衡推薦", mclPick, "provider mcl")}
+        </div>
+      `
+      : "";
 
     const html = `
       <div class="provider-compare-recommendation-heading">
@@ -240,11 +262,8 @@
         ${cardHtml("全院線座位最鬆", roomy, "seats")}
         ${cardHtml("全院線平衡推薦", pick, "balanced")}
       </div>
-      <div class="provider-compare-provider-picks">
-        ${cardHtml("Broadway 平衡推薦", broadwayPick, "provider broadway")}
-        ${cardHtml("MCL 平衡推薦", mclPick, "provider mcl")}
-      </div>
-      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。所有推薦均顯示時間及戲院名稱；點推薦只會跳到時間線中的相應場次，不會直接離開 HK Cinema。只使用已有可靠票價、時間及座位比例的場次；MCL 座位 lazy loading 後會自動更新。</p>
+      ${providerPicksHtml}
+      <p class="provider-compare-recommendation-note">平衡推薦＝價格 50% + 可選座位比例 35% + 較早時間 15%。同一個目前篩選結果內的所有平衡推薦共用同一評分尺度，因此 Broadway、MCL 與全院線分數可直接對照。只選單一院線時不重複顯示另一院線推薦。點推薦只會跳到時間線中的相應場次，不會直接離開 HK Cinema；MCL 座位 lazy loading 後會自動更新。</p>
     `;
 
     let panel = section.querySelector("[data-provider-recommendations]");
@@ -332,6 +351,7 @@
 
       if (
         event.target.closest("[data-insight-provider]") ||
+        event.target.closest("[data-insight-period]") ||
         event.target.closest("[data-insight-sort]") ||
         event.target.closest("[data-provider-compare-date]")
       ) schedule();
