@@ -82,7 +82,7 @@
 
   function activeDateFor(card) {
     if (card.matches(".emperor-showtime-card")) {
-      return document.querySelector("[data-emperor-detail-date].active")?.dataset?.emperorDetailDate || null;
+      return document.querySelector('[data-detail-provider="emperor"][data-detail-date].active')?.dataset?.detailDate || null;
     }
     return document.querySelector("[data-provider-compare-date].active")?.dataset?.providerCompareDate || null;
   }
