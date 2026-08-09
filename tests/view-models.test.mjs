@@ -223,10 +223,12 @@ test("Phase 7B model loads before all legacy detail and seat renderers", async (
   assert.ok(metadataIndex > -1);
   assert.ok(modelIndex > -1);
   assert.ok(metadataIndex < modelIndex);
+  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b2");
+  assert.ok(rendererIndex > modelIndex);
   for (const script of [
-    "app.js?v=6k1",
-    "mcl-detail.js?v=6k1",
-    "emperor-detail.js?v=6f1",
+    "app.js?v=7b2",
+    "mcl-detail.js?v=7b2",
+    "emperor-detail.js?v=7b2",
     "seatmap.js?v=6o1",
     "mcl-seatmap.js?v=6o1",
     "emperor-seatmap.js?v=6n1"

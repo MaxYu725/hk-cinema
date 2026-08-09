@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Phase 7B Shared Movie Detail Visual</title>
+  <link rel="stylesheet" href="../app/style.css">
+  <link rel="stylesheet" href="../app/movie-detail-shared.css">
+  <style>
+    .fixture-launcher { display: flex; gap: 8px; padding: 20px; }
+    .fixture-launcher button { padding: 10px 14px; border: 1px solid #d9dce0; border-radius: 999px; background: #fff; }
+  </style>
+</head>
+<body>
+  <main class="fixture-launcher" aria-label="Visual fixture provider chooser">
+    <button type="button" data-provider="broadway">Broadway</button>
+    <button type="button" data-provider="mcl">MCL</button>
+    <button type="button" data-provider="emperor">Emperor</button>
+  </main>
+  <script src="../app/showtime-metadata.js"></script>
+  <script src="../app/view-models.js"></script>
+  <script src="../app/movie-detail-shared.js"></script>
+  <script>
+    const providerMovies = {
+      broadway: {
+        id: "broadway:1", sourceId: "1", title: { zh: "劇場版 鬼滅之刃 無限城篇", en: "Demon Slayer: Infinity Castle" },
+        releaseDate: "2026-08-06", durationMinutes: 155, rating: "IIB", category: "動畫", language: "日語", subtitles: ["中文", "英文"],
+        director: ["外崎春雄"], cast: ["花江夏樹", "鬼頭明里"], description: "炭治郎與鬼殺隊踏進無限城，迎戰最後的強敵。", formats: ["2D", "IMAX"]
+      },
+      mcl: {
+        id: "mcl:2", sourceId: "2", title: { zh: "F1 電影", en: "F1 The Movie" }, bookingUrl: "https://www.mclcinema.com/"
+      },
+      emperor: {
+        id: "emperor:3", sourceId: "3", title: { zh: "神奇4俠：英雄第一步", en: "The Fantastic Four: First Steps" },
+        releaseDate: "2026-08-07", durationMinutes: 115, rating: "IIB", category: "動作", language: ["英語"], subtitles: ["中文"],
+        director: ["麥特夏克曼"], cast: ["柏德烈柏斯高", "雲妮莎卻比"], description: "Marvel 第一家庭踏上新的冒險。", formats: ["2D"]
+      }
+    };
+
+    function session(providerId) {
+      const base = {
+        id: `${providerId}:90001`, sourceId: "90001", date: "2026-08-10", time: "19:30",
+        cinema: { id: `${providerId}:cinema`, sourceId: "cinema", name: { zh: providerId === "mcl" ? "MCL THE ONE 戲院" : providerId === "emperor" ? "英皇戲院（中環娛樂行）" : "百老匯電影中心" } },
+        house: { sourceId: "H1", name: "2院" }, format: "2D", language: "英語", subtitle: "中文字幕",
+        bookingUrl: providerId === "mcl" ? "https://www.mclcinema.com/MCLSelectSeat.aspx?ci=cinema&si=90001" : providerId === "broadway" ? "https://www.cinema.com.hk/hk/show/90001" : "https://www.emperorcinemas.com/showtimes"
+      };
+      if (providerId === "mcl") return { ...base, price: { display: 105, adult: 105, student: 90, child: 80, senior: 80 }, seatSummary: { occupiedPercent: 72 } };
+      if (providerId === "emperor") return { ...base, price: { display: 130, face: 120, serviceFee: 10, lowest: 110 }, seatSummary: { total: 80, available: 30, sold: 50 }, purchase: { canPurchase: true, scheduleKey: "fixture-key" } };
+      return { ...base, price: { display: 110 }, seatSummary: { total: 115, available: 30, sold: 80, held: 5 } };
+    }
+
+    function openProvider(providerId) {
+      const item = session(providerId);
+      window.HKCinemaMovieDetail.render({
+        providerId,
+        movie: providerMovies[providerId],
+        shows: { availableDates: ["2026-08-10", "2026-08-11", "2026-08-12"], selectedDate: "2026-08-10", sessions: [item] }
+      });
+    }
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-provider]");
+      if (button) openProvider(button.dataset.provider);
+    });
+    openProvider(new URLSearchParams(location.search).get("provider") || "emperor");
+  </script>
+</body>
+</html>
