@@ -1,0 +1,272 @@
+{
+  "broadway": {
+    "movie": {
+      "id": "broadway:19217",
+      "provider": "broadway",
+      "sourceId": "19217",
+      "status": "now-showing",
+      "title": {
+        "zh": "劇場版 鬼滅之刃 無限城篇",
+        "en": "Demon Slayer: Infinity Castle"
+      },
+      "releaseDate": "2026-08-06",
+      "durationMinutes": 155,
+      "category": "動畫",
+      "rating": "IIB",
+      "language": "日語",
+      "subtitles": ["中文", "英文"],
+      "director": ["外崎春雄"],
+      "cast": ["花江夏樹", "鬼頭明里"],
+      "poster": "https://media.grabticks.com/19217__.jpg",
+      "trailer": "https://www.youtube.com/watch?v=example",
+      "formats": ["2D", "IMAX"]
+    },
+    "showtime": {
+      "id": "broadway:90001",
+      "provider": "broadway",
+      "sourceId": "90001",
+      "movieId": "broadway:19217",
+      "cinema": {
+        "id": "broadway:1",
+        "sourceId": "1",
+        "name": { "zh": "百老匯電影中心", "en": "Broadway Cinematheque" }
+      },
+      "house": { "id": "2", "name": "2院" },
+      "date": "2026-08-10",
+      "time": "19:30",
+      "startAt": "2026-08-10T19:30:00+08:00",
+      "format": "2D",
+      "language": "日語",
+      "subtitles": ["中文", "英文"],
+      "price": {
+        "currency": "HKD",
+        "adult": 110,
+        "display": 110,
+        "lowest": null,
+        "serviceFee": 0,
+        "ticketTypes": []
+      },
+      "seatSummary": {
+        "total": 115,
+        "available": 30,
+        "unavailable": 85,
+        "held": 5,
+        "sold": 80,
+        "blocked": 0,
+        "accessibleAvailable": 1,
+        "occupancy": 0.739,
+        "source": "provider-summary",
+        "updatedAt": "2026-08-09T12:00:00.000Z"
+      },
+      "bookingUrl": "https://www.cinema.com.hk/hk/show/90001"
+    },
+    "seatMap": {
+      "showId": "broadway:90001",
+      "provider": "broadway",
+      "screen": "SCREEN",
+      "dimensions": { "width": 800, "height": 400 },
+      "rows": [
+        {
+          "name": "A",
+          "seats": [
+            { "id": "A1", "label": "1", "row": "A", "column": 1, "status": "available", "type": "standard", "providerType": null },
+            { "id": "A2", "label": "2", "row": "A", "column": 2, "status": "held", "type": "wheelchair", "providerType": "wh" },
+            { "id": "A4", "label": "4", "row": "A", "column": 4, "status": "unavailable", "type": "unknown", "providerType": "vip" }
+          ]
+        }
+      ],
+      "summary": {
+        "total": 3,
+        "available": 1,
+        "unavailable": 2,
+        "held": 1,
+        "sold": null,
+        "blocked": 0,
+        "accessibleAvailable": 0,
+        "occupancy": 0.667
+      },
+      "sourceUrl": "https://www.cinema.com.hk/hk/show/90001",
+      "updatedAt": "2026-08-09T12:00:00.000Z"
+    }
+  },
+  "mcl": {
+    "movie": {
+      "id": "mcl:19216",
+      "provider": "mcl",
+      "sourceId": "19216",
+      "status": "now-showing",
+      "title": { "zh": "F1 電影", "en": null },
+      "releaseDate": null,
+      "durationMinutes": null,
+      "category": null,
+      "rating": null,
+      "language": [],
+      "subtitles": [],
+      "director": [],
+      "cast": [],
+      "poster": "https://www.mclcinema.com/images/19216.jpg",
+      "trailer": null,
+      "formats": [],
+      "bookingUrl": "https://www.mclcinema.com/MovieSet.aspx?id=19216&visLang=1"
+    },
+    "showtime": {
+      "id": "mcl:810001",
+      "provider": "mcl",
+      "sourceId": "810001",
+      "date": "2026-08-10",
+      "time": "20:10",
+      "cinema": {
+        "id": "021",
+        "name": { "zh": "MCL THE ONE 戲院", "en": null }
+      },
+      "house": { "id": null, "name": "House 3" },
+      "format": "2D",
+      "language": "英語",
+      "versionName": "2D 英語 · 中文字幕",
+      "displayVersion": "2D 英語",
+      "price": {
+        "display": 105,
+        "adult": 105,
+        "student": 90,
+        "child": 80,
+        "senior": 80
+      },
+      "seatSummary": {
+        "available": null,
+        "total": null,
+        "held": null,
+        "unavailable": null,
+        "occupiedPercent": 72
+      },
+      "bookingUrl": "https://www.mclcinema.com/MCLSelectSeat.aspx?visLang=1&ci=021&si=810001"
+    },
+    "seatMap": {
+      "provider": "mcl",
+      "cinemaCode": "021",
+      "sessionId": "810001",
+      "layoutVersion": 3,
+      "totalColumns": 4,
+      "areas": [
+        {
+          "index": 0,
+          "name": "普通區",
+          "cellColumns": 4,
+          "ratioLeft": 0,
+          "ratioTop": 0,
+          "rows": [
+            {
+              "name": "A",
+              "cells": [
+                { "type": "label", "text": "A", "cellIndex": 0 },
+                { "type": "seat", "cellIndex": 1, "seat": { "id": "A1", "seatNum": "A1", "rowName": "A", "column": 1, "displayCell": 1, "status": "wheelchair", "upstreamStatus": "Wheelchair" } },
+                { "type": "seat", "cellIndex": 2, "seat": { "id": "A2", "seatNum": "A2", "rowName": "A", "column": 2, "displayCell": 2, "status": "sofa-sold", "upstreamStatus": "SofaSold", "seatStyle": "Sofa", "visualSpan": 2 } },
+                { "type": "seat", "cellIndex": 3, "seat": { "id": "A3", "seatNum": "A3", "rowName": "A", "column": 3, "displayCell": 3, "status": "broken", "upstreamStatus": "Broken" } }
+              ]
+            }
+          ]
+        }
+      ],
+      "seats": [
+        { "id": "A1", "seatNum": "A1", "rowName": "A", "column": 1, "displayCell": 1, "status": "wheelchair", "upstreamStatus": "Wheelchair" },
+        { "id": "A2", "seatNum": "A2", "rowName": "A", "column": 2, "displayCell": 2, "status": "sofa-sold", "upstreamStatus": "SofaSold", "seatStyle": "Sofa", "visualSpan": 2 },
+        { "id": "A3", "seatNum": "A3", "rowName": "A", "column": 3, "displayCell": 3, "status": "broken", "upstreamStatus": "Broken" }
+      ],
+      "counts": { "total": 3, "available": 1, "sold": 1, "blocked": 1, "wheelchair": 1, "sofa-available": 0, "sofa-sold": 1, "unknown": 0 },
+      "screenLabel": "銀幕",
+      "source": { "provider": "mcl", "parser": "official-table-v3", "updatedAt": "2026-08-09T12:00:00.000Z" }
+    }
+  },
+  "emperor": {
+    "movie": {
+      "id": "emperor:30001",
+      "provider": "emperor",
+      "sourceId": "30001",
+      "status": "now-showing",
+      "title": { "zh": "神奇4俠：英雄第一步", "en": "The Fantastic Four: First Steps" },
+      "releaseDate": "2026-08-07",
+      "durationMinutes": 115,
+      "category": "動作",
+      "rating": "IIB",
+      "language": ["英語"],
+      "subtitles": ["中文"],
+      "director": ["麥特夏克曼"],
+      "cast": ["柏德烈柏斯高"],
+      "poster": "https://example.test/emperor-poster.jpg",
+      "formats": ["2D"],
+      "bookingUrl": "https://www.emperorcinemas.com/showtimes?filmUniqueId=30001"
+    },
+    "detail": {
+      "movie": {
+        "id": "emperor:30001",
+        "provider": "emperor",
+        "sourceId": "30001",
+        "title": { "zh": "神奇4俠：英雄第一步", "en": "The Fantastic Four: First Steps" },
+        "releaseDate": "2026-08-07",
+        "durationMinutes": 115,
+        "category": "動作",
+        "classification": "IIB",
+        "language": "英語",
+        "subtitle": "中文",
+        "directors": "麥特夏克曼",
+        "cast": "柏德烈柏斯高、雲妮莎卻比",
+        "description": "Marvel 第一家庭踏上新的冒險。",
+        "trailer": "https://www.youtube.com/watch?v=emperor-example",
+        "formats": ["2D"],
+        "formatGroups": ["標準版"],
+        "bookingUrl": "https://www.emperorcinemas.com/showtimes?filmUniqueId=30001"
+      },
+      "source": "emperor-sync-film-detail"
+    },
+    "showtime": {
+      "id": "emperor:820001",
+      "provider": "emperor",
+      "sourceId": "820001",
+      "movieSourceId": "30001",
+      "cinema": {
+        "sourceId": "501",
+        "name": { "zh": "英皇戲院（中環娛樂行）" },
+        "cityCode": "HK",
+        "cityName": "香港"
+      },
+      "house": { "sourceId": "H1", "name": "1院" },
+      "date": "2026-08-10",
+      "time": "21:00",
+      "startsAt": "2026-08-10T13:00:00.000Z",
+      "endsAt": "2026-08-10T14:55:00.000Z",
+      "format": "2D",
+      "language": "英語",
+      "subtitle": "中文",
+      "price": { "display": 130, "face": 120, "serviceFee": 10, "lowest": 110 },
+      "seatSummary": { "total": 80, "sold": 50, "available": 30, "occupiedPercent": 62.5 },
+      "purchase": { "canPurchase": true, "scheduleKey": "ABCDEF0123456789", "freeSeating": false, "soldOut": false, "blocked": false, "prioritySale": false, "priorityAllowed": false },
+      "bookingUrl": "https://www.emperorcinemas.com/showtimes?filmUniqueId=30001"
+    },
+    "seatMap": {
+      "provider": "emperor",
+      "scheduleId": "820001",
+      "cinemaLinkId": "501",
+      "hallId": "H1",
+      "maxCanBuy": 8,
+      "notice": "座位只供參考",
+      "popupNotices": ["實際座位以官方頁面為準"],
+      "counts": { "total": 5, "available": 1, "unavailable": 4, "noSell": 2, "disabled": 1, "isolation": 1, "wheelchair": 1, "special": 5 },
+      "sections": [
+        {
+          "id": "S1",
+          "name": "普通區",
+          "bounds": { "minLeft": 10, "maxLeft": 138, "minTop": 20, "maxTop": 20, "width": 160, "height": 32 },
+          "grid": { "minRow": 1, "maxRow": 1, "minColumn": 1, "maxColumn": 5, "pitch": 32 },
+          "areas": [{ "id": "A1", "name": "普通區", "price": 130, "lowestPrice": 110 }],
+          "seats": [
+            { "id": "E1", "name": "A1", "rowName": "A", "columnName": "1", "position": { "left": 10, "top": 20, "relativeLeftPercent": 0, "relativeTopPercent": 0, "rotate": 0 }, "areaId": "A1", "areaName": "普通區", "rawFlag": 12, "type": "wheelchair", "rawStatus": 1, "status": "available", "selectable": true },
+            { "id": "E2", "name": "A2", "rowName": "A", "columnName": "2", "position": { "left": 42, "top": 20, "relativeLeftPercent": 0, "relativeTopPercent": 0, "rotate": 0 }, "areaId": "A1", "areaName": "普通區", "rawFlag": 11, "type": "extended-recliner", "rawStatus": 0, "status": "unavailable", "selectable": false },
+            { "id": "E3", "name": "A3", "rowName": "A", "columnName": "3", "position": { "left": 74, "top": 20, "relativeLeftPercent": 0, "relativeTopPercent": 0, "rotate": 0 }, "areaId": "A1", "areaName": "普通區", "rawFlag": 5, "type": "vibrate", "rawStatus": -1, "status": "disabled", "selectable": false },
+            { "id": "E4", "name": "A4", "rowName": "A", "columnName": "4", "position": { "left": 106, "top": 20, "relativeLeftPercent": 0, "relativeTopPercent": 0, "rotate": 0 }, "areaId": "A1", "areaName": "普通區", "rawFlag": 6, "type": "couple", "rawStatus": -2, "status": "isolation", "selectable": false },
+            { "id": "E5", "name": "A5", "rowName": "A", "columnName": "5", "position": { "left": 138, "top": 20, "relativeLeftPercent": 0, "relativeTopPercent": 0, "rotate": 0 }, "areaId": "A1", "areaName": "普通區", "rawFlag": 9, "type": "double-armchair", "rawStatus": 0, "status": "unavailable", "selectable": false }
+          ]
+        }
+      ],
+      "source": "emperor-sync-seat-getSeatMap"
+    }
+  }
+}
