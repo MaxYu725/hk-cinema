@@ -132,8 +132,17 @@
     const replacement = document.createElement("article");
     copyCardAttributes(card, replacement);
     replacement.className = card.className;
-    replacement.innerHTML = card.innerHTML;
+    // Move the existing nodes instead of cloning their markup. Seat-map
+    // providers keep per-trigger state in WeakMaps, so retaining node identity
+    // is required for already-prepared Broadway, MCL and Emperor actions.
+    replacement.append(...card.childNodes);
     replacement.tabIndex = -1;
+
+    // MCL observes the showtime card itself. The old anchor may already have
+    // been marked as observed before this mobile-polish layer runs, but the new
+    // article is a different observer target and must be registered afresh.
+    delete replacement.dataset.seatObserved;
+    delete replacement.dataset.seatLoading;
 
     const bookingUrl = card.getAttribute("href") || "";
     if (bookingUrl) {
@@ -178,10 +187,17 @@
   }
 
   function enhanceShowCards(root) {
+    let converted = false;
     root.querySelectorAll(".provider-compare-timeline > .provider-compare-show").forEach(original => {
       const card = convertLinkedCard(original);
+      converted ||= card !== original;
       addBookingAction(card);
     });
+
+    if (converted) {
+      window.HKCinemaProviderCompareSeats?.refresh?.();
+      window.HKCinemaEmperorSeatMap?.refresh?.();
+    }
   }
 
   function enhancePoster(root) {
@@ -222,6 +238,7 @@
 
     row = document.createElement("div");
     row.className = "phase6m-active-filters";
+    row.dataset.phase6mOwned = "true";
     row.dataset.phase6mActiveFilters = "true";
     row.dataset.signature = signature;
     row.setAttribute("aria-label", "目前生效的比較條件");
@@ -256,11 +273,13 @@
       shortcut = document.createElement("button");
       shortcut.type = "button";
       shortcut.className = "phase6m-filter-shortcut";
+      shortcut.dataset.phase6mOwned = "true";
       shortcut.dataset.phase6mFilterShortcut = "true";
       rail.appendChild(shortcut);
     }
 
-    shortcut.textContent = filters.length ? `篩選 ${filters.length}` : "篩選";
+    const label = filters.length ? `篩選 ${filters.length}` : "篩選";
+    if (shortcut.textContent !== label) shortcut.textContent = label;
     shortcut.classList.toggle("active", filters.length > 0);
     shortcut.setAttribute("aria-label", filters.length ? `開啟篩選，目前 ${filters.length} 個條件生效` : "開啟場次篩選");
   }
@@ -312,6 +331,7 @@
     empty?.remove();
 
     empty = emptyContainer("phase6m-filter-empty");
+    empty.dataset.phase6mOwned = "true";
     empty.dataset.phase6mFilterEmpty = "true";
     empty.dataset.message = message;
     addEmptyCopy(empty, "沒有符合目前篩選的場次", message);
@@ -329,6 +349,7 @@
 
       const context = document.createElement("span");
       context.className = "phase6m-empty-context";
+      context.dataset.phase6mOwned = "true";
       context.textContent = errors.length
         ? "部分院線暫時未能更新；可重試資料，或先切換其他日期。"
         : "可切換上方日期；院線新增場次後重新載入即可查看。";
@@ -336,6 +357,7 @@
 
       const actions = document.createElement("div");
       actions.className = "phase6m-empty-actions";
+      actions.dataset.phase6mOwned = "true";
       actions.appendChild(actionButton("data-provider-compare-retry", "重新載入"));
       empty.appendChild(actions);
     });
@@ -360,6 +382,7 @@
     const errors = Object.values(state.errors || {}).filter(Boolean);
     const section = document.createElement("section");
     section.className = "provider-compare-section phase6m-empty-section";
+    section.dataset.phase6mOwned = "true";
     section.dataset.phase6mNoDates = "true";
 
     const empty = emptyContainer("");

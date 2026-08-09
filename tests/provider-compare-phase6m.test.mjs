@@ -17,8 +17,15 @@ test("Phase 6M separates seat-map and official booking actions", async () => {
     source("app/emperor-seatmap.js")
   ]);
 
-  assert.match(index, /provider-compare-phase6m\.js\?v=6m1/);
+  assert.match(index, /provider-compare-phase6m\.js\?v=6n1/);
+  assert.match(index, /provider-compare-seats\.js\?v=6n1/);
+  assert.match(index, /emperor-seatmap\.js\?v=6n1/);
   assert.match(phase6m, /document\.createElement\("article"\)/);
+  assert.match(phase6m, /replacement\.append\(\.\.\.card\.childNodes\)/);
+  assert.doesNotMatch(phase6m, /replacement\.innerHTML = card\.innerHTML/);
+  assert.match(phase6m, /delete replacement\.dataset\.seatObserved/);
+  assert.match(phase6m, /HKCinemaProviderCompareSeats\?\.refresh/);
+  assert.match(phase6m, /HKCinemaEmperorSeatMap\?\.refresh/);
   assert.match(phase6m, /provider-compare-booking/);
   assert.match(phase6m, /dataset\.bookingUrl = bookingUrl/);
   assert.match(phase6m, /replacement\.setAttribute\("href", bookingUrl\)/);
@@ -35,8 +42,10 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   ]);
 
   assert.match(phase6m, /data-phase6m-active-filters/);
+  assert.match(phase6m, /phase6mOwned/);
   assert.match(phase6m, /phase6mClearFilter/);
   assert.match(phase6m, /data-phase6m-filter-shortcut/);
+  assert.match(phase6m, /shortcut\.textContent !== label/);
   assert.match(phase6m, /沒有符合目前篩選的場次/);
   assert.match(phase6m, /data-provider-compare-reset/);
   assert.match(phase6m, /data-phase6m-no-dates/);
@@ -45,6 +54,7 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   assert.match(insights, /data-insight-cinema/);
   assert.match(insights, /data-insight-period/);
   assert.match(insights, /data-insight-sort/);
+  assert.match(insights, /records\.every\(isPhase6MOwnedMutation\)/);
   assert.match(preferences, /hkcinema:provider-compare-filters:v1/);
 });
 

@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check app/provider-compare-phase6m.js && node --test tests/*.test.mjs"
+    "test": "node --check app/provider-compare-phase6m.js && node --check app/provider-compare-insights-v3.js && node --check app/provider-compare-seats.js && node --check app/emperor-seatmap.js && node --test tests/*.test.mjs"
   }
 }
