@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 6O Native Comparison Visual Fixture</title>
+  <link rel="stylesheet" href="../app/style.css">
+  <link rel="stylesheet" href="../app/provider-compare.css">
+  <link rel="stylesheet" href="../app/provider-compare-insights.css">
+  <link rel="stylesheet" href="../app/provider-compare-v3.css">
+  <link rel="stylesheet" href="../app/provider-compare-seats.css">
+  <link rel="stylesheet" href="../app/provider-compare-density.css">
+  <link rel="stylesheet" href="../app/provider-compare-phase6m.css">
+  <style>
+    body { margin: 0; background: #eef0f3; font-family: system-ui, sans-serif; }
+    .phase6o-fixture-result {
+      position: fixed;
+      z-index: 200;
+      top: 10px;
+      left: 50%;
+      max-width: calc(100% - 32px);
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #fff3cd;
+      color: #664d03;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, .16);
+      font-size: .75rem;
+      font-weight: 900;
+      transform: translateX(-50%);
+    }
+    .phase6o-fixture-result.pass { background: #dff3e8; color: #17603d; }
+    .phase6o-fixture-result.fail { background: #f8d7da; color: #842029; }
+  </style>
+</head>
+<body class="provider-compare-open">
+  <output class="phase6o-fixture-result" data-phase6o-result aria-live="polite">執行 Phase 6O 自檢…</output>
+  <div id="providerCompareOverlay" class="provider-compare-overlay" data-compare-data-state="ready">
+    <div class="provider-compare-backdrop"></div>
+    <aside class="provider-compare-sheet" role="dialog" aria-modal="true" aria-label="Phase 6O 院線比較驗收">
+      <div id="providerCompareContent">
+        <section class="provider-compare-hero">
+          <div>
+            <p class="eyebrow">PHASE 6O FIXTURE</p>
+            <h1>三院線比較</h1>
+            <p>固定資料 · 原生卡片 · 手機優先</p>
+          </div>
+        </section>
+
+        <div class="provider-compare-date-rail">
+          <span class="provider-compare-date-label">日期</span>
+          <div class="provider-compare-dates" data-provider-count="3">
+            <button type="button" class="provider-compare-date active">
+              <strong>8月8日週六</strong>
+              <span class="both">三院線</span>
+            </button>
+          </div>
+        </div>
+
+        <section class="provider-compare-section provider-compare-timeline-section">
+          <div class="provider-compare-section-heading">
+            <div>
+              <p class="eyebrow">SHOWTIMES</p>
+              <h2>場次時間線</h2>
+            </div>
+            <small>3 場</small>
+          </div>
+          <div class="provider-compare-timeline">
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/broadway" data-seat-available="68" data-seat-total="100">
+              <div class="provider-compare-show-time">10:30</div>
+              <div class="provider-compare-show-main">
+                <div class="provider-compare-show-topline">
+                  <span class="provider-compare-source broadway">Broadway</span>
+                  <strong>PALACE ifc</strong>
+                </div>
+                <p>1院 · 2D · 粵語</p>
+                <span class="provider-compare-seat available">68/100 可選</span>
+              </div>
+              <div class="provider-compare-show-actions">
+                <span class="provider-compare-show-price">$110</span>
+                <a class="provider-compare-booking" href="https://example.com/broadway" target="_blank" rel="noopener noreferrer">購票</a>
+              </div>
+            </article>
+
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/mcl" data-seat-available="92" data-seat-total="120">
+              <div class="provider-compare-show-time">13:15</div>
+              <div class="provider-compare-show-main">
+                <div class="provider-compare-show-topline">
+                  <span class="provider-compare-source mcl">MCL</span>
+                  <strong>K11 ART HOUSE (尖東站)</strong>
+                </div>
+                <p>THEATRE 4 · 2D · 粵語</p>
+                <span class="provider-compare-seat available">92/120 可選</span>
+              </div>
+              <div class="provider-compare-show-actions">
+                <span class="provider-compare-show-price">$105</span>
+                <a class="provider-compare-booking" href="https://example.com/mcl" target="_blank" rel="noopener noreferrer">購票</a>
+              </div>
+            </article>
+
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/emperor" data-seat-available="44" data-seat-total="80">
+              <div class="provider-compare-show-time">18:45</div>
+              <div class="provider-compare-show-main">
+                <div class="provider-compare-show-topline">
+                  <span class="provider-compare-source emperor">Emperor</span>
+                  <strong>英皇戲院 (中環娛樂行)</strong>
+                </div>
+                <p>3院 · 2D · 粵語</p>
+                <span class="provider-compare-seat available">44/80 未售</span>
+              </div>
+              <div class="provider-compare-show-actions">
+                <span class="provider-compare-show-price">$120</span>
+                <a class="provider-compare-booking" href="https://example.com/emperor" target="_blank" rel="noopener noreferrer">購票</a>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    window.HKCinemaProviderCompare = {
+      getState() {
+        return {
+          match: { broadway: {}, mcl: {}, emperor: {} },
+          selectedDate: "2026-08-08",
+          availableDates: {
+            broadway: ["2026-08-08"],
+            mcl: ["2026-08-08"],
+            emperor: ["2026-08-08"]
+          },
+          errors: {}
+        };
+      }
+    };
+  </script>
+  <script src="../app/cinema-registry.js"></script>
+  <script src="../app/provider-compare-insights-v3.js"></script>
+  <script src="../app/provider-compare-phase6m.js"></script>
+  <script>
+    const result = document.querySelector("[data-phase6o-result]");
+    const content = document.querySelector("#providerCompareContent");
+    let mutations = 0;
+    const stabilityObserver = new MutationObserver(records => { mutations += records.length; });
+    stabilityObserver.observe(content, { childList: true, subtree: true, attributes: true, characterData: true });
+
+    function finish() {
+      stabilityObserver.disconnect();
+      const cards = Array.from(document.querySelectorAll(".provider-compare-timeline > .provider-compare-show"));
+      const visibleCards = cards.filter(card => !card.hidden);
+      const checks = {
+        nativeCards: cards.length === 3 && cards.every(card => card.tagName === "ARTICLE"),
+        explicitBookings: cards.every(card => card.dataset.bookingUrl && card.querySelector(":scope .provider-compare-booking")),
+        activeFilter: document.querySelectorAll("[data-phase6m-active-filters]").length === 1 && document.querySelectorAll("[data-insight-clear-filter='provider']").length === 1,
+        mclOnly: visibleCards.length === 1 && visibleCards[0].querySelector(".provider-compare-source.mcl"),
+        stable: mutations < 80
+      };
+      const failed = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+      result.classList.add(failed.length ? "fail" : "pass");
+      result.textContent = failed.length
+        ? `FAIL · ${failed.join(", ")} · ${mutations} mutations`
+        : `PASS · 原生卡片／訂票／篩選／observer 穩定 · ${mutations} mutations`;
+      document.body.dataset.phase6oFixture = failed.length ? "fail" : "pass";
+    }
+
+    requestAnimationFrame(() => {
+      document.querySelector("[data-insight-provider='mcl']")?.click();
+      setTimeout(finish, 600);
+    });
+  </script>
+</body>
+</html>

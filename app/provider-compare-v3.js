@@ -476,11 +476,17 @@
   }
 
   function renderTimelineItem(item) {
-    const seatAttrs = [
+    const cardAttrs = [
       Number.isFinite(item.seatAvailable) ? `data-seat-available="${item.seatAvailable}"` : "",
-      Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : ""
+      Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : "",
+      item.bookingUrl ? `data-booking-url="${escapeHtml(item.bookingUrl)}"` : ""
     ].filter(Boolean).join(" ");
-    const content = `
+    const bookingAction = item.bookingUrl
+      ? `<a class="provider-compare-booking" href="${escapeHtml(item.bookingUrl)}" target="_blank" rel="noopener noreferrer" aria-label="前往 ${escapeHtml(item.providerLabel)} 官方購票：${escapeHtml(item.cinemaName)} ${escapeHtml(item.time)}">購票</a>`
+      : "";
+
+    return `
+      <article class="provider-compare-show phase6m-show-card phase6o-native-show" ${cardAttrs}>
       <div class="provider-compare-show-time">${escapeHtml(item.time)}</div>
       <div class="provider-compare-show-main">
         <div class="provider-compare-show-topline">
@@ -490,13 +496,12 @@
         ${item.secondary ? `<p>${escapeHtml(item.secondary)}</p>` : ""}
         <span class="provider-compare-seat ${escapeHtml(item.seatClass)}">${escapeHtml(item.seatText)}</span>
       </div>
-      <div class="provider-compare-show-price">${Number.isFinite(item.price) ? `$${escapeHtml(item.price)}` : "—"}</div>
+      <div class="provider-compare-show-actions">
+        <div class="provider-compare-show-price">${Number.isFinite(item.price) ? `$${escapeHtml(item.price)}` : "—"}</div>
+        ${bookingAction}
+      </div>
+      </article>
     `;
-
-    if (item.bookingUrl) {
-      return `<a class="provider-compare-show" ${seatAttrs} href="${escapeHtml(item.bookingUrl)}" target="_blank" rel="noopener noreferrer">${content}</a>`;
-    }
-    return `<div class="provider-compare-show" ${seatAttrs}>${content}</div>`;
   }
 
   function renderTimeline() {

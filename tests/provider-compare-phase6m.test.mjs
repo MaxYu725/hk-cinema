@@ -9,26 +9,26 @@ async function source(path) {
 }
 
 test("Phase 6M separates seat-map and official booking actions", async () => {
-  const [index, phase6m, broadwaySeats, mclSeats, emperorSeats] = await Promise.all([
+  const [index, compare, phase6m, broadwaySeats, mclSeats, emperorSeats] = await Promise.all([
     source("app/index.html"),
+    source("app/provider-compare-v3.js"),
     source("app/provider-compare-phase6m.js"),
     source("app/seatmap.js"),
     source("app/mcl-seatmap.js"),
     source("app/emperor-seatmap.js")
   ]);
 
-  assert.match(index, /provider-compare-phase6m\.js\?v=6n1/);
-  assert.match(index, /provider-compare-seats\.js\?v=6n1/);
+  assert.match(index, /provider-compare-v3\.js\?v=6o1/);
+  assert.match(index, /provider-compare-phase6m\.js\?v=6o1/);
+  assert.match(index, /provider-compare-seats\.js\?v=6o1/);
   assert.match(index, /emperor-seatmap\.js\?v=6n1/);
-  assert.match(phase6m, /document\.createElement\("article"\)/);
-  assert.match(phase6m, /replacement\.append\(\.\.\.card\.childNodes\)/);
-  assert.doesNotMatch(phase6m, /replacement\.innerHTML = card\.innerHTML/);
-  assert.match(phase6m, /delete replacement\.dataset\.seatObserved/);
-  assert.match(phase6m, /HKCinemaProviderCompareSeats\?\.refresh/);
-  assert.match(phase6m, /HKCinemaEmperorSeatMap\?\.refresh/);
-  assert.match(phase6m, /provider-compare-booking/);
-  assert.match(phase6m, /dataset\.bookingUrl = bookingUrl/);
-  assert.match(phase6m, /replacement\.setAttribute\("href", bookingUrl\)/);
+  assert.match(compare, /<article class="provider-compare-show phase6m-show-card phase6o-native-show"/);
+  assert.match(compare, /data-booking-url=/);
+  assert.match(compare, /provider-compare-booking/);
+  assert.doesNotMatch(compare, /<a class="provider-compare-show"/);
+  assert.doesNotMatch(phase6m, /convertLinkedCard|replaceWith\(replacement\)/);
+  assert.match(broadwaySeats, /dataset\?\.bookingUrl \|\| card\?\.getAttribute\("href"\)/);
+  assert.match(mclSeats, /dataset\?\.bookingUrl \|\| card\?\.getAttribute\("href"\)/);
   assert.match(broadwaySeats, /\.provider-compare-show \.provider-compare-seat/);
   assert.match(mclSeats, /\.mcl-showtime-card, \.provider-compare-show/);
   assert.match(emperorSeats, /\.provider-compare-show/);
@@ -41,9 +41,8 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
     source("app/provider-compare-preferences.js")
   ]);
 
-  assert.match(phase6m, /data-phase6m-active-filters/);
-  assert.match(phase6m, /phase6mOwned/);
-  assert.match(phase6m, /phase6mClearFilter/);
+  assert.match(insights, /data-phase6m-active-filters/);
+  assert.match(insights, /data-insight-clear-filter/);
   assert.match(phase6m, /data-phase6m-filter-shortcut/);
   assert.match(phase6m, /shortcut\.textContent !== label/);
   assert.match(phase6m, /沒有符合目前篩選的場次/);
@@ -54,7 +53,7 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   assert.match(insights, /data-insight-cinema/);
   assert.match(insights, /data-insight-period/);
   assert.match(insights, /data-insight-sort/);
-  assert.match(insights, /records\.every\(isPhase6MOwnedMutation\)/);
+  assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
   assert.match(preferences, /hkcinema:provider-compare-filters:v1/);
 });
 
