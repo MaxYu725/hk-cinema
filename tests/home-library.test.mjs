@@ -85,7 +85,7 @@ test("Phase 6I search, library and card actions stay wired", async () => {
   ]);
 
   assert.ok(index.indexOf("home-library-core.js?v=6k1") < index.indexOf("home-library.js?v=6k1"));
-  assert.ok(index.indexOf("multi-provider.js?v=6k1") < index.indexOf("home-library-core.js?v=6k1"));
+  assert.ok(index.indexOf("multi-provider.js?v=7a3") < index.indexOf("home-library-core.js?v=6k1"));
   assert.match(app, /data-movie-favorite/);
   assert.match(multiProvider, /providerVisible/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);

@@ -21,6 +21,11 @@
       mcl: [],
       emperor: []
     },
+    criteriaDateDecisions: {
+      broadway: new Map(),
+      mcl: new Map(),
+      emperor: new Map()
+    },
     data: {
       broadway: null,
       mcl: null,
@@ -60,6 +65,64 @@
 
   function providerLabels(match = state.match) {
     return activeProviders(match).map(provider => provider.label);
+  }
+
+  function metadataCore() {
+    return window.HKCinemaShowtimeMetadata || null;
+  }
+
+  function sessionMetadata(session) {
+    return metadataCore()?.normalizeSession?.(session) || {
+      languages: ["unknown"],
+      subtitles: ["unknown"],
+      formats: ["unknown"],
+      languageLabels: ["語言未提供"],
+      subtitleLabels: ["字幕未提供"],
+      formatLabels: []
+    };
+  }
+
+  function usesSessionCriteria(provider, match = state.match) {
+    return Boolean(
+      match?.sessionCriteria &&
+      match?.comparisonOnlyProviders?.includes?.(provider)
+    );
+  }
+
+  function rawSessionMatches(provider, session, match = state.match) {
+    if (!usesSessionCriteria(provider, match)) return true;
+    return Boolean(metadataCore()?.matchesCriteria?.(
+      sessionMetadata(session),
+      match.sessionCriteria
+    ));
+  }
+
+  function filteredRawSessions(provider, sessions, match = state.match) {
+    return (sessions || []).filter(session => rawSessionMatches(provider, session, match));
+  }
+
+  function availableDatesFor(provider, result, match = state.match) {
+    if (!usesSessionCriteria(provider, match) || !Array.isArray(result?.allSessions)) {
+      return uniqueDates(result?.availableDates || []);
+    }
+    return uniqueDates(
+      metadataCore()?.candidateDatesForCriteria?.(
+        result,
+        match.sessionCriteria,
+        state.criteriaDateDecisions[provider]
+      ) ||
+      result?.availableDates || []
+    );
+  }
+
+  function rememberCriteriaDateDecision(provider, result, match = state.match) {
+    if (!usesSessionCriteria(provider, match)) return;
+    const decision = metadataCore()?.selectedDateDecisionForCriteria?.(
+      result,
+      match.sessionCriteria
+    );
+    if (!decision?.date || !["match", "mismatch"].includes(decision.status)) return;
+    state.criteriaDateDecisions[provider].set(decision.date, decision.status);
   }
 
   function ensureOverlay() {
@@ -257,39 +320,6 @@
     }
   }
 
-  function guardPromise(promise, signal, timeoutMs, timeoutMessage) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      let timer = null;
-      const cleanup = () => {
-        if (timer) clearTimeout(timer);
-        signal?.removeEventListener?.("abort", onAbort);
-      };
-      const settle = (fn, value) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        fn(value);
-      };
-      const onAbort = () => {
-        const error = new Error("Comparison request cancelled");
-        error.name = "AbortError";
-        settle(reject, error);
-      };
-
-      if (signal?.aborted) {
-        onAbort();
-        return;
-      }
-      signal?.addEventListener?.("abort", onAbort, { once: true });
-      timer = setTimeout(() => settle(reject, new Error(timeoutMessage)), timeoutMs);
-      Promise.resolve(promise).then(
-        value => settle(resolve, value),
-        error => settle(reject, error)
-      );
-    });
-  }
-
   async function fetchProvider(provider, match, date, signal) {
     const entry = match?.[provider];
     if (!entry) return null;
@@ -299,19 +329,25 @@
     if (provider === "mcl") {
       const mcl = window.HKCinemaProviders?.mcl;
       if (!mcl?.getTicketing) throw new Error("MCL ticketing provider 未能載入");
-      const result = await guardPromise(
-        mcl.getTicketing(sourceId, date),
-        signal,
-        TIMEOUTS.mcl,
-        "MCL 場次讀取逾時，請稍後重試。"
-      );
-      return {
-        ...result,
-        _health: {
-          updatedAt: result?.source?.updatedAt || new Date().toISOString(),
-          source: result?.source?.cache ? "cache" : "network"
-        }
-      };
+      const lifecycle = childController(signal, TIMEOUTS.mcl);
+      try {
+        const result = await mcl.getTicketing(sourceId, date, {
+          signal: lifecycle.controller.signal
+        });
+        if (lifecycle.timedOut()) throw new Error("MCL 場次讀取逾時，請稍後重試。");
+        return {
+          ...result,
+          _health: {
+            updatedAt: result?.source?.updatedAt || new Date().toISOString(),
+            source: result?.source?.cache ? "cache" : "network"
+          }
+        };
+      } catch (error) {
+        if (lifecycle.timedOut()) throw new Error("MCL 場次讀取逾時，請稍後重試。");
+        throw error;
+      } finally {
+        lifecycle.cleanup();
+      }
     }
 
     return await fetchWorkerShows(provider, sourceId, date, signal);
@@ -329,8 +365,21 @@
     return "available";
   }
 
+  function metadataSecondary(session, metadata) {
+    const subtitleText = metadata.subtitles?.includes("unknown")
+      ? "字幕未提供"
+      : `字幕：${metadata.subtitleLabels.join("、")}`;
+    return [
+      session?.house?.name,
+      ...metadata.formatLabels,
+      ...metadata.languageLabels,
+      subtitleText
+    ].filter(Boolean).join(" · ");
+  }
+
   function normalizeBroadwaySession(session) {
     const seat = session?.seatSummary || {};
+    const metadata = sessionMetadata(session);
     const available = Number.isFinite(seat.available) ? seat.available : null;
     const total = Number.isFinite(seat.total) ? seat.total : null;
     const seatText = Number.isFinite(available)
@@ -343,7 +392,8 @@
       providerLabel: "Broadway",
       time: String(session?.time || "--:--"),
       cinemaName: session?.cinema?.name?.zh || session?.cinema?.name?.en || "Broadway 戲院",
-      secondary: [session?.house?.name, session?.format, session?.language].filter(Boolean).join(" · "),
+      secondary: metadataSecondary(session, metadata),
+      metadata,
       price: Number.isFinite(session?.price?.display) ? session.price.display : null,
       seatText,
       seatClass: seatClass(available, total),
@@ -355,6 +405,7 @@
 
   function normalizeMCLSession(session) {
     const occupied = session?.seatSummary?.occupiedPercent;
+    const metadata = sessionMetadata(session);
     let seatText = "座位資料稍後提供";
     let klass = "unknown";
     if (Number.isFinite(occupied)) {
@@ -371,7 +422,8 @@
       providerLabel: "MCL",
       time: String(session?.time || "--:--"),
       cinemaName: session?.cinema?.name?.zh || session?.cinema?.name?.en || "MCL 戲院",
-      secondary: [session?.house?.name, session?.format, session?.language].filter(Boolean).join(" · "),
+      secondary: metadataSecondary(session, metadata),
+      metadata,
       price,
       seatText,
       seatClass: klass,
@@ -383,6 +435,7 @@
 
   function normalizeEmperorSession(session) {
     const summary = session?.seatSummary || {};
+    const metadata = sessionMetadata(session);
     const available = Number.isFinite(summary.available) ? summary.available : null;
     const total = Number.isFinite(summary.total) ? summary.total : null;
     const seatText = Number.isFinite(available)
@@ -395,12 +448,8 @@
       providerLabel: "Emperor",
       time: String(session?.time || "--:--"),
       cinemaName: session?.cinema?.name?.zh || "Emperor Cinemas",
-      secondary: [
-        session?.house?.name,
-        session?.format,
-        session?.language,
-        session?.subtitle ? `字幕：${session.subtitle}` : null
-      ].filter(Boolean).join(" · "),
+      secondary: metadataSecondary(session, metadata),
+      metadata,
       price: Number.isFinite(session?.price?.display) ? session.price.display : null,
       seatText,
       seatClass: seatClass(available, total),
@@ -427,7 +476,7 @@
     for (const provider of activeProviders()) {
       const key = provider.key;
       if (!state.data[key] || !state.availableDates[key].includes(state.selectedDate)) continue;
-      items.push(...(state.data[key].sessions || []).map(session => normalizeSession(key, session)));
+      items.push(...filteredRawSessions(key, state.data[key].sessions).map(session => normalizeSession(key, session)));
     }
 
     return items.sort((a, b) => {
@@ -476,9 +525,13 @@
   }
 
   function renderTimelineItem(item) {
+    const metadata = item.metadata || sessionMetadata({});
     const cardAttrs = [
       Number.isFinite(item.seatAvailable) ? `data-seat-available="${item.seatAvailable}"` : "",
       Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : "",
+      `data-show-language="${escapeHtml(metadata.languages.join(","))}"`,
+      `data-show-subtitle="${escapeHtml(metadata.subtitles.join(","))}"`,
+      `data-show-format="${escapeHtml(metadata.formats.join(","))}"`,
       item.bookingUrl ? `data-booking-url="${escapeHtml(item.bookingUrl)}"` : ""
     ].filter(Boolean).join(" ");
     const bookingAction = item.bookingUrl
@@ -519,9 +572,9 @@
     if (!state.selectedDate) return "";
 
     const sessions = timelineSessions();
-    const counts = activeProviders().map(provider =>
-      `${provider.label} ${state.data[provider.key]?.sessions?.length || 0} 場`
-    );
+    const counts = activeProviders().map(provider => (
+      `${provider.label} ${sessions.filter(session => session.provider === provider.key).length} 場`
+    ));
 
     return `
       <section class="provider-compare-section provider-compare-timeline-section">
@@ -555,6 +608,13 @@
     const poster = match.broadway?.poster || mclMovie.poster || emperorMovie.poster || null;
     const labels = providerLabels(match);
     const matchLabel = match.matchType === "normalized-variant" ? "版本配對" : "精確標題";
+    const criteriaLanguages = metadataCore()?.labelsFor?.(
+      "language",
+      match.sessionCriteria?.languages || []
+    ) || [];
+    const criteriaNote = match.comparisonOnlyProviders?.includes?.("mcl") && criteriaLanguages.length
+      ? ` · MCL 按${criteriaLanguages.join("／")}場次配對`
+      : "";
 
     const body = state.loadingInitial
       ? `
@@ -577,7 +637,7 @@
           <h1>${escapeHtml(match.title)}</h1>
           <div class="provider-compare-status">
             <span>${labels.length} 院線</span>
-            <small>${matchLabel} · 信心 ${Math.round((match.confidence || 0) * 100)}%</small>
+            <small>${matchLabel} · 信心 ${Math.round((match.confidence || 0) * 100)}%${escapeHtml(criteriaNote)}</small>
           </div>
         </div>
       </div>
@@ -602,7 +662,10 @@
       const key = provider.key;
       const hasDate = state.availableDates[key].includes(date);
       if (!hasDate) return Promise.resolve(null);
-      if (state.data[key]?.selectedDate === date) return Promise.resolve(state.data[key]);
+      const reusableSelectedDate =
+        state.data[key]?.selectedDate === date &&
+        (key !== "mcl" || state.data[key]?.metadataComplete === true);
+      if (reusableSelectedDate) return Promise.resolve(state.data[key]);
       return fetchProvider(key, state.match, date, signal);
     });
 
@@ -615,12 +678,25 @@
       if (result.status === "fulfilled") {
         state.data[key] = result.value;
         if (result.value?._health) state.freshness[key] = { ...result.value._health };
-        if (hasDate) state.errors[key] = null;
+        if (hasDate) {
+          state.errors[key] = null;
+          rememberCriteriaDateDecision(key, result.value, state.match);
+          state.availableDates[key] = availableDatesFor(key, result.value, state.match);
+        }
       } else {
         state.data[key] = null;
         state.errors[key] = errorMessage(result.reason);
       }
     });
+
+    if (!combinedDates().includes(state.selectedDate)) {
+      const preferredDate = firstPreferredDate();
+      if (preferredDate) {
+        await loadDate(preferredDate, requestCycle);
+        return;
+      }
+      state.selectedDate = null;
+    }
 
     state.loadingDate = false;
     render();
@@ -636,6 +712,7 @@
     state.selectedDate = null;
     for (const provider of PROVIDERS) {
       state.availableDates[provider.key] = [];
+      state.criteriaDateDecisions[provider.key].clear();
       state.data[provider.key] = null;
       state.errors[provider.key] = null;
       state.freshness[provider.key] = null;
@@ -654,7 +731,8 @@
       if (result.status === "fulfilled") {
         state.data[key] = result.value;
         if (result.value?._health) state.freshness[key] = { ...result.value._health };
-        state.availableDates[key] = uniqueDates(result.value?.availableDates || []);
+        rememberCriteriaDateDecision(key, result.value, match);
+        state.availableDates[key] = availableDatesFor(key, result.value, match);
       } else {
         state.errors[key] = errorMessage(result.reason);
       }

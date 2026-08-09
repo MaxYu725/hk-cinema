@@ -3,13 +3,15 @@
   const API_BASE = `${SITE_BASE}MCLWebAPI2/`;
   const CACHE_MAX_AGE_MS = 2 * 60 * 1000;
   const REQUEST_TIMEOUTS = [8000, 12000];
+  const REQUEST_BUDGET_MS = 13500;
+  const ENRICHMENT_BUDGET_MS = 10000;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   function cacheKey(movieSetId, date) {
-    return `hkcinema:mcl-webapi-ticketing:${movieSetId}:${date || "default"}:v3`;
+    return `hkcinema:mcl-webapi-ticketing:${movieSetId}:${date || "default"}:v5`;
   }
 
   function readCache(movieSetId, date) {
@@ -48,9 +50,13 @@
     }
   }
 
-  async function fetchTextOnce(url, timeoutMs) {
+  async function fetchTextOnce(url, timeoutMs, parentSignal = null) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const onParentAbort = () => controller.abort(parentSignal?.reason);
+
+    if (parentSignal?.aborted) onParentAbort();
+    else parentSignal?.addEventListener?.("abort", onParentAbort, { once: true });
 
     try {
       const response = await fetch(url, {
@@ -71,18 +77,21 @@
       return await response.text();
     } finally {
       clearTimeout(timer);
+      parentSignal?.removeEventListener?.("abort", onParentAbort);
     }
   }
 
-  async function fetchText(url, retry = true) {
+  async function fetchText(url, retry = true, signal = null) {
     const timeouts = retry ? REQUEST_TIMEOUTS : [7000];
     let lastError = null;
 
     for (let attempt = 0; attempt < timeouts.length; attempt++) {
+      if (signal?.aborted) throw signal.reason || new Error("MCL request cancelled");
       try {
-        return await fetchTextOnce(url, timeouts[attempt]);
+        return await fetchTextOnce(url, timeouts[attempt], signal);
       } catch (error) {
         lastError = error;
+        if (signal?.aborted) throw error;
         if (attempt < timeouts.length - 1) {
           await sleep(650);
         }
@@ -489,9 +498,9 @@
     return map;
   }
 
-  async function getCinemaMap() {
+  async function getCinemaMap(signal = null) {
     try {
-      const text = await fetchText(`${API_BASE}GetCinemaDetails.aspx?l=1`, false);
+      const text = await fetchText(`${API_BASE}GetCinemaDetails.aspx?l=1`, false, signal);
       const json = safeJson(text);
       return json ? collectCinemaMap(json) : new Map();
     } catch {
@@ -543,28 +552,54 @@
     };
   }
 
-  async function enrichSession(session) {
+  function hasSessionLanguageMetadata(session) {
+    const languagePattern = /(?:粵語|廣東話|cantonese|canto|英語|英文|english|日語|日文|日本語|japanese|國語|普通話|華語|mandarin|putonghua|韓語|韓文|korean|泰語|泰文|thai|法語|法文|french|德語|德文|german|西班牙語|西班牙文|spanish|印地語|印度語|hindi|原聲|original)/i;
+    const subtitleLanguagePattern = /(?:中文|英文|日文|韓文|泰文|法文|德文|西班牙文|chinese|english|japanese|korean|thai|french|german|spanish)\s*(?:字幕|subtitles?)/i;
+    const hasRecognizedSpokenLanguage = value => String(value || "")
+      .normalize("NFKC")
+      .split(/[·・|/]+/)
+      .some(part => {
+        const segment = part.trim();
+        if (!segment || /^(?:字幕|subtitles?)\s*[:：]?/i.test(segment)) return false;
+        const spokenPart = segment.replace(subtitleLanguagePattern, " ").trim();
+        return languagePattern.test(spokenPart);
+      });
+
+    return (
+      hasRecognizedSpokenLanguage(session?.language) ||
+      hasRecognizedSpokenLanguage(session?.versionName) ||
+      hasRecognizedSpokenLanguage(session?.displayVersion)
+    );
+  }
+
+  function isSessionInfoPayload(info) {
+    return Boolean(
+      info &&
+      typeof info === "object" &&
+      !Array.isArray(info) &&
+      ["l", "s", "dn", "st", "hn"].some(key => Object.prototype.hasOwnProperty.call(info, key))
+    );
+  }
+
+  async function enrichSessionMetadata(session, signal = null) {
     const cinemaId = session.cinema?.id;
-    if (!cinemaId) return session;
+    if (!cinemaId) {
+      return { session, metadataComplete: hasSessionLanguageMetadata(session) };
+    }
 
     const sessionId = session.sourceId;
     const infoUrl = `${API_BASE}GetSessionInfo.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`;
-    const priceUrl = `${API_BASE}GetPrice.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`;
-
-    const [infoText, priceText] = await Promise.all([
-      fetchText(infoUrl, false).catch(() => null),
-      fetchText(priceUrl, false).catch(() => null)
-    ]);
-
-    const info = safeJson(infoText) || {};
-    const prices = priceFromList(safeJson(priceText));
-    const adult = prices.adult;
+    const infoText = await fetchText(infoUrl, false, signal).catch(() => null);
+    const info = safeJson(infoText);
+    if (!isSessionInfoPayload(info)) {
+      return { session, metadataComplete: false };
+    }
     const languageParts = [
       info.l,
       info.s ? `字幕: ${info.s}` : null
     ].filter(Boolean);
 
-    return {
+    const enrichedSession = {
       ...session,
       date: normalizeDate(info.dn) || session.date,
       time: normalizeTime(info.st) || session.time,
@@ -573,24 +608,45 @@
         name: info.hn || session.house?.name || null
       },
       language: languageParts.join(" · ") || session.language || null,
+      bookingUrl:
+        `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(cinemaId)}&si=${encodeURIComponent(sessionId)}`
+    };
+
+    return {
+      session: enrichedSession,
+      metadataComplete: hasSessionLanguageMetadata(enrichedSession)
+    };
+  }
+
+  async function enrichSessionPrice(session, signal = null) {
+    const cinemaId = session.cinema?.id;
+    if (!cinemaId) return session;
+
+    const sessionId = session.sourceId;
+    const priceUrl = `${API_BASE}GetPrice.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`;
+    const priceText = await fetchText(priceUrl, false, signal).catch(() => null);
+    const prices = priceFromList(safeJson(priceText));
+    const adult = prices.adult;
+
+    return {
+      ...session,
       price: {
         display: adult,
         adult,
         student: prices.student,
         child: prices.child,
         senior: prices.senior
-      },
-      bookingUrl:
-        `${SITE_BASE}MCLSelectSeat.aspx?visLang=1&ci=${encodeURIComponent(cinemaId)}&si=${encodeURIComponent(sessionId)}`
+      }
     };
   }
 
-  async function mapLimit(items, limit, mapper) {
-    const results = new Array(items.length);
+  async function mapLimit(items, limit, mapper, signal = null) {
+    const results = [...items];
     let nextIndex = 0;
 
     async function worker() {
       while (true) {
+        if (signal?.aborted) return;
         const index = nextIndex++;
         if (index >= items.length) return;
 
@@ -609,7 +665,54 @@
     return results;
   }
 
-  async function getTicketing(movieSetId, selectedDate = null) {
+  async function enrichSelectedSessions(
+    sessions,
+    parentSignal = null,
+    budgetMs = ENRICHMENT_BUDGET_MS
+  ) {
+    const fullEnrichmentLimit = 40;
+    if (!sessions.length) return { sessions: [], metadataComplete: true };
+    if (budgetMs <= 0 || parentSignal?.aborted) {
+      return { sessions: [...sessions], metadataComplete: false };
+    }
+    const controller = new AbortController();
+    const onParentAbort = () => controller.abort(parentSignal?.reason);
+    const timer = setTimeout(() => controller.abort("enrichment-deadline"), budgetMs);
+    if (parentSignal?.aborted) onParentAbort();
+    else parentSignal?.addEventListener?.("abort", onParentAbort, { once: true });
+
+    try {
+      const metadataResults = await mapLimit(
+        sessions,
+        8,
+        session => enrichSessionMetadata(session, controller.signal),
+        controller.signal
+      );
+      const withMetadata = metadataResults.map((result, index) => result?.session || sessions[index]);
+      const metadataComplete = metadataResults.every(result => result?.metadataComplete === true);
+      if (controller.signal.aborted) {
+        return { sessions: withMetadata, metadataComplete: false };
+      }
+
+      const withPrices = await mapLimit(
+        withMetadata.slice(0, fullEnrichmentLimit),
+        8,
+        session => enrichSessionPrice(session, controller.signal),
+        controller.signal
+      );
+      return {
+        sessions: [...withPrices, ...withMetadata.slice(fullEnrichmentLimit)],
+        metadataComplete
+      };
+    } finally {
+      clearTimeout(timer);
+      parentSignal?.removeEventListener?.("abort", onParentAbort);
+    }
+  }
+
+  async function getTicketing(movieSetId, selectedDate = null, options = {}) {
+    const requestStartedAt = Date.now();
+    const signal = options?.signal || null;
     const id = String(movieSetId || "").replace(/^mcl:/, "");
 
     if (!/^\d+$/.test(id)) {
@@ -622,10 +725,10 @@
     const query = `l=1&t=s&id=${encodeURIComponent(id)}`;
 
     const [listResult, gridResult, daysResult, cinemaMap] = await Promise.all([
-      fetchText(`${API_BASE}GetNowShowingList.aspx?${query}`).catch(error => ({ error })),
-      fetchText(`${API_BASE}GetNowShowingGrid.aspx?${query}&m=i`).catch(error => ({ error })),
-      fetchText(`${API_BASE}GetShowDays.aspx?${query}`).catch(error => ({ error })),
-      getCinemaMap()
+      fetchText(`${API_BASE}GetNowShowingList.aspx?${query}`, true, signal).catch(error => ({ error })),
+      fetchText(`${API_BASE}GetNowShowingGrid.aspx?${query}&m=i`, true, signal).catch(error => ({ error })),
+      fetchText(`${API_BASE}GetShowDays.aspx?${query}`, true, signal).catch(error => ({ error })),
+      getCinemaMap(signal)
     ]);
 
     const texts = [listResult, gridResult, daysResult]
@@ -662,7 +765,12 @@
       ? allSessions.filter(session => !session.date || session.date === resolvedDate)
       : allSessions;
 
-    selectedSessions = await mapLimit(selectedSessions.slice(0, 40), 6, enrichSession);
+    const enrichmentBudget = Math.max(0, Math.min(
+      ENRICHMENT_BUDGET_MS,
+      REQUEST_BUDGET_MS - (Date.now() - requestStartedAt)
+    ));
+    const enrichment = await enrichSelectedSessions(selectedSessions, signal, enrichmentBudget);
+    selectedSessions = enrichment.sessions;
 
     const enrichedDates = new Set(availableDates);
     selectedSessions.forEach(session => {
@@ -690,6 +798,7 @@
       selectedDate: resolvedDate,
       sessions: selectedSessions,
       allSessions,
+      metadataComplete: enrichment.metadataComplete,
       availableVersions: [],
       source: {
         provider: "mcl",
@@ -701,7 +810,9 @@
       }
     };
 
-    writeCache(id, selectedDate, data);
+    if (enrichment.metadataComplete && !signal?.aborted) {
+      writeCache(id, selectedDate, data);
+    }
     return data;
   }
 

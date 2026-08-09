@@ -2,6 +2,9 @@
   const STORAGE_KEY = "hkcinema:provider-compare-filters:v1";
   const DEFAULTS = {
     provider: "all",
+    language: "all",
+    subtitle: "all",
+    format: "all",
     region: "all",
     cinema: "all",
     period: "all",
@@ -27,8 +30,16 @@
 
   function sanitize(value) {
     const input = value && typeof value === "object" ? value : {};
+    const metadataValue = key => (
+      typeof input[key] === "string" && /^(?:all|[a-z0-9-]+)$/.test(input[key])
+        ? input[key]
+        : DEFAULTS[key]
+    );
     return {
       provider: ALLOWED.provider.has(input.provider) ? input.provider : DEFAULTS.provider,
+      language: metadataValue("language"),
+      subtitle: metadataValue("subtitle"),
+      format: metadataValue("format"),
       region: ALLOWED.region.has(input.region) ? input.region : DEFAULTS.region,
       cinema: typeof input.cinema === "string" && input.cinema ? input.cinema : DEFAULTS.cinema,
       period: ALLOWED.period.has(input.period) ? input.period : DEFAULTS.period,
@@ -93,6 +104,9 @@
       try {
         const saved = readSaved();
         clickFilterButton("data-insight-provider", saved.provider);
+        filtersApi()?.setFilter?.("language", saved.language);
+        filtersApi()?.setFilter?.("subtitle", saved.subtitle);
+        filtersApi()?.setFilter?.("format", saved.format);
         clickFilterButton("data-insight-region", saved.region);
         clickFilterButton("data-insight-period", saved.period);
         clickFilterButton("data-insight-sort", saved.sort);
@@ -111,6 +125,9 @@
     restoring = true;
     try {
       clickFilterButton("data-insight-provider", DEFAULTS.provider);
+      filtersApi()?.setFilter?.("language", DEFAULTS.language);
+      filtersApi()?.setFilter?.("subtitle", DEFAULTS.subtitle);
+      filtersApi()?.setFilter?.("format", DEFAULTS.format);
       clickFilterButton("data-insight-region", DEFAULTS.region);
       clickFilterButton("data-insight-period", DEFAULTS.period);
       clickFilterButton("data-insight-sort", DEFAULTS.sort);

@@ -359,6 +359,14 @@ body.movie-group-open {
   color: #fff;
 }
 
+.movie-group-compare-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding-top: max(12px, env(safe-area-inset-top));

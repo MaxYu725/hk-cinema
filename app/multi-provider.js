@@ -114,6 +114,10 @@
     return window.HKCinemaHomeDiscoveryCore.variantSignature(value);
   }
 
+  function showtimeMetadata() {
+    return window.HKCinemaShowtimeMetadata || null;
+  }
+
   function getActiveTab() {
     return document.querySelector(".tab.active")?.dataset.tab || "now";
   }
@@ -575,9 +579,12 @@
             <div class="movie-group-variant-actions">
               ${PROVIDER_OPTIONS.map(provider => variantActionButton(provider, variant)).join("")}
               ${variant.matchId
-                ? `<button type="button" class="movie-group-compare-action" data-movie-group-compare="${escapeHtml(variant.matchId)}">比較院線</button>`
+                ? `<button type="button" class="movie-group-compare-action" data-movie-group-compare="${escapeHtml(variant.matchId)}">比較 ${variant.comparisonProviderCount || variant.providers.length} 院線</button>`
                 : ""}
             </div>
+            ${variant.comparisonMclSourceId
+              ? `<small class="movie-group-compare-note">MCL 會按每場語言加入此版本比較</small>`
+              : ""}
           </section>
         `).join("")}
       </div>
@@ -621,6 +628,9 @@
       broadwaySourceId: providerData.broadwaySourceId || null,
       mclSourceId: providerData.mclSourceId || null,
       emperorSourceId: providerData.emperorSourceId || null,
+      comparisonMclSourceId: null,
+      comparisonProviderCount: cardProviders(card).length,
+      sessionCriteria: null,
       broadwayMovieId: card.dataset.movieId || null,
       poster: card.querySelector(".movie-poster img")?.src || null,
       matchId: card.dataset.providerMatchId || null
@@ -628,8 +638,12 @@
   }
 
   function buildVariantMatchRecord(groupId, variant, index) {
+    const comparisonMclSourceId = variant.mclSourceId || variant.comparisonMclSourceId;
     const sources = PROVIDER_OPTIONS
-      .map(provider => [provider.key, variant[`${provider.key}SourceId`]])
+      .map(provider => [
+        provider.key,
+        provider.key === "mcl" ? comparisonMclSourceId : variant[`${provider.key}SourceId`]
+      ])
       .filter(([, sourceId]) => Boolean(sourceId));
     if (sources.length < 2) return null;
 
@@ -648,11 +662,11 @@
             poster: variant.poster || null
           }
         : null,
-      mcl: variant.mclSourceId
+      mcl: comparisonMclSourceId
         ? {
             provider: "mcl",
-            sourceId: variant.mclSourceId,
-            movie: findMCLMovie(variant.mclSourceId)
+            sourceId: comparisonMclSourceId,
+            movie: findMCLMovie(comparisonMclSourceId)
           }
         : null,
       emperor: variant.emperorSourceId
@@ -661,7 +675,9 @@
             sourceId: variant.emperorSourceId,
             movie: findEmperorMovie(variant.emperorSourceId)
           }
-        : null
+        : null,
+      sessionCriteria: variant.sessionCriteria || null,
+      comparisonOnlyProviders: variant.comparisonMclSourceId ? ["mcl"] : []
     });
     return matchId;
   }
@@ -682,6 +698,9 @@
           broadwaySourceId: null,
           mclSourceId: null,
           emperorSourceId: null,
+          comparisonMclSourceId: null,
+          comparisonProviderCount: 0,
+          sessionCriteria: null,
           broadwayMovieId: null,
           poster: null,
           matchId: null
@@ -706,10 +725,36 @@
         .map(provider => provider.label);
     }
 
-    return Array.from(bySignature.values()).map((variant, index) => {
+    const combinedVariants = Array.from(bySignature.values());
+    const genericMCL = combinedVariants.find(variant => (
+      variant.mclSourceId &&
+      showtimeMetadata()?.isGenericBridgeSource?.(variant.tags)
+    ));
+
+    return combinedVariants.map((variant, index) => {
       const label = variant.tags.join(" · ");
       const displayTitle = label ? `${groupTitle}（${label}）` : groupTitle;
       const combined = { ...variant, title: displayTitle };
+      const criteria = showtimeMetadata()?.criteriaFromVariant?.(variant.tags) || null;
+
+      if (
+        !combined.mclSourceId &&
+        genericMCL?.mclSourceId &&
+        criteria?.bridgeEligible
+      ) {
+        combined.comparisonMclSourceId = genericMCL.mclSourceId;
+        combined.sessionCriteria = {
+          languages: [...criteria.languages],
+          subtitles: [],
+          formats: [...criteria.formats]
+        };
+      }
+
+      combined.comparisonProviderCount = PROVIDER_OPTIONS.filter(provider => (
+        provider.key === "mcl"
+          ? Boolean(combined.mclSourceId || combined.comparisonMclSourceId)
+          : Boolean(combined[`${provider.key}SourceId`])
+      )).length;
       combined.matchId = buildVariantMatchRecord(groupId, combined, index);
       return combined;
     });

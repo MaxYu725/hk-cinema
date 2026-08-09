@@ -65,7 +65,7 @@
             <small>3 場</small>
           </div>
           <div class="provider-compare-timeline">
-            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/broadway" data-seat-available="68" data-seat-total="100">
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/broadway" data-seat-available="68" data-seat-total="100" data-show-language="japanese" data-show-subtitle="chinese" data-show-format="2d">
               <div class="provider-compare-show-time">10:30</div>
               <div class="provider-compare-show-main">
                 <div class="provider-compare-show-topline">
@@ -81,7 +81,7 @@
               </div>
             </article>
 
-            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/mcl" data-seat-available="92" data-seat-total="120">
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/mcl" data-seat-available="92" data-seat-total="120" data-show-language="japanese" data-show-subtitle="chinese,english" data-show-format="2d">
               <div class="provider-compare-show-time">13:15</div>
               <div class="provider-compare-show-main">
                 <div class="provider-compare-show-topline">
@@ -97,7 +97,7 @@
               </div>
             </article>
 
-            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/emperor" data-seat-available="44" data-seat-total="80">
+            <article class="provider-compare-show phase6m-show-card phase6o-native-show" data-booking-url="https://example.com/emperor" data-seat-available="44" data-seat-total="80" data-show-language="cantonese" data-show-subtitle="none" data-show-format="2d">
               <div class="provider-compare-show-time">18:45</div>
               <div class="provider-compare-show-main">
                 <div class="provider-compare-show-topline">
@@ -134,6 +134,7 @@
       }
     };
   </script>
+  <script src="../app/showtime-metadata.js"></script>
   <script src="../app/cinema-registry.js"></script>
   <script src="../app/provider-compare-insights-v3.js"></script>
   <script src="../app/provider-compare-phase6m.js"></script>
@@ -141,6 +142,7 @@
     const result = document.querySelector("[data-phase6o-result]");
     const content = document.querySelector("#providerCompareContent");
     let mutations = 0;
+    let phase7aLanguageFilter = false;
     const stabilityObserver = new MutationObserver(records => { mutations += records.length; });
     stabilityObserver.observe(content, { childList: true, subtree: true, attributes: true, characterData: true });
 
@@ -152,6 +154,7 @@
         nativeCards: cards.length === 3 && cards.every(card => card.tagName === "ARTICLE"),
         explicitBookings: cards.every(card => card.dataset.bookingUrl && card.querySelector(":scope .provider-compare-booking")),
         activeFilter: document.querySelectorAll("[data-phase6m-active-filters]").length === 1 && document.querySelectorAll("[data-insight-clear-filter='provider']").length === 1,
+        phase7aLanguageFilter,
         mclOnly: visibleCards.length === 1 && visibleCards[0].querySelector(".provider-compare-source.mcl"),
         stable: mutations < 80
       };
@@ -164,6 +167,9 @@
     }
 
     requestAnimationFrame(() => {
+      document.querySelector("[data-insight-language='japanese']")?.click();
+      const languageCards = Array.from(document.querySelectorAll(".provider-compare-show:not([hidden])"));
+      phase7aLanguageFilter = languageCards.length === 2 && languageCards.some(card => card.querySelector(".provider-compare-source.mcl"));
       document.querySelector("[data-insight-provider='mcl']")?.click();
       setTimeout(finish, 600);
     });
