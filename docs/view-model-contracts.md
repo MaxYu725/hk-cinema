@@ -4,7 +4,7 @@ Version: 1（Phase 7B）
 
 `app/view-models.js` 是來源正規化與共用 UI 之間的唯一展示契約。Broadway、MCL、Emperor 的原始欄位先經 provider adapter 轉換；共用 renderer 不應直接讀取院線原始 JSON。
 
-目前 Phase 7B 第一個 checkpoint 只建立及載入資料層，既有詳情與座位 renderer 尚未切換，因此正式畫面保持不變。
+Phase 7B 的電影詳情及全屏座位介面均只讀取這份契約。三個 provider client 只負責識別場次及取得官方資料，不再各自輸出畫面。
 
 ## 公開 API
 
@@ -86,7 +86,9 @@ Adapter 不會由 MCL 百分比推算總座位或可選座位，也不會把 Emp
 | MCL | `area-grid` | 多分區、表格 cell、區域偏移、跨格座位 |
 | Emperor | `positioned` | `left/top`、相對偏移、旋轉、分區與票價 |
 
-每個 section 都固定包含 `bounds`、`metrics`、`areas`、`rows`、`seats`；renderer 只按 `layoutMode` 選擇定位方式，共用標題、摘要、圖例、載入、錯誤及官方購票操作。
+每個 section 都固定包含 `bounds`、`metrics`、`areas`、`rows`、`seats`；`seatmap-shared.js` 只按 `layoutMode` 選擇定位方式，共用全屏外殼、標題、摘要、圖例、載入、錯誤及官方購票操作。
+
+Broadway 的所有行會使用整個影廳共同的最小／最大 column 範圍，避免不同行各自左移。MCL 若收到舊 parser 的 `rows` 而沒有 `areas`，adapter 會建立單一 `area-grid` section，保留原本 column 空格而不推測新座位。
 
 `metrics` 固定保留 `totalColumns`、`cellColumns`、`ratioLeft`、`ratioTop`、`minRow`、`maxRow`、`minColumn`、`maxColumn`、`pitch`；不適用的欄位為 `null`，因此 MCL 的區域偏移及 Emperor 的格線範圍都不會在正規化時遺失。
 

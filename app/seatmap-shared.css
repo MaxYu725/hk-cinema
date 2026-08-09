@@ -1,0 +1,669 @@
+.seat-pill,
+.seatmap-launch {
+  cursor: pointer;
+}
+
+.seatmap-launch:focus-visible {
+  outline: 3px solid rgba(35, 111, 71, .28);
+  outline-offset: 3px;
+}
+
+body.seatmap-open {
+  overflow: hidden;
+}
+
+.shared-seatmap-overlay[hidden] {
+  display: none;
+}
+
+.shared-seatmap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shared-seatmap-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 19, 24, .52);
+  backdrop-filter: blur(8px);
+}
+
+.shared-seatmap-sheet {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(820px, 100vw);
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding:
+    max(60px, calc(env(safe-area-inset-top) + 46px))
+    24px
+    max(32px, calc(env(safe-area-inset-bottom) + 18px));
+  background: #f6f7f9;
+  box-shadow: -18px 0 60px rgba(20, 22, 28, .2);
+}
+
+.shared-seatmap-close {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 2002;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #17191d;
+  box-shadow: 0 8px 24px rgba(20, 22, 28, .1);
+  font: inherit;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shared-seatmap-close:focus-visible,
+.shared-seatmap-state button:focus-visible,
+.shared-seatmap-booking:focus-visible,
+.shared-seatmap-scroll:focus-visible {
+  outline: 3px solid rgba(35, 111, 71, .3);
+  outline-offset: 3px;
+}
+
+.shared-seatmap-header {
+  min-width: 0;
+  padding-right: 62px;
+}
+
+.shared-seatmap-header .eyebrow {
+  margin: 0 0 6px;
+  color: #236f47;
+}
+
+.shared-seatmap-content[data-seatmap-provider="emperor"] .shared-seatmap-header .eyebrow {
+  color: #8f2738;
+}
+
+.shared-seatmap-header h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.12;
+}
+
+.shared-seatmap-header > p:last-child {
+  margin: 8px 0 0;
+  color: #747a83;
+  line-height: 1.5;
+}
+
+.shared-seatmap-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.shared-seatmap-summary > div {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid #e3e6ea;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.shared-seatmap-summary strong,
+.shared-seatmap-summary span {
+  display: block;
+}
+
+.shared-seatmap-summary strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.shared-seatmap-summary span {
+  margin-top: 2px;
+  color: #747a83;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.shared-seatmap-legends {
+  margin-top: 15px;
+}
+
+.shared-seatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: #646b74;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.shared-seatmap-legend + .shared-seatmap-legend {
+  margin-top: 8px;
+}
+
+.shared-seatmap-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.shared-seatmap-legend i {
+  box-sizing: border-box;
+  width: 15px;
+  height: 15px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 5px 5px 3px 3px;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.shared-seatmap-layout {
+  margin-top: 20px;
+}
+
+.shared-seatmap-screen {
+  position: relative;
+  box-sizing: border-box;
+  width: min(80%, 520px);
+  max-width: 100%;
+  height: 38px;
+  margin: 0 auto 16px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.shared-seatmap-screen::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 5%;
+  right: 5%;
+  height: 24px;
+  border-top: 4px solid #c9cdd3;
+  border-radius: 50% 50% 0 0;
+}
+
+.shared-seatmap-screen span {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 0 10px;
+  background: #f6f7f9;
+  color: #858b94;
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.shared-seatmap-scroll-hint {
+  margin: -4px 0 10px;
+  color: #858b94;
+  font-size: .72rem;
+  text-align: center;
+}
+
+.shared-seatmap-viewport {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.shared-seatmap-scroll {
+  max-width: 100%;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.shared-seatmap-scroll.is-scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
+}
+
+.shared-seatmap-grid {
+  box-sizing: border-box;
+  width: max-content;
+  margin: 0 auto;
+  padding: 8px 0 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.shared-seatmap-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-seatmap-row-label {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  flex: 0 0 26px;
+  width: 26px;
+  background: #f6f7f9;
+  color: #747a83;
+  text-align: center;
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.shared-seatmap-row-cells {
+  display: grid;
+  gap: var(--seat-gap, 4px);
+}
+
+.shared-seat {
+  box-sizing: border-box;
+  width: var(--seat-size, 24px);
+  height: calc(var(--seat-size, 24px) - 2px);
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 4px 4px;
+  font-size: clamp(.42rem, 1.65vw, .62rem);
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+}
+
+.shared-seat.gap {
+  visibility: hidden;
+}
+
+.shared-seat.status-available,
+.shared-seatmap-legend i.status-available {
+  border-color: #69b78b;
+  background: #dff3e8;
+  color: #1f7046;
+}
+
+.shared-seat.status-held,
+.shared-seatmap-legend i.status-held {
+  border-color: #dfb95f;
+  background: #f8edcf;
+  color: #8f6715;
+}
+
+.shared-seat.status-sold,
+.shared-seatmap-legend i.status-sold {
+  border-color: #4d535c;
+  background: #555c66;
+  color: #fff;
+}
+
+.shared-seat.status-blocked,
+.shared-seatmap-legend i.status-blocked {
+  border-color: #d4c2c5;
+  background: #f0e5e7;
+  color: #91606a;
+}
+
+.shared-seat.status-unavailable,
+.shared-seatmap-legend i.status-unavailable {
+  border-color: #d5d9de;
+  background: #e7e9ed;
+  color: #80868e;
+}
+
+.shared-seat.status-unknown,
+.shared-seatmap-legend i.status-unknown {
+  border-style: dashed;
+  border-color: #b9b1c9;
+  background: #eeebf4;
+  color: #756c87;
+}
+
+.shared-seat.type-wheelchair,
+.shared-seatmap-legend i.type-wheelchair {
+  border-color: #77a4c9;
+  box-shadow: inset 0 0 0 1px rgba(49, 95, 136, .12);
+}
+
+.shared-seat.type-sofa,
+.shared-seat.type-couple {
+  border-width: 2px;
+  border-radius: 9px 9px 5px 5px;
+}
+
+.shared-seat.type-recliner {
+  border-radius: 10px 10px 5px 5px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .08);
+}
+
+.shared-seat.type-motion {
+  box-shadow: 0 0 0 2px rgba(143, 39, 56, .12);
+}
+
+.shared-seatmap-legend i.type-sofa,
+.shared-seatmap-legend i.type-couple,
+.shared-seatmap-legend i.type-recliner,
+.shared-seatmap-legend i.type-motion,
+.shared-seatmap-legend i.type-special {
+  border: 2px solid #858b94;
+  background: #fff;
+}
+
+.area-grid-viewport {
+  min-height: 60px;
+}
+
+.shared-seatmap-area-canvas {
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.shared-seatmap-area-canvas .shared-seatmap-screen {
+  margin-bottom: 10px;
+}
+
+.shared-seatmap-areas,
+.shared-seatmap-area {
+  position: relative;
+}
+
+.shared-seatmap-area {
+  position: absolute;
+}
+
+.shared-seatmap-area-row {
+  display: grid;
+  align-items: center;
+}
+
+.shared-seat.area-cell {
+  position: relative;
+  width: var(--seat-size, 20px);
+  height: var(--seat-size, 20px);
+  background: transparent;
+  border: 0;
+}
+
+.shared-seat.area-cell.label {
+  visibility: visible;
+  color: #858b94;
+  font-size: clamp(.42rem, 1.7vw, .65rem);
+}
+
+.shared-seat.area-cell > .shared-seat {
+  position: absolute;
+  inset: 1px auto auto 1px;
+  width: calc(var(--seat-size, 20px) - 3px);
+  height: calc(var(--seat-size, 20px) - 3px);
+}
+
+.shared-seat.area-cell > .shared-seat.is-wide {
+  width: calc((var(--seat-size, 20px) * 2) - 3px);
+  z-index: 2;
+}
+
+.shared-seatmap-fixed-rows {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 5;
+  width: 28px;
+  pointer-events: none;
+  background: linear-gradient(90deg, #f6f7f9 72%, rgba(246, 247, 249, 0));
+}
+
+.shared-seatmap-fixed-rows > span {
+  position: absolute;
+  left: 0;
+  width: 20px;
+  transform: translateY(-50%);
+  color: #747a83;
+  font-size: .62rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.shared-seatmap-scroll.is-scrollable .shared-seat.area-cell.label {
+  visibility: hidden;
+}
+
+.shared-seatmap-section {
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid #e1e4e9;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.shared-seatmap-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shared-seatmap-section-heading strong {
+  font-size: .92rem;
+}
+
+.shared-seatmap-section-heading span {
+  color: #858b93;
+  font-size: .68rem;
+}
+
+.shared-seatmap-zone-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.shared-seatmap-zone-list span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f2f3f5;
+  color: #6f757d;
+  font-size: .64rem;
+}
+
+.positioned-viewport {
+  margin-top: 12px;
+  background: #fafbfc;
+}
+
+.shared-seatmap-positioned-canvas {
+  position: relative;
+  min-width: 100%;
+  margin: 0 auto;
+  border-radius: 16px;
+  background:
+    linear-gradient(#fafbfc, #fafbfc) padding-box,
+    repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(23, 25, 29, .025) 32px);
+}
+
+.shared-seatmap-positioned-canvas > .shared-seat {
+  position: absolute;
+  transform-origin: center;
+}
+
+.shared-seatmap-positioned-rows {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 4;
+  width: 38px;
+  max-height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, #fafbfc 0 76%, rgba(250, 251, 252, 0));
+}
+
+.shared-seatmap-positioned-rows span {
+  position: absolute;
+  left: 0;
+  width: 30px;
+  transform: translateY(-50%);
+  color: #747a83;
+  font-size: 9px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.shared-seatmap-notices {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 16px;
+  background: #fff4e1;
+  color: #7f642f;
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.shared-seatmap-notices p {
+  margin: 0;
+}
+
+.shared-seatmap-notices p + p {
+  margin-top: 6px;
+}
+
+.shared-seatmap-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e1e4e9;
+}
+
+.shared-seatmap-footer p {
+  max-width: 500px;
+  margin: 0;
+  color: #747a83;
+  font-size: .72rem;
+  line-height: 1.55;
+}
+
+.shared-seatmap-booking,
+.shared-seatmap-state button {
+  box-sizing: border-box;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #236f47;
+  color: #fff;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.shared-seatmap-content[data-seatmap-provider="emperor"] .shared-seatmap-booking {
+  background: #8f2738;
+}
+
+.shared-seatmap-state,
+.shared-seatmap-empty {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid #e1e4e9;
+  border-radius: 22px;
+  background: #fff;
+  text-align: center;
+}
+
+.shared-seatmap-state > span,
+.shared-seatmap-empty > span {
+  color: #747a83;
+  line-height: 1.5;
+}
+
+.shared-seatmap-state.error strong {
+  color: #954343;
+}
+
+.shared-seatmap-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.shared-seatmap-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #dfe5e1;
+  border-top-color: #236f47;
+  border-radius: 50%;
+  animation: seatmap-spin .8s linear infinite;
+}
+
+@keyframes seatmap-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .shared-seatmap-sheet {
+    width: 100vw;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .shared-seatmap-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .shared-seatmap-section {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .shared-seatmap-footer {
+    flex-direction: column;
+  }
+
+  .shared-seatmap-booking {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .shared-seatmap-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shared-seatmap-legend {
+    gap: 7px 10px;
+    font-size: .68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shared-seatmap-overlay *,
+  .shared-seatmap-overlay *::before,
+  .shared-seatmap-overlay *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

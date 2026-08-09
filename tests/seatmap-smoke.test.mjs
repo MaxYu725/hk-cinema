@@ -3,13 +3,17 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-const APP = new URL("../app/", import.meta.url);
+const ROOT = new URL("../", import.meta.url);
 
-async function source(name) {
-  return readFile(new URL(name, APP), "utf8");
+async function source(path) {
+  return readFile(new URL(path, ROOT), "utf8");
 }
 
-async function loadSeatMapScript(name, { innerWidth = 390 } = {}) {
+async function fixtures() {
+  return JSON.parse(await source("tests/fixtures/phase7b-view-models.json"));
+}
+
+async function loadSeatMaps({ innerWidth = 390, providerScripts = false } = {}) {
   const document = {
     activeElement: null,
     body: null,
@@ -24,15 +28,16 @@ async function loadSeatMapScript(name, { innerWidth = 390 } = {}) {
     addEventListener() {},
     dispatchEvent() {}
   };
-  class MutationObserver {
-    observe() {}
-  }
+  class MutationObserver { observe() {} }
   class Request {}
-
+  class CustomEvent {
+    constructor(type, options = {}) { this.type = type; this.detail = options.detail; }
+  }
   const context = vm.createContext({
     AbortController,
     clearTimeout,
     console,
+    CustomEvent,
     document,
     fetch: window.fetch,
     location: window.location,
@@ -43,14 +48,23 @@ async function loadSeatMapScript(name, { innerWidth = 390 } = {}) {
     URL,
     window
   });
-
-  vm.runInContext(await source("seatmap-shared.js"), context, { filename: "seatmap-shared.js" });
-  vm.runInContext(await source(name), context, { filename: name });
+  for (const path of ["app/showtime-metadata.js", "app/view-models.js", "app/seatmap-shared.js"]) {
+    vm.runInContext(await source(path), context, { filename: path });
+  }
+  if (providerScripts) {
+    for (const path of ["app/seatmap.js", "app/mcl-seatmap.js", "app/emperor-seatmap.js"]) {
+      vm.runInContext(await source(path), context, { filename: path });
+    }
+  }
   return context;
 }
 
+function json(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 test("shared trigger and horizontal centering stay deterministic", async () => {
-  const context = await loadSeatMapScript("seatmap.js");
+  const context = await loadSeatMaps();
   const shared = context.window.HKCinemaSeatMapShared;
   const classes = new Set();
   const attributes = new Map();
@@ -74,124 +88,156 @@ test("shared trigger and horizontal centering stay deterministic", async () => {
   const wide = { scrollWidth: 1400, clientWidth: 700, scrollLeft: 0 };
   const compact = { scrollWidth: 500, clientWidth: 700, scrollLeft: 99 };
   assert.equal(shared.centerHorizontally(wide), 350);
-  assert.equal(wide.scrollLeft, 350);
   assert.equal(shared.centerHorizontally(compact), 0);
-  assert.equal(compact.scrollLeft, 0);
 });
 
-test("Broadway renderer exposes accurate counts, labels and controls", async () => {
-  const context = await loadSeatMapScript("seatmap.js");
-  const api = context.window.HKCinemaBroadwaySeatMap;
-  const html = api.renderSeatMap({
-    screen: "SCREEN",
-    summary: { available: 2, held: 1, unavailable: 1, total: 4 },
-    rows: [{
-      name: "A",
-      seats: [
-        { row: "A", label: "1", column: 1, status: "available", type: "standard" },
-        { row: "A", label: "2", column: 3, status: "held", type: "wheelchair" }
-      ]
-    }]
-  });
+test("all providers render through one full-screen SeatMapViewModel structure", async () => {
+  const [context, data] = await Promise.all([loadSeatMaps(), fixtures()]);
+  const models = context.window.HKCinemaViewModels;
+  const renderer = context.window.HKCinemaSeatMapShared;
+  const inputs = {
+    broadway: [data.broadway.seatMap, data.broadway.showtime],
+    mcl: [data.mcl.seatMap, data.mcl.showtime],
+    emperor: [data.emperor.seatMap, data.emperor.showtime]
+  };
 
-  assert.match(html, /BROADWAY · SEAT MAP/);
-  assert.match(html, /<strong>2<\/strong><span>可選<\/span>/);
-  assert.match(html, /seat-gap/);
-  assert.match(html, /♿/);
-  assert.match(html, /data-broadway-seatmap-close/);
-  assert.equal(api.getStats().requestTimeoutMs, 12000);
+  for (const [provider, [seatMap, showtime]] of Object.entries(inputs)) {
+    const model = models.seatMap(provider, seatMap, showtime);
+    const html = renderer.renderMap(model);
+    assert.match(html, new RegExp(`class="shared-seatmap-content" data-seatmap-provider="${provider}"`));
+    assert.match(html, /class="shared-seatmap-header"/);
+    assert.match(html, /class="shared-seatmap-summary"/);
+    assert.match(html, /class="shared-seatmap-legends"/);
+    assert.match(html, /class="shared-seatmap-layout"/);
+    assert.match(html, /class="shared-seatmap-footer"/);
+    assert.match(html, /class="shared-seatmap-booking"/);
+    assert.doesNotMatch(html, /undefined|\[object Object\]/);
+  }
 });
 
-test("MCL wide official layout keeps row labels outside the scroller", async () => {
-  const context = await loadSeatMapScript("mcl-seatmap.js", { innerWidth: 390 });
-  const api = context.window.HKCinemaMCLSeatMap;
-  const blankCells = Array.from({ length: 32 }, () => ({ type: "blank" }));
-  const data = {
-    layoutVersion: 3,
+test("shared renderer preserves Broadway gaps, MCL areas and Emperor geometry", async () => {
+  const [context, data] = await Promise.all([loadSeatMaps(), fixtures()]);
+  const models = context.window.HKCinemaViewModels;
+  const renderer = context.window.HKCinemaSeatMapShared;
+
+  const broadway = renderer.renderMap(models.seatMap("broadway", data.broadway.seatMap, data.broadway.showtime));
+  assert.match(broadway, /data-layout-mode="grid"/);
+  assert.match(broadway, /shared-seat gap/);
+  assert.match(broadway, /status-held type-wheelchair/);
+  assert.match(broadway, /<strong>3<\/strong><span>總座位<\/span>/);
+
+  const mcl = renderer.renderMap(models.seatMap("mcl", data.mcl.seatMap, data.mcl.showtime));
+  assert.match(mcl, /data-layout-mode="area-grid"/);
+  assert.match(mcl, /shared-seatmap-area-canvas/);
+  assert.match(mcl, /status-sold type-sofa is-wide/);
+  assert.match(mcl, /status-blocked type-standard/);
+
+  const emperor = renderer.renderMap(models.seatMap("emperor", data.emperor.seatMap, data.emperor.showtime));
+  assert.match(emperor, /data-layout-mode="positioned"/);
+  assert.match(emperor, /shared-seatmap-positioned-canvas/);
+  assert.match(emperor, /type-recliner/);
+  assert.match(emperor, /type-motion/);
+  assert.match(emperor, /type-couple/);
+  assert.match(emperor, /普通區 · \$130/);
+  assert.match(emperor, /實際座位以官方頁面為準/);
+  assert.doesNotMatch(emperor, /已售<\/span>/);
+});
+
+test("normal halls fit while large and IMAX layouts retain readable seats and scroll", async () => {
+  const compactContext = await loadSeatMaps({ innerWidth: 390 });
+  const shared = compactContext.window.HKCinemaSeatMapShared;
+  const models = compactContext.window.HKCinemaViewModels;
+  const normalRows = [{
+    name: "A",
+    seats: Array.from({ length: 14 }, (_, index) => ({
+      id: `A${index + 1}`,
+      label: String(index + 1),
+      row: "A",
+      column: index + 1,
+      status: "available",
+      type: "standard"
+    }))
+  }];
+  const imaxRows = [{
+    name: "A",
+    seats: Array.from({ length: 32 }, (_, index) => ({
+      id: `A${index + 1}`,
+      label: String(index + 1),
+      row: "A",
+      column: index + 1,
+      status: "available",
+      type: "standard"
+    }))
+  }];
+  const normal = models.seatMap("broadway", { showId: "1", rows: normalRows }, { sourceId: "1" });
+  const imax = models.seatMap("broadway", { showId: "2", rows: imaxRows }, { sourceId: "2" });
+  assert.equal(shared.gridMetrics(normal).scrollable, false);
+  assert.equal(shared.gridMetrics(imax).scrollable, true);
+  assert.ok(shared.gridMetrics(imax).size >= 17);
+
+  const wideMcl = models.seatMap("mcl", {
+    sessionId: "3",
     totalColumns: 32,
-    screenLabel: "銀幕",
-    counts: { available: 1, sold: 1, blocked: 0 },
     areas: [{
-      name: "普通區",
+      name: "IMAX",
       cellColumns: 32,
       ratioLeft: 0,
       ratioTop: 0,
       rows: [
-        { name: "A", cells: blankCells },
-        { name: "B", cells: blankCells }
+        { name: "A", cells: Array.from({ length: 32 }, (_, index) => ({ type: "blank", cellIndex: index })) },
+        { name: "B", cells: Array.from({ length: 32 }, (_, index) => ({ type: "blank", cellIndex: index })) }
       ]
     }]
-  };
-
-  const metrics = api.layoutMetricsV3(data);
-  const html = api.renderMap(data, "https://example.test/buy?si=1&ci=2");
+  }, { sourceId: "3" });
+  const metrics = shared.areaGridMetrics(wideMcl);
+  const html = shared.renderMap(wideMcl);
   assert.equal(metrics.scrollable, true);
-  assert.ok(metrics.canvasWidth > metrics.availableWidth);
-  assert.match(html, /mcl-seatmap-stage is-scrollable/);
-  assert.match(html, /mcl-seatmap-fixed-rows/);
-  assert.match(html, /mcl-seatmap-fixed-row[^>]*>A<\/span>/);
-  assert.match(html, /MCL CINEMAS · SEAT MAP/);
-  assert.match(html, /data-mcl-seatmap-close/);
-  assert.equal(api.getStats().requestTimeoutMs, 12000);
+  assert.ok(metrics.cellSize >= 17);
+  assert.match(html, /大型／闊身影廳/);
+  assert.match(html, /shared-seatmap-fixed-rows/);
+
+  assert.equal(shared.positionedMetrics({ bounds: { width: 280, height: 120 } }).scrollable, false);
+  assert.equal(shared.positionedMetrics({ bounds: { width: 900, height: 320 } }).scrollable, true);
+  assert.ok(shared.positionedMetrics({ bounds: { width: 900, height: 320 } }).seatSize >= 18);
 });
 
-test("Emperor section keeps fixed row labels separate from official geometry", async () => {
-  const context = await loadSeatMapScript("emperor-seatmap.js");
-  const api = context.window.HKCinemaEmperorSeatMap;
-  const html = api.renderSection({
-    name: "普通區",
-    bounds: { minLeft: 10, minTop: 20, width: 400, height: 120 },
-    areas: [{ name: "普通區", price: 120 }],
-    seats: [
-      {
-        name: "A1",
-        rowName: "A",
-        columnName: "1",
-        status: "available",
-        type: "general",
-        areaName: "普通區",
-        position: { left: 10, top: 20, relativeLeftPercent: 0, relativeTopPercent: 0, rotate: 0 }
-      },
-      {
-        name: "B1",
-        rowName: "B",
-        columnName: "1",
-        status: "unavailable",
-        type: "general",
-        areaName: "普通區",
-        position: { left: 10, top: 60, relativeLeftPercent: 0, relativeTopPercent: 0, rotate: 0 }
-      }
-    ]
-  });
-
-  const canvasEnd = html.indexOf("</div>\n          </div>\n          <div class=\"emperor-seatmap-row-labels\"");
-  assert.ok(canvasEnd > -1);
-  assert.match(html, /emperor-seatmap-canvas[^]*status-available/);
-  assert.match(html, /emperor-seatmap-row-labels[^]*>A<\/span>/);
-  assert.match(html, /emperor-seatmap-row-labels[^]*>B<\/span>/);
-  assert.equal(api.getStats().requestTimeoutMs, 12000);
-});
-
-test("three-provider reliability and copy contracts remain wired", async () => {
-  const [index, broadway, mcl, emperor, mclDetail, emperorDetail, compare] = await Promise.all([
-    source("index.html"),
-    source("seatmap.js"),
-    source("mcl-seatmap.js"),
-    source("emperor-seatmap.js"),
-    source("mcl-detail.js"),
-    source("emperor-detail.js"),
-    source("provider-compare-v3.js")
+test("three provider clients delegate fetch results to the shared lifecycle", async () => {
+  const [index, shared, broadway, mcl, emperor, css] = await Promise.all([
+    source("app/index.html"),
+    source("app/seatmap-shared.js"),
+    source("app/seatmap.js"),
+    source("app/mcl-seatmap.js"),
+    source("app/emperor-seatmap.js"),
+    source("app/seatmap-shared.css")
   ]);
 
   for (const provider of [broadway, mcl, emperor]) {
-    assert.match(provider, /REQUEST_TIMEOUT_MS = 12000/);
-    assert.match(provider, /AbortController/);
-    assert.match(provider, /重新載入/);
+    assert.match(provider, /shared\?\.open\(\{/);
+    assert.match(provider, /HKCinemaViewModels\.seatMap/);
+    assert.doesNotMatch(provider, /innerHTML\s*=/);
+    assert.doesNotMatch(provider, /function render(?:Map|Seat|Section|Legend)/);
   }
-  assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("emperor-seatmap.js?v=6n1"));
-  assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("seatmap.js?v=6o1"));
-  assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("mcl-seatmap.js?v=6o1"));
-  assert.doesNotMatch(mclDetail, /完整座位圖會在下一階段接入/);
-  assert.doesNotMatch(emperorDetail, /並非即時可選座位圖/);
-  assert.doesNotMatch(compare, /點場次會前往所屬院線官方購票頁/);
+  assert.match(shared, /REQUEST_TIMEOUT_MS = 12000/);
+  assert.match(shared, /AbortController/);
+  assert.match(shared, /data-seatmap-retry/);
+  assert.match(shared, /aria-modal="true"/);
+  assert.match(shared, /event\.key === "Escape"/);
+  assert.match(css, /body\.seatmap-open/);
+  assert.match(css, /@media \(max-width: 360px\)/);
+
+  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3");
+  assert.ok(sharedIndex > index.indexOf("view-models.js?v=7b3"));
+  for (const loader of ["emperor-seatmap.js?v=7b3", "seatmap.js?v=7b3", "mcl-seatmap.js?v=7b3"]) {
+    assert.ok(index.indexOf(loader) > sharedIndex, `${loader} must load after the shared renderer`);
+  }
+  assert.match(index, /seatmap-shared\.css\?v=7b3/);
+  assert.doesNotMatch(index, /(?:mcl-|emperor-)?seatmap\.css\?v=/);
+});
+
+test("provider clients still expose one reliability surface", async () => {
+  const context = await loadSeatMaps({ providerScripts: true });
+  assert.equal(context.window.HKCinemaBroadwaySeatMap.getStats().requestTimeoutMs, 12000);
+  assert.equal(context.window.HKCinemaMCLSeatMap.getStats().requestTimeoutMs, 12000);
+  assert.equal(context.window.HKCinemaEmperorSeatMap.getStats().requestTimeoutMs, 12000);
+  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3");
 });

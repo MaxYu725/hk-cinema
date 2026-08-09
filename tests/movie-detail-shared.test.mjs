@@ -157,15 +157,15 @@ test("all provider loaders delegate markup to the shared renderer", async () => 
     assert.doesNotMatch(loader, /function renderSession/);
     assert.doesNotMatch(loader, /<div class="detail-hero/);
   }
-  const modelIndex = index.indexOf("view-models.js?v=7b1");
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b2");
+  const modelIndex = index.indexOf("view-models.js?v=7b3");
+  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3");
   assert.ok(modelIndex > -1 && rendererIndex > modelIndex);
   for (const loader of ["app.js?v=7b2", "mcl-detail.js?v=7b2", "emperor-detail.js?v=7b2"]) {
     assert.ok(rendererIndex < index.indexOf(loader), `${loader} must load after the shared renderer`);
   }
-  assert.match(index, /movie-detail-shared\.css\?v=7b2/);
+  assert.match(index, /movie-detail-shared\.css\?v=7b3/);
   assert.match(css, /@media \(max-width: 360px\)/);
-  assert.match(seatmap, /data-detail-provider="emperor"/);
+  assert.match(seatmap, /HKCinemaMovieDetail\?\.showtimeFor/);
   for (const provider of ["broadway", "mcl", "emperor"]) {
     assert.match(visual, new RegExp(`data-provider="${provider}"`));
   }

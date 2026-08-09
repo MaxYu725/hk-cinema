@@ -24,6 +24,7 @@
   };
 
   let returnFocus = null;
+  const showtimeCards = new WeakMap();
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -399,6 +400,11 @@
     overlay.dataset.detailProvider = view.providerId;
     const content = overlay.querySelector("#movieDetailContent");
     content.innerHTML = renderHtml(view);
+    const showtimesById = new Map(view.showtimes.map(showtime => [String(showtime.sourceId || ""), showtime]));
+    content.querySelectorAll?.(".shared-showtime-card[data-showtime-id]").forEach(card => {
+      const showtime = showtimesById.get(String(card.dataset.showtimeId || ""));
+      if (showtime) showtimeCards.set(card, showtime);
+    });
     overlay.hidden = false;
     document.body.classList.add("detail-open");
     if (opening) requestAnimationFrame(() => overlay.querySelector(".detail-close")?.focus());
@@ -435,12 +441,15 @@
   });
 
   window.HKCinemaMovieDetail = Object.freeze({
-    version: "7b2",
+    version: "7b3",
     createView,
     renderHtml,
     render,
     close,
     ensureOverlay,
+    showtimeFor(card) {
+      return showtimeCards.get(card) || null;
+    },
     activeProvider() {
       const overlay = document.querySelector("#movieDetailOverlay");
       return overlay && !overlay.hidden ? overlay.dataset.detailProvider || null : null;
