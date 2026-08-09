@@ -519,21 +519,24 @@
   }
 
   function broadwayRows(rows = []) {
-    return rows.map(row => {
-      const seats = (row?.seats || []).map(broadwaySeat).sort((a, b) => (a.column ?? 0) - (b.column ?? 0));
-      const numeric = seats.map(seat => seat.column).filter(Number.isFinite);
-      if (!numeric.length) {
-        return rowViewModel(row?.name, seats.map(seat => cell("seat", { seat })), seats);
+    const normalized = rows.map(row => ({
+      source: row,
+      seats: (row?.seats || []).map(broadwaySeat).sort((a, b) => (a.column ?? 0) - (b.column ?? 0))
+    }));
+    const numeric = normalized.flatMap(row => row.seats.map(seat => seat.column).filter(Number.isFinite));
+    const min = numeric.length ? Math.min(...numeric) : null;
+    const max = numeric.length ? Math.max(...numeric) : null;
+    return normalized.map(({ source, seats }) => {
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return rowViewModel(source?.name, seats.map(seat => cell("seat", { seat })), seats);
       }
       const byColumn = new Map(seats.map(seat => [seat.column, seat]));
-      const min = Math.min(...numeric);
-      const max = Math.max(...numeric);
       const cells = [];
       for (let column = min; column <= max; column += 1) {
         const seat = byColumn.get(column);
         cells.push(seat ? cell("seat", { index: column, seat }) : cell("gap", { index: column }));
       }
-      return rowViewModel(row?.name, cells, seats);
+      return rowViewModel(source?.name, cells, seats);
     });
   }
 
@@ -674,9 +677,34 @@
   }
 
   function mclSeatMap(raw = {}, session = null) {
-    const sections = (raw?.areas || []).map((area, index) => {
+    const rawAreas = Array.isArray(raw?.areas) && raw.areas.length
+      ? raw.areas
+      : [{
+          id: "main",
+          name: null,
+          cellColumns: raw?.totalColumns,
+          ratioLeft: 0,
+          ratioTop: 0,
+          rows: (raw?.rows || []).map(row => {
+            const seats = (row?.seats || []).map(mclSeat);
+            const columns = Math.max(Number(raw?.totalColumns) || 0, ...seats.map(seat => seat.column || 0));
+            const byColumn = new Map(seats.map(seat => [seat.column, seat]));
+            return {
+              name: row?.name,
+              cells: Array.from({ length: columns }, (_, index) => {
+                const seat = byColumn.get(index + 1);
+                return seat ? { type: "seat", cellIndex: index + 1, seat } : { type: "blank", cellIndex: index + 1 };
+              })
+            };
+          })
+        }];
+    const sections = rawAreas.map((area, index) => {
       const rows = (area?.rows || []).map(row => {
-        const cells = (row?.cells || []).map(mclCell);
+        const cells = (row?.cells || []).map(item => (
+          item?.type === "seat" && item?.seat?.status && item.seat.type
+            ? cell("seat", { index: item?.cellIndex, seat: item.seat })
+            : mclCell(item)
+        ));
         const seats = cells.filter(item => item.kind === "seat" && item.seat).map(item => item.seat);
         return rowViewModel(row?.name, cells, seats);
       });
@@ -769,7 +797,7 @@
   }
 
   window.HKCinemaViewModels = Object.freeze({
-    version: "7b1",
+    version: "7b3",
     schemaVersion: SCHEMA_VERSION,
     providers: PROVIDERS,
     seatStatuses: SEAT_STATUSES,

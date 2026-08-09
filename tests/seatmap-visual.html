@@ -2,75 +2,47 @@
 <html lang="zh-HK">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SeatMap Visual Fixture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Phase 7B 共用全屏座位圖驗收</title>
   <link rel="stylesheet" href="../app/style.css">
-  <link rel="stylesheet" href="../app/mcl-seatmap.css">
+  <link rel="stylesheet" href="../app/seatmap-shared.css">
   <style>
-    body { margin: 0; background: #f4f5f7; color: #17191d; font-family: system-ui, sans-serif; }
-    main { width: min(920px, calc(100% - 32px)); margin: 24px auto 60px; }
-    h1 { margin: 0 0 16px; font-size: 1.25rem; }
-    .fixture-mobile { margin-top: 30px; }
-    .fixture-mobile iframe { width: 390px; max-width: 100%; height: 760px; border: 1px solid #d7dbe1; border-radius: 18px; background: #fff; }
-    body.is-mobile-fixture main { width: calc(100% - 16px); margin: 8px auto; }
-    body.is-mobile-fixture h1,
-    body.is-mobile-fixture .fixture-mobile { display: none; }
+    body { margin: 0; background: #eef0f3; color: #17191d; font-family: system-ui, sans-serif; }
+    .visual-controls { position: fixed; inset: 12px 12px auto; z-index: 2100; display: flex; gap: 6px; pointer-events: none; }
+    .visual-controls button { pointer-events: auto; border: 0; border-radius: 999px; padding: 8px 11px; background: #17191d; color: #fff; font: inherit; font-size: 12px; font-weight: 800; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>MCL 闊影廳固定資料驗收</h1>
-    <div id="mclFixtureSeatMap" class="mcl-seatmap-panel"></div>
-    <section class="fixture-mobile">
-      <h1>390px 手機視窗</h1>
-      <iframe title="MCL 手機座位圖驗收"></iframe>
-    </section>
-  </main>
+  <div class="visual-controls" aria-label="選擇院線座位圖">
+    <button type="button" data-provider="broadway">Broadway</button>
+    <button type="button" data-provider="mcl">MCL</button>
+    <button type="button" data-provider="emperor">Emperor</button>
+  </div>
+  <script src="../app/showtime-metadata.js"></script>
+  <script src="../app/view-models.js"></script>
   <script src="../app/seatmap-shared.js"></script>
-  <script src="../app/mcl-seatmap.js"></script>
   <script>
-    const makeRow = (name, rowIndex) => {
-      const cells = Array.from({ length: 32 }, () => ({ type: "blank" }));
-      cells[0] = { type: "label", text: name };
-      cells[31] = { type: "label", text: name };
-      for (let index = 2; index < 30; index += 1) {
-        cells[index] = {
-          type: "seat",
-          seat: {
-            rowName: name,
-            seatNum: `${name}${30 - index}`,
-            status: (index + rowIndex) % 4 === 0 ? "sold" : "available",
-            visualSpan: 1
-          }
-        };
-      }
-      return { name, cells };
-    };
+    let fixture = null;
 
-    const data = {
-      layoutVersion: 3,
-      totalColumns: 32,
-      screenLabel: "銀幕",
-      counts: { available: 210, sold: 70, blocked: 0 },
-      areas: [{
-        name: "普通區",
-        cellColumns: 32,
-        ratioLeft: 0,
-        ratioTop: 0,
-        rows: "ABCDEFGHIJ".split("").map(makeRow)
-      }]
-    };
-
-    const panel = document.querySelector("#mclFixtureSeatMap");
-    panel.innerHTML = window.HKCinemaMCLSeatMap.renderMap(data, "https://www.mclcinema.com/");
-    window.HKCinemaSeatMapShared.centerAfterRender(panel, ".mcl-seatmap-stage.is-scrollable");
-
-    const mobile = new URLSearchParams(location.search).has("mobile");
-    if (mobile) {
-      document.body.classList.add("is-mobile-fixture");
-    } else {
-      document.querySelector("iframe").src = "./seatmap-visual.html?mobile=1";
+    async function show(provider, trigger) {
+      fixture ||= await fetch("./fixtures/phase7b-view-models.json").then(response => response.json());
+      const entry = fixture[provider];
+      const showtime = window.HKCinemaViewModels.showtime(provider, entry.showtime);
+      window.HKCinemaSeatMapShared.open({
+        provider,
+        key: `${provider}-visual`,
+        trigger,
+        showtime,
+        bookingUrl: showtime.bookingUrl,
+        load: async () => entry.seatMap,
+        adapt: raw => window.HKCinemaViewModels.seatMap(provider, raw, showtime)
+      });
     }
+
+    document.querySelectorAll("[data-provider]").forEach(button => {
+      button.addEventListener("click", () => show(button.dataset.provider, button));
+    });
+    show(new URLSearchParams(location.search).get("provider") || "broadway", document.querySelector("[data-provider]"));
   </script>
 </body>
 </html>

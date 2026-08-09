@@ -215,24 +215,55 @@ test("Phase 7B keeps each nested provider notice intact", async () => {
   ]);
 });
 
-test("Phase 7B model loads before all legacy detail and seat renderers", async () => {
+test("Phase 7B model loads before the shared detail and seat renderers", async () => {
   const index = await source("app/index.html");
   const metadataIndex = index.indexOf("showtime-metadata.js?v=7a5");
-  const modelIndex = index.indexOf("view-models.js?v=7b1");
+  const modelIndex = index.indexOf("view-models.js?v=7b3");
 
   assert.ok(metadataIndex > -1);
   assert.ok(modelIndex > -1);
   assert.ok(metadataIndex < modelIndex);
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b2");
+  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3");
   assert.ok(rendererIndex > modelIndex);
   for (const script of [
     "app.js?v=7b2",
     "mcl-detail.js?v=7b2",
     "emperor-detail.js?v=7b2",
-    "seatmap.js?v=6o1",
-    "mcl-seatmap.js?v=6o1",
-    "emperor-seatmap.js?v=6n1"
+    "seatmap-shared.js?v=7b3",
+    "seatmap.js?v=7b3",
+    "mcl-seatmap.js?v=7b3",
+    "emperor-seatmap.js?v=7b3"
   ]) {
     assert.ok(modelIndex < index.indexOf(script), `${script} must load after the shared model`);
   }
+});
+
+test("Phase 7B aligns Broadway rows globally and retains MCL legacy rows", async () => {
+  const api = await loadViewModels();
+  const broadway = json(api.seatMap("broadway", {
+    showId: "100",
+    rows: [
+      { name: "A", seats: [{ id: "A2", label: "2", row: "A", column: 2, status: "available", type: "standard" }] },
+      { name: "B", seats: [{ id: "B1", label: "1", row: "B", column: 1, status: "available", type: "standard" }] }
+    ]
+  }, { sourceId: "100" }));
+  assert.equal(broadway.sections[0].rows[0].cells.length, 2);
+  assert.equal(broadway.sections[0].rows[0].cells[0].kind, "gap");
+  assert.equal(broadway.sections[0].rows[1].cells[0].seat.id, "B1");
+
+  const mcl = json(api.seatMap("mcl", {
+    sessionId: "200",
+    totalColumns: 3,
+    rows: [{
+      name: "A",
+      seats: [
+        { id: "A1", seatNum: "A1", rowName: "A", column: 1, status: "available" },
+        { id: "A3", seatNum: "A3", rowName: "A", column: 3, status: "sold" }
+      ]
+    }]
+  }, { sourceId: "200" }));
+  assert.equal(mcl.layoutMode, "area-grid");
+  assert.equal(mcl.sections.length, 1);
+  assert.deepEqual(mcl.sections[0].rows[0].cells.map(cell => cell.kind), ["seat", "gap", "seat"]);
+  assert.equal(mcl.summary.total, 2);
 });
