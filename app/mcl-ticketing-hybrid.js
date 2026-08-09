@@ -16,7 +16,8 @@
 
   async function getWorkerTicketing(
     movieSetId,
-    selectedDate = null
+    selectedDate = null,
+    options = {}
   ) {
     const id = String(movieSetId || "")
       .replace(/^mcl:/, "");
@@ -30,10 +31,14 @@
     }
 
     const controller = new AbortController();
+    const parentSignal = options?.signal || null;
+    const onParentAbort = () => controller.abort(parentSignal?.reason);
     const timer = setTimeout(
       () => controller.abort("timeout"),
       WORKER_TIMEOUT_MS
     );
+    if (parentSignal?.aborted) onParentAbort();
+    else parentSignal?.addEventListener?.("abort", onParentAbort, { once: true });
 
     try {
       const response = await fetch(
@@ -63,6 +68,7 @@
       return result.data;
     } finally {
       clearTimeout(timer);
+      parentSignal?.removeEventListener?.("abort", onParentAbort);
     }
   }
 
@@ -89,43 +95,56 @@
 
     provider.getTicketing = async (
       movieSetId,
-      selectedDate = null
+      selectedDate = null,
+      options = {}
     ) => {
       const id = String(movieSetId || "")
         .replace(/^mcl:/, "");
+      let browserData = null;
 
       try {
-        return await browserGetTicketing(
+        browserData = await browserGetTicketing(
           id,
-          selectedDate
+          selectedDate,
+          options
         );
+
+        if (browserData?.metadataComplete !== false) {
+          return browserData;
+        }
       } catch (browserError) {
+        if (options?.signal?.aborted) throw browserError;
         // A fast HTTP 200 response containing the wrong MCL payload is the
         // recurring VPN / proxy failure mode. Do not enter a long fallback
         // chain or return stale partial showtimes in this case.
         if (isFormatMismatch(browserError)) {
           throw unsupportedVpnError();
         }
+      }
 
-        try {
-          const data = await getWorkerTicketing(
-            id,
-            selectedDate
-          );
+      try {
+        const data = await getWorkerTicketing(
+          id,
+          selectedDate,
+          options
+        );
 
-          return {
-            ...data,
-            source: {
-              ...(data?.source || {}),
-              fallbackFrom:
-                "browser-direct-mclwebapi2"
-            }
-          };
-        } catch {
-          throw new Error(
-            "MCL 場次暫時無法更新。請檢查網絡後重試；如正在使用 VPN／Proxy，請關閉後再試。"
-          );
+        return {
+          ...data,
+          source: {
+            ...(data?.source || {}),
+            fallbackFrom:
+              "browser-direct-mclwebapi2"
+          }
+        };
+      } catch (workerError) {
+        if (options?.signal?.aborted) throw workerError;
+        if (Array.isArray(browserData?.sessions) && browserData.sessions.length) {
+          return browserData;
         }
+        throw new Error(
+          "MCL 場次暫時無法更新。請檢查網絡後重試；如正在使用 VPN／Proxy，請關閉後再試。"
+        );
       }
     };
 

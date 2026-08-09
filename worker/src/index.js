@@ -280,7 +280,11 @@ export default {
             source: result.source,
             updatedAt: new Date().toISOString()
           }
-        }, 200, { "cache-control": "public, max-age=60" });
+        }, 200, {
+          "cache-control": result.metadataComplete
+            ? "public, max-age=60"
+            : "no-store"
+        });
       } catch (error) {
         return json({
           ok: false,

@@ -7,6 +7,9 @@
   const PROVIDER_ORDER = { broadway: 0, mcl: 1, emperor: 2 };
   const DEFAULT_FILTERS = Object.freeze({
     provider: "all",
+    language: "all",
+    subtitle: "all",
+    format: "all",
     region: "all",
     cinema: "all",
     period: "all",
@@ -17,9 +20,22 @@
     period: { morning: "早場", afternoon: "下午", evening: "晚場" },
     sort: { price: "價格排序", seats: "座位排序" }
   });
+  const METADATA_ORDER = Object.freeze({
+    language: ["cantonese", "english", "japanese", "mandarin", "korean", "thai", "french", "german", "spanish", "hindi", "original", "unknown"],
+    subtitle: ["chinese", "english", "japanese", "none", "unknown"],
+    format: ["2d", "3d", "imax", "4dx", "mx4d", "d-box", "screenx", "luxe", "dolby", "35mm", "4k", "unknown"]
+  });
+  const METADATA_UNKNOWN_LABELS = Object.freeze({
+    language: "語言未提供",
+    subtitle: "字幕未提供",
+    format: "制式未提供"
+  });
 
   const uiState = {
     provider: "all",
+    language: "all",
+    subtitle: "all",
+    format: "all",
     region: "all",
     cinema: "all",
     period: "all",
@@ -50,6 +66,22 @@
     const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
     if (!match) return Number.MAX_SAFE_INTEGER;
     return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  function metadataCore() {
+    return window.HKCinemaShowtimeMetadata || null;
+  }
+
+  function metadataValues(card, key) {
+    return String(card?.dataset?.[key] || "unknown")
+      .split(",")
+      .map(value => value.trim())
+      .filter(Boolean);
+  }
+
+  function metadataLabel(kind, key) {
+    if (key === "unknown") return METADATA_UNKNOWN_LABELS[kind] || "未提供";
+    return metadataCore()?.labels?.[kind]?.[key] || key;
   }
 
   function parseSeats(card) {
@@ -128,6 +160,9 @@
       region: cinemaMeta.region || "unknown",
       district: cinemaMeta.district || null,
       price,
+      languages: metadataValues(card, "showLanguage"),
+      subtitles: metadataValues(card, "showSubtitle"),
+      formats: metadataValues(card, "showFormat"),
       seats,
       seatAvailable: seats?.available ?? null,
       seatRatio: seats?.ratio ?? null
@@ -149,9 +184,18 @@
     );
   }
 
+  function matchesMetadataFilters(item) {
+    return (
+      (uiState.language === "all" || item.languages.includes(uiState.language)) &&
+      (uiState.subtitle === "all" || item.subtitles.includes(uiState.subtitle)) &&
+      (uiState.format === "all" || item.formats.includes(uiState.format))
+    );
+  }
+
   function matchesFilters(item) {
     return (
       matchesProviderAndRegion(item) &&
+      matchesMetadataFilters(item) &&
       (uiState.cinema === "all" || item.cinemaKey === uiState.cinema) &&
       matchesPeriod(item)
     );
@@ -160,7 +204,7 @@
   function getCinemaOptions(items) {
     const map = new Map();
     for (const item of items) {
-      if (!matchesProviderAndRegion(item)) continue;
+      if (!matchesProviderAndRegion(item) || !matchesMetadataFilters(item)) continue;
       const periodMatches = matchesPeriod(item);
       const existing = map.get(item.cinemaKey);
       if (existing) {
@@ -193,6 +237,32 @@
     }
   }
 
+  function metadataOptions(items, kind) {
+    const field = kind === "language" ? "languages" : kind === "subtitle" ? "subtitles" : "formats";
+    const keys = Array.from(new Set(items.flatMap(item => item[field] || [])));
+    const order = METADATA_ORDER[kind] || [];
+    return keys
+      .map(key => ({ key, label: metadataLabel(kind, key) }))
+      .sort((a, b) => {
+        const aOrder = order.indexOf(a.key);
+        const bOrder = order.indexOf(b.key);
+        return (aOrder < 0 ? 99 : aOrder) - (bOrder < 0 ? 99 : bOrder) || a.label.localeCompare(b.label, "zh-HK");
+      });
+  }
+
+  function ensureMetadataSelections(items) {
+    for (const kind of ["language", "subtitle", "format"]) {
+      if (uiState[kind] === "all") continue;
+      if (!metadataOptions(items, kind).some(option => option.key === uiState[kind])) {
+        uiState[kind] = "all";
+      }
+    }
+  }
+
+  function selectedMetadataLabel(kind) {
+    return uiState[kind] === "all" ? "" : metadataLabel(kind, uiState[kind]);
+  }
+
   function selectedCinemaLabel(items) {
     if (uiState.cinema === "all") return "全部戲院";
     return getCinemaOptions(items).find(entry => entry.key === uiState.cinema)?.canonical || "指定戲院";
@@ -202,6 +272,11 @@
     const filters = [];
     if (uiState.provider !== DEFAULT_FILTERS.provider) {
       filters.push({ key: "provider", label: PROVIDER_LABELS[uiState.provider] || uiState.provider });
+    }
+    for (const kind of ["language", "subtitle", "format"]) {
+      if (uiState[kind] !== DEFAULT_FILTERS[kind]) {
+        filters.push({ key: kind, label: selectedMetadataLabel(kind) });
+      }
     }
     if (uiState.region !== DEFAULT_FILTERS.region) {
       filters.push({ key: "region", label: FILTER_LABELS.region[uiState.region] || uiState.region });
@@ -272,6 +347,20 @@
     `;
   }
 
+  function renderMetadataControl(items, kind, label) {
+    const options = metadataOptions(items, kind);
+    if (!options.length) return "";
+    return `
+      <div class="provider-compare-control-group provider-compare-metadata-control" data-metadata-filter="${escapeHtml(kind)}">
+        <span>${escapeHtml(label)}</span>
+        <button type="button" data-insight-${escapeHtml(kind)}="all" class="${uiState[kind] === "all" ? "active" : ""}" aria-pressed="${uiState[kind] === "all"}">全部</button>
+        ${options.map(option => `
+          <button type="button" data-insight-${escapeHtml(kind)}="${escapeHtml(option.key)}" class="${uiState[kind] === option.key ? "active" : ""}" aria-pressed="${uiState[kind] === option.key}">${escapeHtml(option.label)}</button>
+        `).join("")}
+      </div>
+    `;
+  }
+
   function renderSummary(items, allItems) {
     const lowest = cheapest(items);
     const first = earliest(items);
@@ -299,7 +388,12 @@
     const regionLabel = uiState.region === "hk" ? "港島" : uiState.region === "kln" ? "九龍" : uiState.region === "nt-islands" ? "新界/離島" : "全港";
     const periodLabel = uiState.period === "morning" ? "早場" : uiState.period === "afternoon" ? "下午" : uiState.period === "evening" ? "晚場" : "全日";
     const selectedCinema = uiState.cinema === "all" ? "" : ` · ${selectedCinemaLabel(allItems)}`;
-    const activeFilterSummary = `${providerLabel} · ${regionLabel}${selectedCinema} · ${periodLabel}`;
+    const metadataSummary = [
+      selectedMetadataLabel("language"),
+      selectedMetadataLabel("subtitle"),
+      selectedMetadataLabel("format")
+    ].filter(Boolean);
+    const activeFilterSummary = `${providerLabel}${metadataSummary.length ? ` · ${metadataSummary.join(" · ")}` : ""} · ${regionLabel}${selectedCinema} · ${periodLabel}`;
 
     return `
       <div class="provider-compare-insights" data-provider-insights>
@@ -346,6 +440,10 @@
             <button type="button" data-insight-provider="emperor" class="${uiState.provider === "emperor" ? "active" : ""}">Emperor</button>
           </div>
 
+          ${renderMetadataControl(allItems, "language", "語言")}
+          ${renderMetadataControl(allItems, "subtitle", "字幕")}
+          ${renderMetadataControl(allItems, "format", "制式")}
+
           <div class="provider-compare-control-group">
             <span>地區</span>
             <button type="button" data-insight-region="all" class="${uiState.region === "all" ? "active" : ""}">全部</button>
@@ -375,7 +473,7 @@
           </div>
           <details class="provider-compare-insight-note">
             <summary>篩選定義</summary>
-            <p>戲院及場次數會跟隨院線、地區與時段即時重算。早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。${escapeHtml(unknownNote)}</p>
+            <p>語言、字幕及制式只顯示當日實際存在的選項；未能從院線確認的資料會明確標示為未提供。戲院及場次數會跟隨所有條件即時重算。早場為 12:00 前、下午為 12:00–17:59、晚場為 18:00 起。${escapeHtml(unknownNote)}</p>
           </details>
         </div>
       </div>
@@ -419,9 +517,14 @@
       const providerLabel = uiState.provider === "all" ? "全部院線" : PROVIDER_LABELS[uiState.provider] || "全部院線";
       const regionLabel = uiState.region === "hk" ? "港島" : uiState.region === "kln" ? "九龍" : uiState.region === "nt-islands" ? "新界/離島" : "全部地區";
       const cinemaPart = uiState.cinema === "all" ? "" : ` · ${selectedCinemaLabel(items)}`;
+      const metadataPart = [
+        selectedMetadataLabel("language"),
+        selectedMetadataLabel("subtitle"),
+        selectedMetadataLabel("format")
+      ].filter(Boolean).map(label => ` · ${label}`).join("");
       const periodLabel = uiState.period === "morning" ? "早場" : uiState.period === "afternoon" ? "下午" : uiState.period === "evening" ? "晚場" : "全日";
       const sortLabel = uiState.sort === "price" ? "價格由低至高" : uiState.sort === "seats" ? "可用比例由高至低" : "時間由早至晚";
-      result.textContent = `${providerLabel} · ${regionLabel}${cinemaPart} · ${periodLabel} · ${visibleItems.length} 場 · ${sortLabel}`;
+      result.textContent = `${providerLabel}${metadataPart} · ${regionLabel}${cinemaPart} · ${periodLabel} · ${visibleItems.length} 場 · ${sortLabel}`;
     }
     return visibleItems;
   }
@@ -438,6 +541,7 @@
     try {
       const cards = Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"));
       const items = cards.map(parseCard);
+      ensureMetadataSelections(items);
       ensureCinemaSelection(items);
       section.querySelector("[data-provider-insights]")?.remove();
       section.querySelector("[data-insight-result]")?.remove();
@@ -504,6 +608,12 @@
       enhance();
       return uiState.cinema;
     },
+    setFilter(key, value) {
+      if (!Object.prototype.hasOwnProperty.call(DEFAULT_FILTERS, key) || key === "cinema") return null;
+      uiState[key] = String(value || DEFAULT_FILTERS[key]);
+      enhance();
+      return uiState[key];
+    },
     getState() {
       return { ...uiState };
     },
@@ -537,6 +647,15 @@
       event.preventDefault();
       event.stopPropagation();
       uiState.provider = providerButton.dataset.insightProvider || "all";
+      enhance();
+      return;
+    }
+    for (const kind of ["language", "subtitle", "format"]) {
+      const metadataButton = event.target.closest(`[data-insight-${kind}]`);
+      if (!metadataButton) continue;
+      event.preventDefault();
+      event.stopPropagation();
+      uiState[kind] = metadataButton.dataset[`insight${kind[0].toUpperCase()}${kind.slice(1)}`] || "all";
       enhance();
       return;
     }

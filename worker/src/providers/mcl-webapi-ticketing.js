@@ -1,5 +1,7 @@
 const SITE_BASE = "https://www.mclcinema.com/";
 const API_BASE = `${SITE_BASE}MCLWebAPI2/`;
+const REQUEST_BUDGET_MS = 13500;
+const ENRICHMENT_BUDGET_MS = 10000;
 
 function pad2(value) {
   return String(value).padStart(2, "0");
@@ -53,9 +55,13 @@ function normalizeCinemaId(value) {
   return text.length <= 3 ? text.padStart(3, "0") : text;
 }
 
-async function fetchText(url, movieSetId, timeoutMs = 10000) {
+async function fetchText(url, movieSetId, timeoutMs = 10000, parentSignal = null) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onParentAbort = () => controller.abort(parentSignal?.reason);
+
+  if (parentSignal?.aborted) onParentAbort();
+  else parentSignal?.addEventListener?.("abort", onParentAbort, { once: true });
 
   try {
     const response = await fetch(url, {
@@ -78,6 +84,7 @@ async function fetchText(url, movieSetId, timeoutMs = 10000) {
     return text;
   } finally {
     clearTimeout(timer);
+    parentSignal?.removeEventListener?.("abort", onParentAbort);
   }
 }
 
@@ -296,27 +303,83 @@ function priceFromList(value) {
   };
 }
 
-async function enrichSession(session, movieSetId) {
+function hasSessionLanguageMetadata(session) {
+  const languagePattern = /(?:粵語|廣東話|cantonese|canto|英語|英文|english|日語|日文|日本語|japanese|國語|普通話|華語|mandarin|putonghua|韓語|韓文|korean|泰語|泰文|thai|法語|法文|french|德語|德文|german|西班牙語|西班牙文|spanish|印地語|印度語|hindi|原聲|original)/i;
+  const subtitleLanguagePattern = /(?:中文|英文|日文|韓文|泰文|法文|德文|西班牙文|chinese|english|japanese|korean|thai|french|german|spanish)\s*(?:字幕|subtitles?)/i;
+  const hasRecognizedSpokenLanguage = value => String(value || "")
+    .normalize("NFKC")
+    .split(/[·・|/]+/)
+    .some(part => {
+      const segment = part.trim();
+      if (!segment || /^(?:字幕|subtitles?)\s*[:：]?/i.test(segment)) return false;
+      const spokenPart = segment.replace(subtitleLanguagePattern, " ").trim();
+      return languagePattern.test(spokenPart);
+    });
+
+  return (
+    hasRecognizedSpokenLanguage(session?.language) ||
+    hasRecognizedSpokenLanguage(session?.versionName) ||
+    hasRecognizedSpokenLanguage(session?.displayVersion)
+  );
+}
+
+function isSessionInfoPayload(info) {
+  return Boolean(
+    info &&
+    typeof info === "object" &&
+    !Array.isArray(info) &&
+    ["l", "s", "dn", "st", "hn"].some(key => Object.prototype.hasOwnProperty.call(info, key))
+  );
+}
+
+async function enrichSessionMetadata(session, movieSetId, signal = null) {
   const cinemaId = session.cinema?.id;
-  if (!cinemaId) return session;
+  if (!cinemaId) {
+    return { session, metadataComplete: hasSessionLanguageMetadata(session) };
+  }
   const sessionId = session.sourceId;
 
-  const [infoText, priceText] = await Promise.all([
-    fetchText(`${API_BASE}GetSessionInfo.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`, movieSetId, 7000).catch(() => null),
-    fetchText(`${API_BASE}GetPrice.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`, movieSetId, 7000).catch(() => null)
-  ]);
-
-  const info = safeJson(infoText) || {};
-  const prices = priceFromList(safeJson(priceText));
-  const adult = prices.adult;
+  const infoText = await fetchText(
+    `${API_BASE}GetSessionInfo.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`,
+    movieSetId,
+    7000,
+    signal
+  ).catch(() => null);
+  const info = safeJson(infoText);
+  if (!isSessionInfoPayload(info)) {
+    return { session, metadataComplete: false };
+  }
   const language = [info.l, info.s ? `字幕: ${info.s}` : null].filter(Boolean).join(" · ") || null;
 
-  return {
+  const enrichedSession = {
     ...session,
     date: normalizeDate(info.dn) || session.date,
     time: normalizeTime(info.st) || session.time,
     house: { ...(session.house || {}), name: info.hn || session.house?.name || null },
-    language: language || session.language,
+    language: language || session.language
+  };
+
+  return {
+    session: enrichedSession,
+    metadataComplete: hasSessionLanguageMetadata(enrichedSession)
+  };
+}
+
+async function enrichSessionPrice(session, movieSetId, signal = null) {
+  const cinemaId = session.cinema?.id;
+  if (!cinemaId) return session;
+  const sessionId = session.sourceId;
+  const priceText = await fetchText(
+    `${API_BASE}GetPrice.aspx?l=1&si=${encodeURIComponent(sessionId)}&ci=${encodeURIComponent(cinemaId)}`,
+    movieSetId,
+    7000,
+    signal
+  ).catch(() => null);
+  const prices = priceFromList(safeJson(priceText));
+  const adult = prices.adult;
+
+  return {
+    ...session,
     price: {
       display: adult,
       adult,
@@ -327,11 +390,12 @@ async function enrichSession(session, movieSetId) {
   };
 }
 
-async function mapLimit(items, limit, mapper) {
-  const results = new Array(items.length);
+async function mapLimit(items, limit, mapper, signal = null) {
+  const results = [...items];
   let next = 0;
   async function worker() {
     while (true) {
+      if (signal?.aborted) return;
       const index = next++;
       if (index >= items.length) return;
       try { results[index] = await mapper(items[index], index); }
@@ -342,7 +406,43 @@ async function mapLimit(items, limit, mapper) {
   return results;
 }
 
+async function enrichSelectedSessions(sessions, movieSetId, budgetMs = ENRICHMENT_BUDGET_MS) {
+  const fullEnrichmentLimit = 40;
+  if (!sessions.length) return { sessions: [], metadataComplete: true };
+  if (budgetMs <= 0) return { sessions: [...sessions], metadataComplete: false };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("enrichment-deadline"), budgetMs);
+
+  try {
+    const metadataResults = await mapLimit(
+      sessions,
+      8,
+      session => enrichSessionMetadata(session, movieSetId, controller.signal),
+      controller.signal
+    );
+    const withMetadata = metadataResults.map((result, index) => result?.session || sessions[index]);
+    const metadataComplete = metadataResults.every(result => result?.metadataComplete === true);
+    if (controller.signal.aborted) {
+      return { sessions: withMetadata, metadataComplete: false };
+    }
+
+    const withPrices = await mapLimit(
+      withMetadata.slice(0, fullEnrichmentLimit),
+      8,
+      session => enrichSessionPrice(session, movieSetId, controller.signal),
+      controller.signal
+    );
+    return {
+      sessions: [...withPrices, ...withMetadata.slice(fullEnrichmentLimit)],
+      metadataComplete
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function getMCLWebApiTicketing(movieSetId, selectedDate = null) {
+  const requestStartedAt = Date.now();
   const id = String(movieSetId || "").replace(/^mcl:/, "");
   if (!/^\d+$/.test(id)) throw new Error("Invalid MCL movie ID");
 
@@ -373,7 +473,12 @@ export async function getMCLWebApiTicketing(movieSetId, selectedDate = null) {
     ? allSessions.filter(session => !session.date || session.date === resolvedDate)
     : allSessions;
 
-  sessions = await mapLimit(sessions.slice(0, 40), 6, session => enrichSession(session, id));
+  const enrichmentBudget = Math.max(0, Math.min(
+    ENRICHMENT_BUDGET_MS,
+    REQUEST_BUDGET_MS - (Date.now() - requestStartedAt)
+  ));
+  const enrichment = await enrichSelectedSessions(sessions, id, enrichmentBudget);
+  sessions = enrichment.sessions;
 
   const dates = new Set(availableDates);
   for (const session of sessions) if (session.date) dates.add(session.date);
@@ -388,6 +493,7 @@ export async function getMCLWebApiTicketing(movieSetId, selectedDate = null) {
     selectedDate: resolvedDate,
     sessions,
     allSessions,
+    metadataComplete: enrichment.metadataComplete,
     availableVersions: [],
     source: {
       provider: "mcl",

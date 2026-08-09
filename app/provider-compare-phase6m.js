@@ -1,6 +1,9 @@
 (() => {
   const DEFAULT_FILTERS = Object.freeze({
     provider: "all",
+    language: "all",
+    subtitle: "all",
+    format: "all",
     region: "all",
     cinema: "all",
     period: "all",
@@ -57,6 +60,9 @@
     const value = filtersApi()?.getState?.() || {};
     return {
       provider: value.provider || DEFAULT_FILTERS.provider,
+      language: value.language || DEFAULT_FILTERS.language,
+      subtitle: value.subtitle || DEFAULT_FILTERS.subtitle,
+      format: value.format || DEFAULT_FILTERS.format,
       region: value.region || DEFAULT_FILTERS.region,
       cinema: value.cinema || DEFAULT_FILTERS.cinema,
       period: value.period || DEFAULT_FILTERS.period,
@@ -71,12 +77,24 @@
     return text.replace(/\s*·\s*\d+\s*場\s*$/, "");
   }
 
+  function metadataFilterLabel(kind, value) {
+    if (value === "all") return "";
+    return document.querySelector(
+      `#providerCompareContent [data-insight-${kind}="${CSS.escape(value)}"]`
+    )?.textContent?.trim() || value;
+  }
+
   function activeFilters() {
     const state = currentFilterState();
     const filters = [];
 
     if (state.provider !== DEFAULT_FILTERS.provider) {
       filters.push({ key: "provider", label: FILTER_LABELS.provider[state.provider] || state.provider });
+    }
+    for (const kind of ["language", "subtitle", "format"]) {
+      if (state[kind] !== DEFAULT_FILTERS[kind]) {
+        filters.push({ key: kind, label: metadataFilterLabel(kind, state[kind]) });
+      }
     }
     if (state.region !== DEFAULT_FILTERS.region) {
       filters.push({ key: "region", label: FILTER_LABELS.region[state.region] || state.region });
