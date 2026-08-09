@@ -442,6 +442,9 @@
 
   window.HKCinemaProviderCompareSeats = {
     cancelPendingWork,
+    refresh() {
+      queueMicrotask(observeCards);
+    },
     getStats() {
       return {
         generation,

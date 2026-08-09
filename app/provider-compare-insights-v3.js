@@ -410,14 +410,35 @@
     }
   }
 
+  function isPhase6MOwnedMutation(record) {
+    if (record.type !== "childList") return false;
+    const target = record.target?.nodeType === Node.ELEMENT_NODE
+      ? record.target
+      : record.target?.parentElement;
+    if (
+      target?.matches?.("[data-phase6m-owned]") ||
+      target?.closest?.("[data-phase6m-owned]")
+    ) {
+      return true;
+    }
+    const changedNodes = [...record.addedNodes, ...record.removedNodes]
+      .filter(node => node.nodeType === Node.ELEMENT_NODE);
+    if (!changedNodes.length) return false;
+    return changedNodes.every(node =>
+      node.matches?.("[data-phase6m-owned]") ||
+      node.closest?.("[data-phase6m-owned]")
+    );
+  }
+
   function installObserver() {
     const content = document.querySelector("#providerCompareContent");
     if (!content) {
       requestAnimationFrame(installObserver);
       return;
     }
-    observer = new MutationObserver(() => {
-      if (!applying) queueMicrotask(enhance);
+    observer = new MutationObserver(records => {
+      if (applying || records.every(isPhase6MOwnedMutation)) return;
+      queueMicrotask(enhance);
     });
     observer.observe(content, {
       childList: true,

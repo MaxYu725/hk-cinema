@@ -544,6 +544,7 @@
   window.HKCinemaEmperorSeatMap = {
     open,
     close,
+    refresh: scheduleEnhance,
     renderSection,
     getStats() {
       return {

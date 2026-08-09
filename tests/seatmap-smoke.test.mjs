@@ -188,7 +188,7 @@ test("three-provider reliability and copy contracts remain wired", async () => {
     assert.match(provider, /AbortController/);
     assert.match(provider, /重新載入/);
   }
-  assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("emperor-seatmap.js?v=6f1"));
+  assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("emperor-seatmap.js?v=6n1"));
   assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("seatmap.js?v=6f1"));
   assert.ok(index.indexOf("seatmap-shared.js?v=6f1") < index.indexOf("mcl-seatmap.js?v=6f1"));
   assert.doesNotMatch(mclDetail, /完整座位圖會在下一階段接入/);
