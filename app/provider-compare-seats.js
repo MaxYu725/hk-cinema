@@ -23,7 +23,7 @@
   }
 
   function getIdentifiers(card) {
-    const href = card?.getAttribute("href");
+    const href = card?.dataset?.bookingUrl || card?.getAttribute("href");
     if (!href) return null;
 
     try {

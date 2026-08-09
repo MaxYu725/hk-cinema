@@ -94,112 +94,6 @@
     return filters;
   }
 
-  function clearFilter(key) {
-    const selectors = {
-      provider: "[data-insight-provider='all']",
-      region: "[data-insight-region='all']",
-      period: "[data-insight-period='all']",
-      sort: "[data-insight-sort='time']"
-    };
-
-    if (key === "cinema") {
-      filtersApi()?.setCinema?.("all");
-      schedule();
-      return;
-    }
-
-    const target = selectors[key]
-      ? document.querySelector(`#providerCompareContent ${selectors[key]}`)
-      : null;
-    target?.click();
-    schedule();
-  }
-
-  function bookingUrlFor(card) {
-    return card?.dataset?.bookingUrl || card?.getAttribute?.("href") || "";
-  }
-
-  function copyCardAttributes(source, target) {
-    for (const attribute of Array.from(source.attributes || [])) {
-      if (attribute.name === "target" || attribute.name === "rel") continue;
-      target.setAttribute(attribute.name, attribute.value);
-    }
-  }
-
-  function convertLinkedCard(card) {
-    if (!card || card.tagName !== "A") return card;
-
-    const replacement = document.createElement("article");
-    copyCardAttributes(card, replacement);
-    replacement.className = card.className;
-    // Move the existing nodes instead of cloning their markup. Seat-map
-    // providers keep per-trigger state in WeakMaps, so retaining node identity
-    // is required for already-prepared Broadway, MCL and Emperor actions.
-    replacement.append(...card.childNodes);
-    replacement.tabIndex = -1;
-
-    // MCL observes the showtime card itself. The old anchor may already have
-    // been marked as observed before this mobile-polish layer runs, but the new
-    // article is a different observer target and must be registered afresh.
-    delete replacement.dataset.seatObserved;
-    delete replacement.dataset.seatLoading;
-
-    const bookingUrl = card.getAttribute("href") || "";
-    if (bookingUrl) {
-      replacement.dataset.bookingUrl = bookingUrl;
-      // Broadway and MCL seat helpers already read getAttribute("href") from
-      // comparison cards. Preserve the URL as inert metadata on this non-link
-      // article while the explicit booking anchor below owns navigation.
-      replacement.setAttribute("href", bookingUrl);
-    }
-
-    card.replaceWith(replacement);
-    return replacement;
-  }
-
-  function addBookingAction(card) {
-    if (!card || card.dataset.phase6mActions === "true") return;
-
-    const bookingUrl = bookingUrlFor(card);
-    const provider = card.querySelector(".provider-compare-source")?.textContent?.trim() || "院線";
-    const cinema = card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "戲院";
-    const time = card.querySelector(".provider-compare-show-time")?.textContent?.trim() || "場次";
-    const price = card.querySelector(":scope > .provider-compare-show-price");
-
-    const actions = document.createElement("div");
-    actions.className = "provider-compare-show-actions";
-    if (price) actions.appendChild(price);
-
-    if (bookingUrl) {
-      const booking = document.createElement("a");
-      booking.className = "provider-compare-booking";
-      booking.href = bookingUrl;
-      booking.target = "_blank";
-      booking.rel = "noopener noreferrer";
-      booking.textContent = "購票";
-      booking.setAttribute("aria-label", `前往 ${provider} 官方購票：${cinema} ${time}`);
-      actions.appendChild(booking);
-    }
-
-    card.appendChild(actions);
-    card.classList.add("phase6m-show-card");
-    card.dataset.phase6mActions = "true";
-  }
-
-  function enhanceShowCards(root) {
-    let converted = false;
-    root.querySelectorAll(".provider-compare-timeline > .provider-compare-show").forEach(original => {
-      const card = convertLinkedCard(original);
-      converted ||= card !== original;
-      addBookingAction(card);
-    });
-
-    if (converted) {
-      window.HKCinemaProviderCompareSeats?.refresh?.();
-      window.HKCinemaEmperorSeatMap?.refresh?.();
-    }
-  }
-
   function enhancePoster(root) {
     const poster = root.querySelector(".provider-compare-hero img");
     if (!poster || poster.dataset.phase6mPoster === "true") return;
@@ -217,52 +111,6 @@
     });
   }
 
-  function renderFilterChips(root) {
-    const insights = root.querySelector("[data-provider-insights]");
-    const filterBar = insights?.querySelector(".provider-compare-filter-bar");
-    if (!insights || !filterBar) return;
-
-    const filters = activeFilters();
-    const signature = filters.map(filter => `${filter.key}:${filter.label}`).join("|");
-    let row = insights.querySelector("[data-phase6m-active-filters]");
-
-    if (!filters.length) {
-      row?.remove();
-      filterBar.classList.remove("phase6m-has-active");
-      return;
-    }
-
-    filterBar.classList.add("phase6m-has-active");
-    if (row?.dataset.signature === signature) return;
-    row?.remove();
-
-    row = document.createElement("div");
-    row.className = "phase6m-active-filters";
-    row.dataset.phase6mOwned = "true";
-    row.dataset.phase6mActiveFilters = "true";
-    row.dataset.signature = signature;
-    row.setAttribute("aria-label", "目前生效的比較條件");
-
-    const label = document.createElement("span");
-    label.className = "phase6m-active-filter-count";
-    label.textContent = `${filters.length} 個條件`;
-    row.appendChild(label);
-
-    const scroller = document.createElement("div");
-    scroller.className = "phase6m-active-filter-chips";
-    for (const filter of filters) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "phase6m-filter-chip";
-      button.dataset.phase6mClearFilter = filter.key;
-      button.setAttribute("aria-label", `清除${filter.label}篩選`);
-      button.textContent = `${filter.label} ×`;
-      scroller.appendChild(button);
-    }
-    row.appendChild(scroller);
-    filterBar.insertAdjacentElement("afterend", row);
-  }
-
   function enhanceDateRail(root) {
     const rail = root.querySelector(".provider-compare-date-rail");
     if (!rail) return;
@@ -273,7 +121,6 @@
       shortcut = document.createElement("button");
       shortcut.type = "button";
       shortcut.className = "phase6m-filter-shortcut";
-      shortcut.dataset.phase6mOwned = "true";
       shortcut.dataset.phase6mFilterShortcut = "true";
       rail.appendChild(shortcut);
     }
@@ -331,7 +178,6 @@
     empty?.remove();
 
     empty = emptyContainer("phase6m-filter-empty");
-    empty.dataset.phase6mOwned = "true";
     empty.dataset.phase6mFilterEmpty = "true";
     empty.dataset.message = message;
     addEmptyCopy(empty, "沒有符合目前篩選的場次", message);
@@ -349,7 +195,6 @@
 
       const context = document.createElement("span");
       context.className = "phase6m-empty-context";
-      context.dataset.phase6mOwned = "true";
       context.textContent = errors.length
         ? "部分院線暫時未能更新；可重試資料，或先切換其他日期。"
         : "可切換上方日期；院線新增場次後重新載入即可查看。";
@@ -357,7 +202,6 @@
 
       const actions = document.createElement("div");
       actions.className = "phase6m-empty-actions";
-      actions.dataset.phase6mOwned = "true";
       actions.appendChild(actionButton("data-provider-compare-retry", "重新載入"));
       empty.appendChild(actions);
     });
@@ -382,7 +226,6 @@
     const errors = Object.values(state.errors || {}).filter(Boolean);
     const section = document.createElement("section");
     section.className = "provider-compare-section phase6m-empty-section";
-    section.dataset.phase6mOwned = "true";
     section.dataset.phase6mNoDates = "true";
 
     const empty = emptyContainer("");
@@ -411,9 +254,7 @@
     applying = true;
     try {
       enhancePoster(root);
-      enhanceShowCards(root);
       markMissingInsights(root);
-      renderFilterChips(root);
       enhanceDateRail(root);
       enhanceFilteredEmpty(root);
       enhanceBaseEmpty(root);
@@ -434,14 +275,6 @@
   }
 
   function handleClick(event) {
-    const clear = event.target.closest?.("[data-phase6m-clear-filter]");
-    if (clear) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearFilter(clear.dataset.phase6mClearFilter);
-      return;
-    }
-
     const shortcut = event.target.closest?.("[data-phase6m-filter-shortcut]");
     if (shortcut) {
       event.preventDefault();

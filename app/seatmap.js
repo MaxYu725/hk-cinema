@@ -20,7 +20,7 @@
   }
 
   function cardUrl(card) {
-    return card?.getAttribute("href") || card?.dataset?.bookingUrl || "";
+    return card?.dataset?.bookingUrl || card?.getAttribute("href") || "";
   }
 
   function getShowId(card) {

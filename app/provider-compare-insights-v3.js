@@ -5,6 +5,18 @@
     emperor: "Emperor"
   };
   const PROVIDER_ORDER = { broadway: 0, mcl: 1, emperor: 2 };
+  const DEFAULT_FILTERS = Object.freeze({
+    provider: "all",
+    region: "all",
+    cinema: "all",
+    period: "all",
+    sort: "time"
+  });
+  const FILTER_LABELS = Object.freeze({
+    region: { hk: "港島", kln: "九龍", "nt-islands": "新界/離島" },
+    period: { morning: "早場", afternoon: "下午", evening: "晚場" },
+    sort: { price: "價格排序", seats: "座位排序" }
+  });
 
   const uiState = {
     provider: "all",
@@ -186,6 +198,41 @@
     return getCinemaOptions(items).find(entry => entry.key === uiState.cinema)?.canonical || "指定戲院";
   }
 
+  function activeFilters(items) {
+    const filters = [];
+    if (uiState.provider !== DEFAULT_FILTERS.provider) {
+      filters.push({ key: "provider", label: PROVIDER_LABELS[uiState.provider] || uiState.provider });
+    }
+    if (uiState.region !== DEFAULT_FILTERS.region) {
+      filters.push({ key: "region", label: FILTER_LABELS.region[uiState.region] || uiState.region });
+    }
+    if (uiState.cinema !== DEFAULT_FILTERS.cinema) {
+      filters.push({ key: "cinema", label: selectedCinemaLabel(items) });
+    }
+    if (uiState.period !== DEFAULT_FILTERS.period) {
+      filters.push({ key: "period", label: FILTER_LABELS.period[uiState.period] || uiState.period });
+    }
+    if (uiState.sort !== DEFAULT_FILTERS.sort) {
+      filters.push({ key: "sort", label: FILTER_LABELS.sort[uiState.sort] || uiState.sort });
+    }
+    return filters;
+  }
+
+  function renderActiveFilters(items) {
+    const filters = activeFilters(items);
+    if (!filters.length) return "";
+    return `
+      <div class="phase6m-active-filters" data-phase6m-active-filters aria-label="目前生效的比較條件">
+        <span class="phase6m-active-filter-count">${filters.length} 個條件</span>
+        <div class="phase6m-active-filter-chips">
+          ${filters.map(filter => `
+            <button type="button" class="phase6m-filter-chip" data-insight-clear-filter="${escapeHtml(filter.key)}" aria-label="清除${escapeHtml(filter.label)}篩選">${escapeHtml(filter.label)} ×</button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   function cheapest(items, provider = null) {
     return items
       .filter(item => (!provider || item.provider === provider) && Number.isFinite(item.price))
@@ -279,7 +326,7 @@
           </article>
         </div>
 
-        <div class="provider-compare-filter-bar">
+        <div class="provider-compare-filter-bar ${activeFilters(allItems).length ? "phase6m-has-active" : ""}">
           <button type="button" class="provider-compare-filter-toggle" data-provider-filter-toggle aria-expanded="${uiState.expanded}">
             <span>篩選</span>
             <strong>${escapeHtml(activeFilterSummary)}</strong>
@@ -287,6 +334,8 @@
           </button>
           <button type="button" class="provider-compare-reset" data-provider-compare-reset aria-label="重設比較篩選">重設</button>
         </div>
+
+        ${renderActiveFilters(allItems)}
 
         <div class="provider-compare-controls" aria-label="場次篩選及排序" ${uiState.expanded ? "" : "hidden"}>
           <div class="provider-compare-control-group">
@@ -410,23 +459,22 @@
     }
   }
 
-  function isPhase6MOwnedMutation(record) {
-    if (record.type !== "childList") return false;
+  function mutationTouchesTimeline(record) {
     const target = record.target?.nodeType === Node.ELEMENT_NODE
       ? record.target
       : record.target?.parentElement;
-    if (
-      target?.matches?.("[data-phase6m-owned]") ||
-      target?.closest?.("[data-phase6m-owned]")
-    ) {
+    if (record.type === "attributes" || record.type === "characterData") {
+      return Boolean(target?.closest?.(".provider-compare-show"));
+    }
+    if (record.type !== "childList") return false;
+    if (target?.matches?.(".provider-compare-timeline") || target?.closest?.(".provider-compare-timeline")) {
       return true;
     }
-    const changedNodes = [...record.addedNodes, ...record.removedNodes]
-      .filter(node => node.nodeType === Node.ELEMENT_NODE);
-    if (!changedNodes.length) return false;
-    return changedNodes.every(node =>
-      node.matches?.("[data-phase6m-owned]") ||
-      node.closest?.("[data-phase6m-owned]")
+    return [...record.addedNodes, ...record.removedNodes].some(node =>
+      node.nodeType === Node.ELEMENT_NODE && (
+        node.matches?.(".provider-compare-timeline, .provider-compare-show") ||
+        node.querySelector?.(".provider-compare-timeline, .provider-compare-show")
+      )
     );
   }
 
@@ -437,7 +485,7 @@
       return;
     }
     observer = new MutationObserver(records => {
-      if (applying || records.every(isPhase6MOwnedMutation)) return;
+      if (applying || !records.some(mutationTouchesTimeline)) return;
       queueMicrotask(enhance);
     });
     observer.observe(content, {
@@ -465,6 +513,17 @@
   };
 
   document.addEventListener("click", event => {
+    const clearButton = event.target.closest("[data-insight-clear-filter]");
+    if (clearButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const key = clearButton.dataset.insightClearFilter;
+      if (Object.prototype.hasOwnProperty.call(DEFAULT_FILTERS, key)) {
+        uiState[key] = DEFAULT_FILTERS[key];
+      }
+      enhance();
+      return;
+    }
     const filterToggle = event.target.closest("[data-provider-filter-toggle]");
     if (filterToggle) {
       event.preventDefault();
