@@ -4,7 +4,9 @@
   const BULK_TIMEOUT_MS = 4500;
 
   function finite(value) {
-    return Number.isFinite(Number(value)) ? Number(value) : null;
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
   }
 
   function sourceIdOf(session) {
