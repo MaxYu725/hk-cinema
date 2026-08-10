@@ -1,5 +1,112 @@
 (() => {
-  const state = { registration: null, error: null, ready: false };
+  const state = {
+    registration: null,
+    waitingWorker: null,
+    error: null,
+    ready: false,
+    updateReady: false,
+    online: navigator.onLine,
+    reloading: false
+  };
+
+  let networkNoticeTimer = null;
+
+  function ensureNotice() {
+    let notice = document.querySelector("#pwaNotice");
+    if (notice) return notice;
+
+    notice = document.createElement("aside");
+    notice.id = "pwaNotice";
+    notice.className = "pwa-notice";
+    notice.hidden = true;
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "polite");
+    notice.innerHTML = `
+      <div class="pwa-notice-copy">
+        <strong data-pwa-notice-title></strong>
+        <span data-pwa-notice-detail></span>
+      </div>
+      <button type="button" data-pwa-update-action hidden>重新載入</button>
+    `;
+    document.body.append(notice);
+
+    notice.querySelector("[data-pwa-update-action]")?.addEventListener("click", () => {
+      applyUpdate();
+    });
+    return notice;
+  }
+
+  function renderNotice(kind, title, detail, { action = false, autoHide = 0 } = {}) {
+    const notice = ensureNotice();
+    clearTimeout(networkNoticeTimer);
+    notice.dataset.kind = kind;
+    notice.querySelector("[data-pwa-notice-title]").textContent = title;
+    notice.querySelector("[data-pwa-notice-detail]").textContent = detail;
+    const button = notice.querySelector("[data-pwa-update-action]");
+    if (button) button.hidden = !action;
+    notice.hidden = false;
+
+    if (autoHide > 0) {
+      networkNoticeTimer = setTimeout(() => {
+        if (state.updateReady || !state.online) return;
+        notice.hidden = true;
+      }, autoHide);
+    }
+  }
+
+  function showUpdate(worker) {
+    if (!worker || !navigator.serviceWorker.controller) return;
+    state.waitingWorker = worker;
+    state.updateReady = true;
+    renderNotice(
+      "update",
+      "新版 HK Cinema 已準備好",
+      "重新載入後套用新版；目前操作不會被自動中斷。",
+      { action: true }
+    );
+    window.dispatchEvent(new CustomEvent("hkcinema:pwa-update-ready"));
+  }
+
+  function watchInstalling(registration) {
+    const worker = registration.installing;
+    if (!worker) return;
+    worker.addEventListener("statechange", () => {
+      if (worker.state !== "installed") return;
+      const waiting = registration.waiting || worker;
+      if (navigator.serviceWorker.controller) showUpdate(waiting);
+    });
+  }
+
+  function applyUpdate() {
+    const worker = state.waitingWorker || state.registration?.waiting;
+    if (!worker) return false;
+    state.waitingWorker = worker;
+    worker.postMessage({ type: "SKIP_WAITING" });
+    return true;
+  }
+
+  function onControllerChange() {
+    if (!state.updateReady || state.reloading) return;
+    state.reloading = true;
+    location.reload();
+  }
+
+  function setOnline(online) {
+    const changed = state.online !== online;
+    state.online = online;
+    if (!online) {
+      renderNotice(
+        "offline",
+        "目前離線",
+        "App 外框仍可使用；電影、場次、票價及座位需恢復網絡後更新。"
+      );
+      return;
+    }
+
+    if (changed && !state.updateReady) {
+      renderNotice("online", "已恢復連線", "最新戲院資料可再次更新。", { autoHide: 2200 });
+    }
+  }
 
   async function register() {
     if (!("serviceWorker" in navigator)) return null;
@@ -13,7 +120,13 @@
       state.registration = registration;
       state.error = null;
       state.ready = true;
+
+      registration.addEventListener("updatefound", () => watchInstalling(registration));
+      navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
+      if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
       registration.update().catch(() => {});
+
       window.dispatchEvent(new CustomEvent("hkcinema:pwa-ready", { detail: { scope: registration.scope } }));
       return registration;
     } catch (error) {
@@ -24,17 +137,24 @@
   }
 
   window.HKCinemaPWA = Object.freeze({
-    version: "9c1-1",
+    version: "9c3-1",
     register,
+    applyUpdate,
     getState() {
       return {
         ready: state.ready,
         error: state.error,
-        scope: state.registration?.scope || null
+        scope: state.registration?.scope || null,
+        updateReady: state.updateReady,
+        online: state.online
       };
     }
   });
 
+  window.addEventListener("offline", () => setOnline(false));
+  window.addEventListener("online", () => setOnline(true));
+
+  if (!navigator.onLine) setOnline(false);
   if (document.readyState === "complete") register();
   else window.addEventListener("load", register, { once: true });
 })();
