@@ -1,1 +1,0 @@
-Phase 8C PR scope is intentionally limited to merged variant loading and richer filtering. Smart Picks scoring remains unchanged for the next phase.
