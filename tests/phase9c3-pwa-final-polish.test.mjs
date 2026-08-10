@@ -27,6 +27,15 @@ test("PWA runtime exposes controlled update and connection state", () => {
   assert.match(runtime, /目前離線/);
   assert.match(runtime, /已恢復連線/);
   assert.match(runtime, /updateReady:\s*state\.updateReady/);
+  assert.match(runtime, /noticeKind:\s*state\.noticeKind/);
+});
+
+test("offline notice has priority over asynchronous update-ready events", () => {
+  const runtime = fs.readFileSync(path.join(app, "pwa-runtime.js"), "utf8");
+
+  assert.match(runtime, /state\.noticeKind === "offline" && kind !== "offline"/);
+  assert.match(runtime, /state\.noticeKind === "offline"\) state\.noticeKind = null/);
+  assert.match(runtime, /!navigator\.onLine \|\| state\.noticeKind === "offline"/);
 });
 
 test("standalone polish protects safe areas and comparison controls", () => {
