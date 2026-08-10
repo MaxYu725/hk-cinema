@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "HK Cinema",
   "short_name": "HK Cinema",
   "description": "香港戲院電影、場次、票價及座位資訊",
@@ -6,6 +7,9 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#f4f5f7",
-  "theme_color": "#17191d"
+  "theme_color": "#17191d",
+  "categories": ["entertainment", "lifestyle"],
+  "prefer_related_applications": false
 }
