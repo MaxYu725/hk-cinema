@@ -54,16 +54,21 @@
     }
   }
 
-  function showUpdate(worker) {
-    if (!worker || !navigator.serviceWorker.controller) return;
-    state.waitingWorker = worker;
-    state.updateReady = true;
+  function renderUpdateNotice() {
+    if (!state.updateReady || !state.online) return;
     renderNotice(
       "update",
       "新版 HK Cinema 已準備好",
       "重新載入後套用新版；目前操作不會被自動中斷。",
       { action: true }
     );
+  }
+
+  function showUpdate(worker) {
+    if (!worker || !navigator.serviceWorker.controller) return;
+    state.waitingWorker = worker;
+    state.updateReady = true;
+    renderUpdateNotice();
     window.dispatchEvent(new CustomEvent("hkcinema:pwa-update-ready"));
   }
 
@@ -94,6 +99,7 @@
   function setOnline(online) {
     const changed = state.online !== online;
     state.online = online;
+
     if (!online) {
       renderNotice(
         "offline",
@@ -103,7 +109,12 @@
       return;
     }
 
-    if (changed && !state.updateReady) {
+    if (state.updateReady) {
+      renderUpdateNotice();
+      return;
+    }
+
+    if (changed) {
       renderNotice("online", "已恢復連線", "最新戲院資料可再次更新。", { autoHide: 2200 });
     }
   }
