@@ -73,12 +73,17 @@ test("PWA shell registers, keeps cache same-origin, reports connectivity, and ca
     expect(pwa.cachedUrls.every(url => new URL(url).origin === pwa.origin)).toBe(true);
     expect(pwa.cachedUrls.some(url => url.includes("hk-cinema-api.max-yu-jp.workers.dev"))).toBe(false);
 
+    // Verify the actual shell can reopen with browser networking disabled. Chromium
+    // does not consistently emit an `offline` DOM event for the newly reloaded
+    // document, so dispatch it explicitly after reload to test the runtime contract
+    // separately from the network/cache contract.
     await context.setOffline(true);
     await page.reload({ waitUntil: "domcontentloaded", timeout: 15_000 });
     await expect(page.locator(".topbar")).toBeVisible();
     await expect(page.locator("#movieGrid")).toBeVisible();
-    await expect(page.locator("[data-pwa-notice-title]")).toHaveText("目前離線");
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(false);
+    await expect(page.locator("[data-pwa-notice-title]")).toHaveText("目前離線");
 
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event("online")));
