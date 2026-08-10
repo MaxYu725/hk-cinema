@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const compare = await readFile(new URL('../app/provider-compare-v4.js', import.meta.url), 'utf8');
 const filters = await readFile(new URL('../app/provider-compare-insights-v4.js', import.meta.url), 'utf8');
 const prefs = await readFile(new URL('../app/provider-compare-preferences-v2.js', import.meta.url), 'utf8');
+const metadataSource = await readFile(new URL('../app/showtime-metadata.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../app/phase8c-rich-filters.css', import.meta.url), 'utf8');
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
@@ -31,6 +33,29 @@ test('variant labels enrich normalized showtime metadata instead of remaining a 
   assert.match(compare, /versionName:/);
   assert.match(compare, /_phase8cVariantTags/);
   assert.match(css, /\.phase8a-version-rail\s*\{[\s\S]*display:\s*none\s*!important/);
+});
+
+test('Laser IMAX stays distinct and shared variant fallbacks do not invent a language', () => {
+  const window = {};
+  vm.runInContext(metadataSource, vm.createContext({ window }));
+  const metadata = window.HKCinemaShowtimeMetadata;
+
+  const laser = metadata.normalizeSession({ versionName: 'IMAX with Laser' });
+  assert.deepEqual(Array.from(laser.formats), ['imax-laser']);
+  assert.deepEqual(Array.from(laser.formatLabels), ['IMAX with Laser']);
+
+  const ambiguous = metadata.normalizeSession({
+    versionName: '日語版 · 粵語版',
+    _phase8cVariantTags: ['日語版', '粵語版']
+  });
+  assert.deepEqual(Array.from(ambiguous.languages), ['unknown']);
+
+  const explicit = metadata.normalizeSession({
+    language: '日語',
+    versionName: '日語版 · 粵語版',
+    _phase8cVariantTags: ['日語版', '粵語版']
+  });
+  assert.deepEqual(Array.from(explicit.languages), ['japanese']);
 });
 
 test('Phase 8C exposes richer filters without guessing unknown data', () => {
