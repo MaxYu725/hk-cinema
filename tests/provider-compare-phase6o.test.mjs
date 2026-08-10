@@ -8,11 +8,11 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-test("Phase 6O renders the comparison contract once in the primary renderer", async () => {
+test("Phase 6O renders the comparison contract once in the current primary renderer", async () => {
   const [renderer, phase6m, insights, seats, broadwaySeats, mclSeats] = await Promise.all([
-    source("app/provider-compare-v3.js"),
+    source("app/provider-compare-v4.js"),
     source("app/provider-compare-phase6m.js"),
-    source("app/provider-compare-insights-v3.js"),
+    source("app/provider-compare-insights-v4.js"),
     source("app/provider-compare-seats.js"),
     source("app/seatmap.js"),
     source("app/mcl-seatmap.js")
@@ -22,7 +22,7 @@ test("Phase 6O renders the comparison contract once in the primary renderer", as
   assert.match(renderer, /data-booking-url=/);
   assert.match(renderer, /class="provider-compare-booking"/);
   assert.doesNotMatch(phase6m, /cloneNode|replaceWith|convertLinkedCard|addBookingAction/);
-  assert.match(insights, /renderActiveFilters\(allItems\)/);
+  assert.match(insights, /function renderActiveFilters\(items\)/);
   assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
   assert.doesNotMatch(insights, /phase6mOwned/);
 
