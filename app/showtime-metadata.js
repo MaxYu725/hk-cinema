@@ -126,15 +126,22 @@
     const embedded = splitEmbeddedSubtitles(session.languages ?? session.language);
     const fallbackVersion = [session.displayVersion, session.versionName].filter(Boolean);
     const embeddedFallback = splitEmbeddedSubtitles(fallbackVersion);
+    const variantFallback = values(session._phase8cVariantTags);
+    const variantLanguages = matchDefinitions("language", variantFallback);
+    const variantSubtitles = matchDefinitions("subtitle", variantFallback.filter(tag => SUBTITLE_MARKER_PATTERN.test(tag)));
+    const variantFormats = matchDefinitions("format", variantFallback);
     const explicitLanguage = embedded.languageParts.length
       ? embedded.languageParts
-      : embeddedFallback.languageParts;
+      : variantLanguages.length > 1 ? [] : embeddedFallback.languageParts;
     const explicitSubtitles = [
       ...values(session.subtitles ?? session.subtitle),
       ...embedded.subtitleParts,
-      ...embeddedFallback.subtitleParts
+      ...(variantSubtitles.length > 1 ? [] : embeddedFallback.subtitleParts)
     ];
-    const explicitFormats = session.format ?? session.formats ?? fallbackVersion;
+    const suppliedFormat = session.format ?? session.formats;
+    const explicitFormats = suppliedFormat !== null && suppliedFormat !== undefined && suppliedFormat !== ""
+      ? suppliedFormat
+      : variantFormats.length > 1 ? [] : fallbackVersion;
 
     const languages = matchDefinitions("language", explicitLanguage);
     const subtitles = matchDefinitions("subtitle", explicitSubtitles);
