@@ -1,0 +1,21 @@
+@media (max-width: 640px) {
+  /*
+   * home-library.js toggles .is-stuck exactly at the sticky boundary.
+   * Do not let that transient class change the toolbar height: Android
+   * Chromium can apply scroll anchoring and oscillate around the boundary.
+   * The latched class below is applied only after the viewport is safely
+   * beyond the boundary.
+   */
+  .home-library-tools.is-stuck .home-library-filter-options {
+    display: flex;
+  }
+
+  .home-library-tools.is-stuck .home-library-footer {
+    display: flex;
+  }
+
+  .home-library-tools.is-stuck-latched .home-library-filter-options,
+  .home-library-tools.is-stuck-latched .home-library-footer {
+    display: none;
+  }
+}
