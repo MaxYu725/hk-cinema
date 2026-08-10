@@ -77,7 +77,7 @@ test("Phase 6G cache, comparison freshness and Worker observability stay wired",
     source("app/mcl-status.js"),
     source("app/emperor-status.js"),
     source("app/providers/emperor.js"),
-    source("app/provider-compare-v3.js"),
+    source("app/provider-compare-v4.js"),
     source("app/provider-compare-resilience-v3.js"),
     source("worker/src/index-emperor-seat.js"),
     source("worker/wrangler.jsonc")
@@ -92,7 +92,7 @@ test("Phase 6G cache, comparison freshness and Worker observability stay wired",
   assert.match(emperorProvider, /fallbackSections/);
   assert.match(emperorProvider, /if \(!catalogue\.meta\.partial\)/);
   assert.match(compare, /freshness:/);
-  assert.match(compare, /result\.meta\?\.updatedAt/);
+  assert.match(compare, /updatedAt: result\.meta\?\.updatedAt/);
   assert.match(resilience, /資料過期/);
   assert.match(worker, /request_complete/);
   assert.match(worker, /x-request-id/);
