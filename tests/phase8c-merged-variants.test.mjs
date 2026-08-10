@@ -26,6 +26,8 @@ test('aggregate comparison reads every provider source id and merges results', (
   assert.match(compare, /const sessions = successes\.flatMap/);
   assert.match(compare, /_sourceIds: sourceIds/);
   assert.match(compare, /aggregateForMatch\(match\)\) return false/);
+  assert.match(compare, /_requestedDate: date \|\| null/);
+  assert.match(compare, /state\.data\[key\]\?\._requestedDate === date/);
 });
 
 test('variant labels enrich normalized showtime metadata instead of remaining a top-level selector', () => {
