@@ -49,8 +49,9 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   assert.match(phase6m, /data-provider-compare-reset/);
   assert.match(phase6m, /data-phase6m-no-dates/);
   assert.match(insights, /data-insight-provider/);
-  assert.match(insights, /data-insight-language/);
-  assert.match(insights, /data-insight-format/);
+  assert.match(insights, /renderMetadataControl\(items, "language", "語言"\)/);
+  assert.match(insights, /renderMetadataControl\(items, "subtitle", "字幕"\)/);
+  assert.match(insights, /renderMetadataControl\(items, "format", "放映方式"\)/);
   assert.match(insights, /data-insight-region/);
   assert.match(insights, /data-insight-cinema/);
   assert.match(insights, /data-insight-period/);
