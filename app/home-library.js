@@ -9,20 +9,12 @@
   const FAVORITES_KEY = "hkcinema:home-favorites:v1";
   const RECENT_KEY = "hkcinema:home-recent:v1";
   const SORT_KEY = "hkcinema:home-sort:v1";
-  const FILTERS_COLLAPSED_KEY = "hkcinema:home-filters-collapsed:v1";
-  const COMPARE_FILTERS_KEY = "hkcinema:provider-compare-filters:v1";
   const MAX_RECENT = 30;
 
   const state = {
     query: "",
     view: "all",
-    sort: loadSort(),
-    filtersCollapsed: loadCollapsedPreference(),
-    region: loadRegionPreference(),
-    facets: {
-      language: new Set(),
-      format: new Set()
-    }
+    sort: loadSort()
   };
   let favorites = loadRecords(FAVORITES_KEY, "favoritedAt");
   let recent = loadRecords(RECENT_KEY, "lastViewedAt");
@@ -33,42 +25,9 @@
   function loadSort() {
     try {
       const stored = localStorage.getItem(SORT_KEY);
-      return ["default", "release", "providers", "title"].includes(stored) ? stored : "default";
+      return ["default", "release", "title"].includes(stored) ? stored : "default";
     } catch {
       return "default";
-    }
-  }
-
-  function loadCollapsedPreference() {
-    try {
-      return localStorage.getItem(FILTERS_COLLAPSED_KEY) === "collapsed";
-    } catch {
-      return false;
-    }
-  }
-
-  function loadRegionPreference() {
-    try {
-      const stored = JSON.parse(localStorage.getItem(COMPARE_FILTERS_KEY) || "{}");
-      return ["all", "hk", "kln", "nt-islands"].includes(stored?.region) ? stored.region : "all";
-    } catch {
-      return "all";
-    }
-  }
-
-  function saveRegionPreference(region) {
-    try {
-      const stored = JSON.parse(localStorage.getItem(COMPARE_FILTERS_KEY) || "{}");
-      localStorage.setItem(COMPARE_FILTERS_KEY, JSON.stringify({
-        provider: "all",
-        cinema: "all",
-        period: "all",
-        sort: "time",
-        ...(stored && typeof stored === "object" ? stored : {}),
-        region
-      }));
-    } catch {
-      // Storage can be unavailable in restricted/private contexts.
     }
   }
 
@@ -108,6 +67,10 @@
       .replaceAll("'", "&#039;");
   }
 
+  function activeTab() {
+    return document.querySelector(".tab.active")?.dataset.tab || "now";
+  }
+
   function ensureTools() {
     let tools = document.querySelector("#homeLibraryTools");
     if (tools) return tools;
@@ -125,8 +88,8 @@
             inputmode="search"
             autocomplete="off"
             spellcheck="false"
-            placeholder="搜尋電影、版本或院線"
-            aria-label="搜尋電影、版本或院線"
+            placeholder="搜尋電影"
+            aria-label="搜尋電影"
             data-home-movie-search
           >
           <button type="button" data-home-search-clear hidden aria-label="清除搜尋">×</button>
@@ -136,7 +99,6 @@
           <select data-home-movie-sort aria-label="電影排序">
             <option value="default">原有排序</option>
             <option value="release" data-home-release-sort>最新上映</option>
-            <option value="providers">最多院線</option>
             <option value="title">片名</option>
           </select>
         </label>
@@ -159,7 +121,6 @@
     `;
     heading.insertAdjacentElement("afterend", tools);
     tools.querySelector("[data-home-movie-sort]").value = state.sort;
-    ensureFacetFilters();
     requestAnimationFrame(() => {
       toolsAnchor = tools.getBoundingClientRect().top + window.scrollY;
       syncStickyTools();
@@ -167,67 +128,9 @@
     return tools;
   }
 
-  function ensureFacetFilters() {
-    const filters = document.querySelector("#homeProviderFilters");
-    if (!filters || filters.querySelector("[data-home-facet-category]")) return filters;
-
-    const labels = { language: "語言", format: "版本" };
-    for (const [category, definitions] of Object.entries(core.facetDefinitions)) {
-      filters.insertAdjacentHTML("beforeend", `
-        <div class="home-filter-row" data-home-facet-category="${category}">
-          <span class="home-filter-row-label">${labels[category]} <small data-facet-coverage="${category}"></small></span>
-          <div class="home-facet-filter-options" role="group" aria-label="選擇${labels[category]}">
-            <button type="button" data-home-facet="${category}" data-home-facet-value="all" aria-pressed="true">全部</button>
-            ${definitions.map(definition => `
-              <button type="button" data-home-facet="${category}" data-home-facet-value="${definition.key}" aria-pressed="false">
-                ${definition.label} <span data-facet-count="${category}:${definition.key}">0</span>
-              </button>
-            `).join("")}
-          </div>
-        </div>
-      `);
-    }
-    filters.insertAdjacentHTML("beforeend", `
-      <div class="home-filter-row home-region-preference">
-        <span class="home-filter-row-label">地區 <small>場次偏好</small></span>
-        <div class="home-region-filter-options" role="group" aria-label="場次地區偏好">
-          <button type="button" data-home-region="all" aria-pressed="true">全港</button>
-          <button type="button" data-home-region="hk" aria-pressed="false">港島</button>
-          <button type="button" data-home-region="kln" aria-pressed="false">九龍</button>
-          <button type="button" data-home-region="nt-islands" aria-pressed="false">新界／離島</button>
-        </div>
-      </div>
-    `);
-    syncRegionPreference(filters);
-    syncFilterCollapse(filters);
-    return filters;
-  }
-
-  function syncRegionPreference(filters = document.querySelector("#homeProviderFilters")) {
-    filters?.querySelectorAll("[data-home-region]").forEach(button => {
-      const active = button.dataset.homeRegion === state.region;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    });
-  }
-
-  function activeTab() {
-    return document.querySelector(".tab.active")?.dataset.tab || "now";
-  }
-
   function syncSortContext(tools) {
     const option = tools?.querySelector("[data-home-release-sort]");
     if (option) option.textContent = activeTab() === "coming" ? "最快上映" : "最新上映";
-  }
-
-  function syncFilterCollapse(filters = document.querySelector("#homeProviderFilters")) {
-    if (!filters) return;
-    filters.classList.toggle("collapsed", state.filtersCollapsed);
-    const button = filters.querySelector("[data-home-filter-toggle]");
-    if (button) {
-      button.setAttribute("aria-expanded", String(!state.filtersCollapsed));
-      button.textContent = state.filtersCollapsed ? "展開" : "收起";
-    }
   }
 
   function syncStickyTools() {
@@ -245,23 +148,6 @@
       stickyQueued = false;
       syncStickyTools();
     });
-  }
-
-  function restoreRegionPreferenceToCompare() {
-    let attempts = 0;
-    const applyPreference = () => {
-      const overlay = document.querySelector("#providerCompareOverlay");
-      if (!overlay || overlay.hidden) return;
-      const button = overlay.querySelector(`[data-insight-region='${state.region}']`);
-      if (!button) {
-        attempts += 1;
-        if (attempts < 160) window.setTimeout(applyPreference, 250);
-        return;
-      }
-      if (!button.classList.contains("active")) button.click();
-      window.HKCinemaProviderCompareFilters?.setCinema?.("all");
-    };
-    requestAnimationFrame(applyPreference);
   }
 
   function currentCards() {
@@ -286,10 +172,8 @@
       cardTitle(card),
       card.querySelector(".movie-title-en")?.textContent,
       card.querySelector(".movie-meta")?.textContent,
-      card.dataset.providers,
       card.dataset.homeLanguages,
-      card.dataset.homeFormats,
-      ...card.querySelectorAll(".provider-badge, .movie-variant-summary span")
+      card.dataset.homeFormats
     ].map(value => value?.textContent || value).filter(Boolean);
 
     const group = card.dataset.movieGroupId
@@ -301,72 +185,11 @@
           variant.title,
           ...(variant.tags || []),
           ...(variant.languages || []),
-          ...(variant.formats || []),
-          ...(variant.providers || [])
+          ...(variant.formats || [])
         );
       }
     }
     return values;
-  }
-
-  function providerKeys(card) {
-    return String(card.dataset.providers || "").split(",").filter(Boolean);
-  }
-
-  function facetSelectionsEmpty() {
-    return Object.values(state.facets).every(values => values.size === 0);
-  }
-
-  function syncFacetFilters(items, visibleCount) {
-    const filters = ensureFacetFilters();
-    if (!filters) return;
-    const providerSelected = window.HKCinemaHomeProviderFilters?.selected?.() || [];
-    const activeLabels = [];
-
-    for (const [category, definitions] of Object.entries(core.facetDefinitions)) {
-      const selected = state.facets[category];
-      const otherCategory = category === "language" ? "format" : "language";
-      const countBase = items.filter(item => (
-        item.card.dataset.providerVisible !== "false" &&
-        core.searchMatches(item.searchValues, state.query) &&
-        viewMatches(item.key) &&
-        (!state.facets[otherCategory].size || item.facets[otherCategory].some(value => state.facets[otherCategory].has(value)))
-      ));
-
-      filters.querySelectorAll(`[data-home-facet='${category}']`).forEach(button => {
-        const value = button.dataset.homeFacetValue;
-        const active = value === "all" ? selected.size === 0 : selected.has(value);
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", String(active));
-      });
-
-      for (const definition of definitions) {
-        const facetCount = countBase.filter(item => item.facets[category].includes(definition.key)).length;
-        filters.querySelector(`[data-facet-count='${category}:${definition.key}']`)?.replaceChildren(String(facetCount));
-        const button = filters.querySelector(`[data-home-facet='${category}'][data-home-facet-value='${definition.key}']`);
-        if (button) button.hidden = facetCount === 0 && !selected.has(definition.key);
-        if (selected.has(definition.key)) activeLabels.push(definition.label);
-      }
-      const covered = countBase.filter(item => item.facets[category].length > 0).length;
-      const coverage = filters.querySelector(`[data-facet-coverage='${category}']`);
-      if (coverage) {
-        coverage.textContent = `${covered}/${countBase.length}`;
-        coverage.title = `${labelsForCoverage(category)}資料已取得 ${covered}/${countBase.length} 部`;
-      }
-    }
-
-    const providerLabels = providerSelected.map(value => (
-      value === "broadway" ? "Broadway" : value === "mcl" ? "MCL" : value === "emperor" ? "Emperor" : value
-    ));
-    const result = filters.querySelector("[data-home-filter-result]");
-    const labels = [...providerLabels, ...activeLabels];
-    if (result) result.textContent = `${labels.length ? labels.join(" + ") : "全部條件"} · ${visibleCount} 部`;
-    const reset = filters.querySelector("[data-home-filter-reset]");
-    if (reset) reset.hidden = providerSelected.length === 0 && facetSelectionsEmpty();
-  }
-
-  function labelsForCoverage(category) {
-    return category === "language" ? "語言" : "版本";
   }
 
   function syncFavoriteButton(card, key) {
@@ -395,7 +218,7 @@
     return "default";
   }
 
-  function renderEmpty(providerCandidates, visible) {
+  function renderEmpty(items, visible) {
     let empty = document.querySelector("#homeLibraryEmpty");
     if (!empty) {
       empty = document.createElement("div");
@@ -404,19 +227,19 @@
       grid.insertAdjacentElement("afterend", empty);
     }
 
-    if (visible.length || !providerCandidates.length) {
+    if (visible.length || !items.length) {
       empty.hidden = true;
       return;
     }
 
     let title = "找不到相符電影";
-    let detail = "可嘗試縮短關鍵字，或選擇其他院線。";
+    let detail = "可嘗試縮短關鍵字，或切換其他電影分類。";
     if (!state.query.trim() && state.view === "favorites") {
       title = "這個分類暫時沒有收藏";
       detail = "按電影海報右上角的愛心，即可保存在此裝置。";
     } else if (!state.query.trim() && state.view === "recent") {
       title = "最近還未查看電影";
-      detail = "開啟電影或版本選單後，會自動顯示在這裡。";
+      detail = "開啟電影後，會自動顯示在這裡。";
     }
 
     empty.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span>`;
@@ -426,8 +249,6 @@
   function apply() {
     const tools = ensureTools();
     syncSortContext(tools);
-    syncFilterCollapse();
-    syncRegionPreference();
     const cards = currentCards();
     const items = cards.map((card, index) => {
       if (!card.dataset.homeDefaultOrder) card.dataset.homeDefaultOrder = String(index + 1);
@@ -439,19 +260,15 @@
         key,
         title: cardTitle(card),
         searchValues,
-        facets: core.extractFacets(searchValues),
         releaseDate: String(card.dataset.homeReleaseDate || ""),
-        providerCount: providerKeys(card).length,
         defaultOrder: Number(card.dataset.homeDefaultOrder),
         favoritedAt: favorites.get(key)?.favoritedAt || 0,
         lastViewedAt: recent.get(key)?.lastViewedAt || 0
       };
     });
-    const providerCandidates = items.filter(item => item.card.dataset.providerVisible !== "false");
-    const visible = providerCandidates.filter(item => (
+    const visible = items.filter(item => (
       core.searchMatches(item.searchValues, state.query) &&
-      viewMatches(item.key) &&
-      core.facetMatches(item.facets, state.facets)
+      viewMatches(item.key)
     ));
     const visibleKeys = new Set(visible.map(item => item.key));
 
@@ -466,10 +283,10 @@
       item.card.style.order = String(index + 1);
     });
 
-    const currentKeys = new Set(providerCandidates.map(item => item.key));
+    const currentKeys = new Set(items.map(item => item.key));
     const favoriteCount = Array.from(favorites.keys()).filter(key => currentKeys.has(key)).length;
     const recentCount = Array.from(recent.keys()).filter(key => currentKeys.has(key)).length;
-    tools.querySelector("[data-library-count='all']")?.replaceChildren(String(providerCandidates.length));
+    tools.querySelector("[data-library-count='all']")?.replaceChildren(String(items.length));
     tools.querySelector("[data-library-count='favorites']")?.replaceChildren(String(favoriteCount));
     tools.querySelector("[data-library-count='recent']")?.replaceChildren(String(recentCount));
     tools.querySelectorAll("[data-home-library-view]").forEach(button => {
@@ -490,10 +307,9 @@
     }
     const clearRecent = tools.querySelector("[data-home-recent-clear]");
     if (clearRecent) clearRecent.hidden = state.view !== "recent" || recentCount === 0;
-    syncFacetFilters(items, visible.length);
 
     count.textContent = `${visible.length} 部`;
-    renderEmpty(providerCandidates, visible);
+    renderEmpty(items, visible);
   }
 
   function scheduleApply() {
@@ -535,7 +351,8 @@
     return true;
   }
 
-  window.HKCinemaHomeLibrary = {
+  window.HKCinemaHomeLibrary = Object.freeze({
+    version: "8e3",
     apply,
     recordCard,
     getState() {
@@ -543,12 +360,11 @@
         query: state.query,
         view: state.view,
         sort: state.sort,
-        facets: Object.fromEntries(Object.entries(state.facets).map(([category, values]) => [category, Array.from(values)])),
         favorites: Array.from(favorites.values()),
         recent: Array.from(recent.values())
       };
     }
-  };
+  });
 
   document.addEventListener("input", event => {
     if (!event.target.matches?.("[data-home-movie-search]")) return;
@@ -596,51 +412,6 @@
       return;
     }
 
-    const facetButton = event.target.closest?.("[data-home-facet]");
-    if (facetButton) {
-      event.preventDefault();
-      const category = facetButton.dataset.homeFacet;
-      const value = facetButton.dataset.homeFacetValue;
-      if (!state.facets[category]) return;
-      if (value === "all") state.facets[category].clear();
-      else if (state.facets[category].has(value)) state.facets[category].delete(value);
-      else state.facets[category].add(value);
-      apply();
-      return;
-    }
-
-    if (event.target.closest?.("[data-home-filter-reset]")) {
-      event.preventDefault();
-      Object.values(state.facets).forEach(values => values.clear());
-      window.HKCinemaHomeProviderFilters?.clear?.();
-      apply();
-      document.querySelectorAll(".home-provider-filter-options, .home-facet-filter-options, .home-region-filter-options").forEach(options => {
-        options.scrollTo({ left: 0, behavior: "smooth" });
-      });
-      return;
-    }
-
-    const regionButton = event.target.closest?.("[data-home-region]");
-    if (regionButton) {
-      event.preventDefault();
-      state.region = regionButton.dataset.homeRegion || "all";
-      saveRegionPreference(state.region);
-      syncRegionPreference();
-      return;
-    }
-
-    if (event.target.closest?.("[data-home-filter-toggle]")) {
-      event.preventDefault();
-      state.filtersCollapsed = !state.filtersCollapsed;
-      try {
-        localStorage.setItem(FILTERS_COLLAPSED_KEY, state.filtersCollapsed ? "collapsed" : "expanded");
-      } catch {
-        // Storage can be unavailable in restricted/private contexts.
-      }
-      syncFilterCollapse();
-      return;
-    }
-
     if (event.target.closest?.("[data-home-recent-clear]")) {
       event.preventDefault();
       recent.clear();
@@ -661,11 +432,7 @@
   }, true);
 
   window.addEventListener("hkcinema:provider-matches", scheduleApply);
-  window.addEventListener("hkcinema:provider-compare-open", restoreRegionPreferenceToCompare);
   window.addEventListener("hkcinema:home-tab", () => {
-    document.querySelectorAll(".home-provider-filter-options, .home-facet-filter-options, .home-region-filter-options").forEach(options => {
-      options.scrollLeft = 0;
-    });
     toolsAnchor = null;
     scheduleApply();
     requestAnimationFrame(() => {
@@ -679,6 +446,7 @@
     toolsAnchor = null;
     scheduleStickySync();
   });
+
   ensureTools();
   scheduleApply();
 })();

@@ -23,26 +23,27 @@ test("home search handles punctuation, spacing and multiple terms", async () => 
   const values = [
     "劇場版 CHIIKAWA：人魚島的秘密",
     "Japanese Version",
-    "Broadway Emperor"
+    "IMAX2D with Laser"
   ];
 
+  assert.equal(core.version, "8e3");
   assert.equal(core.searchMatches(values, "chiikawa 日語"), false);
   assert.equal(core.searchMatches(values, "chiikawa japanese"), true);
   assert.equal(core.searchMatches(values, "人魚島 秘密"), true);
-  assert.equal(core.searchMatches(values, "MCL"), false);
+  assert.equal(core.searchMatches(values, "imax laser"), true);
 });
 
-test("home sorting supports provider coverage, titles and recent activity", async () => {
+test("home sorting stays movie-first with release, title and activity ordering", async () => {
   const core = await loadCore();
   const items = [
-    { title: "B", providerCount: 1, defaultOrder: 1, lastViewedAt: 10 },
-    { title: "A", providerCount: 3, defaultOrder: 2, lastViewedAt: 20 }
+    { title: "B", defaultOrder: 1, lastViewedAt: 10, favoritedAt: 5 },
+    { title: "A", defaultOrder: 2, lastViewedAt: 20, favoritedAt: 30 }
   ];
 
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "default"))[0].title, "B");
-  assert.equal([...items].sort((a, b) => core.compareItems(a, b, "providers"))[0].title, "A");
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "title"))[0].title, "A");
   assert.equal([...items].sort((a, b) => core.compareItems(a, b, "recent"))[0].title, "A");
+  assert.equal([...items].sort((a, b) => core.compareItems(a, b, "favorites"))[0].title, "A");
 
   const dated = [
     { title: "Soon", releaseDate: "2026-08-10", defaultOrder: 1 },
@@ -50,29 +51,6 @@ test("home sorting supports provider coverage, titles and recent activity", asyn
   ];
   assert.equal([...dated].sort((a, b) => core.compareItems(a, b, "release-newest"))[0].title, "New");
   assert.equal([...dated].sort((a, b) => core.compareItems(a, b, "release-soonest"))[0].title, "Soon");
-});
-
-test("language and presentation facets compose across categories", async () => {
-  const core = await loadCore();
-  const facets = core.extractFacets([
-    "劇場版 CHIIKAWA 人魚島的秘密（日語版）",
-    "IMAX2D with Laser"
-  ]);
-
-  assert.deepEqual(Array.from(facets.language), ["japanese"]);
-  assert.ok(facets.format.includes("2d"));
-  assert.ok(facets.format.includes("imax"));
-  assert.equal(core.facetMatches(facets, {
-    language: new Set(["japanese"]),
-    format: new Set(["imax"])
-  }), true);
-  assert.equal(core.facetMatches(facets, {
-    language: new Set(["cantonese"]),
-    format: new Set(["imax"])
-  }), false);
-
-  const detailLanguages = core.extractFacets(["普通話,英文,泰語"]);
-  assert.deepEqual(Array.from(detailLanguages.language), ["english", "mandarin", "thai"]);
 });
 
 test("movie-first search, favorites and recent activity stay wired", async () => {
@@ -84,17 +62,22 @@ test("movie-first search, favorites and recent activity stay wired", async () =>
     source("app/home-library.css")
   ]);
 
-  assert.ok(index.indexOf("home-library-core.js?v=6k1") < index.indexOf("home-library.js?v=6k1"));
-  assert.ok(index.indexOf("multi-provider.js?v=8e2") < index.indexOf("home-library-core.js?v=6k1"));
+  assert.ok(index.indexOf("home-library-core.js?v=8e3") < index.indexOf("home-library.js?v=8e3"));
+  assert.ok(index.indexOf("multi-provider.js?v=8e2") < index.indexOf("home-library-core.js?v=8e3"));
   assert.match(app, /data-movie-favorite/);
-  assert.doesNotMatch(multiProvider, /providerVisible/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
+  assert.match(library, /placeholder="搜尋電影"/);
   assert.match(library, /data-home-movie-search/);
   assert.match(library, /data-home-library-view/);
   assert.match(library, /data-home-recent-clear/);
   assert.match(library, /homeLanguages/);
-  assert.match(library, /data-home-region/);
-  assert.match(library, /provider-compare-filters:v1/);
+  assert.match(library, /version: "8e3"/);
+  assert.doesNotMatch(library, /data-home-region/);
+  assert.doesNotMatch(library, /data-home-facet/);
+  assert.doesNotMatch(library, /HKCinemaHomeProviderFilters/);
+  assert.doesNotMatch(library, /providerVisible/);
+  assert.doesNotMatch(library, /provider-compare-filters:v1/);
+  assert.doesNotMatch(library, /<option value="providers">/);
   assert.match(styles, /\.movie-favorite-button/);
 });
 
@@ -122,7 +105,7 @@ test("catalogue and detail metadata continue feeding movie aggregates", async ()
   assert.doesNotMatch(providerStyle, /\.home-provider-filters/);
   assert.match(providerStyle, /\.movie-group-member/);
   assert.match(compare, /hkcinema:provider-compare-open/);
-  assert.match(library, /restoreRegionPreferenceToCompare/);
+  assert.doesNotMatch(library, /restoreRegionPreferenceToCompare/);
 });
 
 test("Phase 6J removes the temporary hero and moves compact health into the topbar", async () => {
