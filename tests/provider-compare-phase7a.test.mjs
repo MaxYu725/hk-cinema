@@ -46,7 +46,7 @@ test("Phase 7A normalizes Broadway, MCL and Emperor session metadata", async () 
 
   assert.deepEqual(Array.from(broadway.languages), ["japanese"]);
   assert.deepEqual(Array.from(broadway.subtitles), ["chinese", "english"]);
-  assert.deepEqual(Array.from(broadway.formats), ["imax"]);
+  assert.deepEqual(Array.from(broadway.formats), ["imax-laser"]);
   assert.deepEqual(Array.from(mcl.languages), ["japanese"]);
   assert.deepEqual(Array.from(mcl.subtitles), ["chinese", "english"]);
   assert.deepEqual(Array.from(mcl.formats), ["2d"]);
