@@ -13,13 +13,13 @@ test("movie-first navigation loads after the active comparison engine", async ()
   const compare = index.indexOf("provider-compare-v4.js");
   const navigation = index.indexOf("phase8a-movie-navigation.js");
 
-  assert.match(index, /phase8a-movie-navigation\.css\?v=8e1/);
+  assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
   assert.match(index, /phase8a-movie-navigation\.js\?v=8e1/);
   assert.ok(compare >= 0);
   assert.ok(navigation > compare);
 });
 
-test("movie-first home keeps aggregate navigation without provider-first affordances", async () => {
+test("movie-first home keeps aggregate navigation without migration UI", async () => {
   const source = await read("phase8a-movie-navigation.js");
   const css = await read("phase8a-movie-navigation.css");
 
@@ -31,8 +31,9 @@ test("movie-first home keeps aggregate navigation without provider-first afforda
   assert.match(source, /version: "8e1"/);
   assert.doesNotMatch(source, /data-phase8a-variant-open/);
   assert.doesNotMatch(source, /phase8a-version-rail/);
-  assert.match(css, /#homeProviderFilters\s*\{[\s\S]*display:\s*none\s*!important/);
-  assert.match(css, /\.phase8a-movie-card \.provider-badges/);
+  assert.doesNotMatch(css, /homeProviderFilters/);
+  assert.doesNotMatch(css, /provider-badges/);
+  assert.doesNotMatch(css, /movie-variant-summary/);
   assert.doesNotMatch(css, /phase8a-version-rail/);
 });
 
