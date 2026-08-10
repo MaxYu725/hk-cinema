@@ -343,6 +343,7 @@
       sessions,
       allSessions,
       metadataComplete,
+      _requestedDate: date || null,
       _health: mergedHealth(successes),
       _sourceIds: sourceIds,
       _partialError: failures.length
@@ -607,7 +608,7 @@
       const key = provider.key;
       const hasDate = state.availableDates[key].includes(date);
       if (!hasDate) return Promise.resolve(null);
-      const reusableSelectedDate = state.data[key]?.selectedDate === date && (key !== "mcl" || state.data[key]?.metadataComplete === true);
+      const reusableSelectedDate = state.data[key]?._requestedDate === date && (key !== "mcl" || state.data[key]?.metadataComplete === true);
       if (reusableSelectedDate) return Promise.resolve(state.data[key]);
       return fetchProvider(key, state.match, date, signal);
     });
