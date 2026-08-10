@@ -8,6 +8,7 @@ on:
       - "app/**"
       - "tests/**"
       - "package.json"
+      - "playwright.config.mjs"
       - ".github/workflows/pages.yml"
 
   pull_request:
@@ -17,6 +18,7 @@ on:
       - "app/**"
       - "tests/**"
       - "package.json"
+      - "playwright.config.mjs"
       - ".github/workflows/pages.yml"
 
   workflow_dispatch:
@@ -36,8 +38,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Run tests
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run regression tests
         run: npm test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile browser smoke
+        run: npm run test:e2e
 
   deploy:
     if: github.event_name != 'pull_request'
