@@ -7,6 +7,7 @@ const compare = await readFile(new URL('../app/provider-compare-v4.js', import.m
 const filters = await readFile(new URL('../app/provider-compare-insights-v4.js', import.meta.url), 'utf8');
 const prefs = await readFile(new URL('../app/provider-compare-preferences-v2.js', import.meta.url), 'utf8');
 const metadataSource = await readFile(new URL('../app/showtime-metadata.js', import.meta.url), 'utf8');
+const phase8a = await readFile(new URL('../app/phase8a-movie-navigation.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../app/phase8c-rich-filters.css', import.meta.url), 'utf8');
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
@@ -14,7 +15,7 @@ test('Phase 8C loads the aggregate comparison engine and rich filters', () => {
   assert.match(index, /provider-compare-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
-  assert.match(index, /phase8c-rich-filters\.css\?v=8c1/);
+  assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-insights-v3\.js/);
 });
@@ -30,11 +31,13 @@ test('aggregate comparison reads every provider source id and merges results', (
   assert.match(compare, /state\.data\[key\]\?\._requestedDate === date/);
 });
 
-test('variant labels enrich normalized showtime metadata instead of remaining a top-level selector', () => {
+test('variant labels enrich normalized showtime metadata and no top-level version selector is generated', () => {
   assert.match(compare, /variantTagsForSource/);
   assert.match(compare, /versionName:/);
   assert.match(compare, /_phase8cVariantTags/);
-  assert.match(css, /\.phase8a-version-rail\s*\{[\s\S]*display:\s*none\s*!important/);
+  assert.doesNotMatch(phase8a, /data-phase8a-variant-open/);
+  assert.doesNotMatch(phase8a, /phase8a-version-rail/);
+  assert.doesNotMatch(css, /phase8a-version-rail/);
 });
 
 test('Laser IMAX stays distinct and shared variant fallbacks do not invent a language', () => {
