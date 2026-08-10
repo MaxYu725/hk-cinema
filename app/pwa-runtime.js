@@ -144,7 +144,6 @@
       navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
-      registration.update().catch(() => {});
 
       window.dispatchEvent(new CustomEvent("hkcinema:pwa-ready", { detail: { scope: registration.scope } }));
       return registration;
