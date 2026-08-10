@@ -21,6 +21,7 @@
   ]);
 
   const FORMAT_DEFINITIONS = Object.freeze([
+    { key: "imax-laser", label: "IMAX with Laser", pattern: /IMAX(?:\s*2D|\s*3D)?\s+WITH\s+LASER/i },
     { key: "imax", label: "IMAX", pattern: /IMAX(?:\s*2D|\s*3D|\s+WITH\s+LASER)?/i },
     { key: "4dx", label: "4DX", pattern: /\b4DX\b/i },
     { key: "mx4d", label: "MX4D", pattern: /\bMX4D\b/i },
@@ -75,9 +76,13 @@
       .map(definition => definition.key);
 
     // Premium formats already describe the presentation. Do not also classify
-    // "IMAX 2D" or "4DX 3D" as ordinary 2D/3D sessions.
+    // "IMAX 2D" or "4DX 3D" as ordinary 2D/3D sessions. Laser IMAX stays a
+    // distinct facet instead of being collapsed back into generic IMAX.
     if (kind === "format") {
       const premium = matches.filter(key => !["2d", "3d"].includes(key));
+      if (premium.includes("imax-laser")) {
+        return unique(premium.filter(key => key !== "imax"));
+      }
       if (premium.length) return unique(premium);
     }
     return unique(matches);
@@ -121,15 +126,22 @@
     const embedded = splitEmbeddedSubtitles(session.languages ?? session.language);
     const fallbackVersion = [session.displayVersion, session.versionName].filter(Boolean);
     const embeddedFallback = splitEmbeddedSubtitles(fallbackVersion);
+    const variantFallback = values(session._phase8cVariantTags);
+    const variantLanguages = matchDefinitions("language", variantFallback);
+    const variantSubtitles = matchDefinitions("subtitle", variantFallback.filter(tag => SUBTITLE_MARKER_PATTERN.test(tag)));
+    const variantFormats = matchDefinitions("format", variantFallback);
     const explicitLanguage = embedded.languageParts.length
       ? embedded.languageParts
-      : embeddedFallback.languageParts;
+      : variantLanguages.length > 1 ? [] : embeddedFallback.languageParts;
     const explicitSubtitles = [
       ...values(session.subtitles ?? session.subtitle),
       ...embedded.subtitleParts,
-      ...embeddedFallback.subtitleParts
+      ...(variantSubtitles.length > 1 ? [] : embeddedFallback.subtitleParts)
     ];
-    const explicitFormats = session.format ?? session.formats ?? fallbackVersion;
+    const suppliedFormat = session.format ?? session.formats;
+    const explicitFormats = suppliedFormat !== null && suppliedFormat !== undefined && suppliedFormat !== ""
+      ? suppliedFormat
+      : variantFormats.length > 1 ? [] : fallbackVersion;
 
     const languages = matchDefinitions("language", explicitLanguage);
     const subtitles = matchDefinitions("subtitle", explicitSubtitles);

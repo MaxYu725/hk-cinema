@@ -1,0 +1,84 @@
+/* Phase 8C: merged variants + richer filters */
+
+#providerCompareContent .phase8a-version-rail {
+  display: none !important;
+}
+
+#providerCompareContent .phase8c-insights {
+  margin: 0;
+}
+
+#providerCompareContent .phase8c-active-filters {
+  margin-top: 10px;
+}
+
+#providerCompareContent .phase8c-controls {
+  margin-top: 12px;
+}
+
+#providerCompareContent .phase8c-controls .provider-compare-control-group {
+  align-items: center;
+}
+
+#providerCompareContent .phase8c-controls .provider-compare-control-group > span,
+#providerCompareContent .phase8c-controls .provider-compare-cinema-control > span {
+  min-width: 44px;
+}
+
+#providerCompareContent .phase8c-controls [data-insight-format="imax"],
+#providerCompareContent .phase8c-controls [data-insight-format="35mm"],
+#providerCompareContent .phase8c-controls [data-insight-format="4dx"],
+#providerCompareContent .phase8c-controls [data-insight-format="mx4d"],
+#providerCompareContent .phase8c-controls [data-insight-format="screenx"],
+#providerCompareContent .phase8c-controls [data-insight-format="dolby"] {
+  font-weight: 800;
+}
+
+#providerCompareContent .phase8c-price-control button,
+#providerCompareContent .phase8c-seat-control button,
+#providerCompareContent .phase8c-district-control button {
+  white-space: nowrap;
+}
+
+#providerCompareContent .provider-compare-show[data-movie-source-id] {
+  scroll-margin-top: 92px;
+}
+
+@media (max-width: 640px) {
+  #providerCompareContent .phase8c-controls {
+    padding-top: 4px;
+  }
+
+  #providerCompareContent .phase8c-controls .provider-compare-control-group {
+    gap: 8px;
+  }
+
+  #providerCompareContent .phase8c-controls .provider-compare-control-group > span,
+  #providerCompareContent .phase8c-controls .provider-compare-cinema-control > span {
+    flex: 0 0 42px;
+    min-width: 42px;
+    font-size: .76rem;
+  }
+
+  #providerCompareContent .phase8c-controls .provider-compare-control-group button {
+    min-height: 40px;
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+
+  #providerCompareContent .phase8c-active-filters .phase6m-active-filter-chips {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  #providerCompareContent .phase8c-active-filters .phase6m-active-filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  #providerCompareContent .phase8c-active-filters .phase6m-filter-chip {
+    flex: 0 0 auto;
+  }
+}
