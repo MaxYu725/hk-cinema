@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HK Cinema">
-  <rect width="512" height="512" fill="#17191d"/>
-  <rect x="102" y="118" width="308" height="276" rx="28" fill="none" stroke="#fff" stroke-width="22"/>
-  <rect x="159" y="174" width="194" height="164" rx="18" fill="#fff"/>
-  <path d="M233 207v98l77-49z" fill="#1c8f5b"/>
+  <rect width="512" height="512" rx="92" fill="#0A57B5"/>
+  <rect x="92" y="126" width="328" height="244" rx="32" fill="none" stroke="#fff" stroke-width="27"/>
+  <path d="M223 187v123l97-61.5z" fill="#fff"/>
+  <path d="M154 370h54v28h-54zM304 370h54v28h-54z" fill="#fff"/>
 </svg>
