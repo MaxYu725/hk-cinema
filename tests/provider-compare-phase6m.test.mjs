@@ -37,8 +37,8 @@ test("Phase 6M separates seat-map and official booking actions", async () => {
 test("Phase 6M keeps active filters visible and recoverable from zero results", async () => {
   const [phase6m, insights, preferences] = await Promise.all([
     source("app/provider-compare-phase6m.js"),
-    source("app/provider-compare-insights-v3.js"),
-    source("app/provider-compare-preferences.js")
+    source("app/provider-compare-insights-v4.js"),
+    source("app/provider-compare-preferences-v2.js")
   ]);
 
   assert.match(insights, /data-phase6m-active-filters/);
@@ -49,21 +49,26 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   assert.match(phase6m, /data-provider-compare-reset/);
   assert.match(phase6m, /data-phase6m-no-dates/);
   assert.match(insights, /data-insight-provider/);
+  assert.match(insights, /renderMetadataControl\(items, "language", "語言"\)/);
+  assert.match(insights, /renderMetadataControl\(items, "subtitle", "字幕"\)/);
+  assert.match(insights, /renderMetadataControl\(items, "format", "放映方式"\)/);
   assert.match(insights, /data-insight-region/);
   assert.match(insights, /data-insight-cinema/);
   assert.match(insights, /data-insight-period/);
+  assert.match(insights, /data-insight-price/);
+  assert.match(insights, /data-insight-seats/);
   assert.match(insights, /data-insight-sort/);
   assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
-  assert.match(preferences, /hkcinema:provider-compare-filters:v1/);
+  assert.match(preferences, /hkcinema:provider-compare-filters:v2/);
 });
 
-test("Phase 6M mobile layout handles long lists, long labels and three-provider Smart Picks", async () => {
+test("Phase 6M mobile layout remains compatible with current Rich Filters and Smart Picks", async () => {
   const [css, phase6m, compare, insights, recommendations] = await Promise.all([
     source("app/provider-compare-phase6m.css"),
     source("app/provider-compare-phase6m.js"),
-    source("app/provider-compare-v3.js"),
-    source("app/provider-compare-insights-v3.js"),
-    source("app/provider-compare-recommendations-v3.js")
+    source("app/provider-compare-v4.js"),
+    source("app/provider-compare-insights-v4.js"),
+    source("app/provider-compare-recommendations-v4.js")
   ]);
 
   assert.match(css, /position: sticky/);
@@ -75,14 +80,11 @@ test("Phase 6M mobile layout handles long lists, long labels and three-provider 
   assert.match(phase6m, /poster\.decoding = "async"/);
   assert.match(phase6m, /poster\.setAttribute\("width", "120"\)/);
   assert.match(compare, /Promise\.allSettled/);
+  assert.match(insights, /data-provider-filter-toggle/);
+  assert.match(insights, /provider-compare-controls phase8c-controls/);
 
-  for (const label of ["目前最低票價", "目前最早場次", "院線最低價差", "目前最多可用座位"]) {
-    assert.match(insights, new RegExp(label));
+  for (const helper of ["cheapest", "earliest", "roomiest", "balanced", "recommendationPool"]) {
+    assert.match(recommendations, new RegExp(`function ${helper}\\(`));
   }
-
-  for (const provider of ["broadway", "mcl", "emperor"]) {
-    assert.match(recommendations, new RegExp(`key: "${provider}"`));
-  }
-  assert.match(recommendations, /provider-count-\$\{presentProviders\.size\}/);
-  assert.match(recommendations, /presentProviders\.size > 1/);
+  assert.match(recommendations, /priceScore \* 0\.45 \+ seatScore \* 0\.35 \+ timeScore \* 0\.20/);
 });

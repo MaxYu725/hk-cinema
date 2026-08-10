@@ -8,9 +8,9 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-test("Phase 6N seat-trigger regression remains closed through the native renderer", async () => {
+test("Phase 6N seat-trigger regression remains closed through the current native renderer", async () => {
   const [compare, phase6m, mclSeats, compareSeats, emperorSeats] = await Promise.all([
-    source("app/provider-compare-v3.js"),
+    source("app/provider-compare-v4.js"),
     source("app/provider-compare-phase6m.js"),
     source("app/mcl-seatmap.js"),
     source("app/provider-compare-seats.js"),
@@ -29,7 +29,7 @@ test("Phase 6N seat-trigger regression remains closed through the native rendere
 test("Phase 6N observer-loop regression remains closed without ownership markers", async () => {
   const [phase6m, insights] = await Promise.all([
     source("app/provider-compare-phase6m.js"),
-    source("app/provider-compare-insights-v3.js")
+    source("app/provider-compare-insights-v4.js")
   ]);
 
   assert.doesNotMatch(phase6m, /phase6mOwned/);

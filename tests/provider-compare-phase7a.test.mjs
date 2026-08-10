@@ -257,8 +257,8 @@ test("Phase 7A moves to the next valid date after MCL enrichment rejects the sel
     sessionCriteria: criteria,
     comparisonOnlyProviders: ["mcl"]
   });
-  vm.runInContext(await source("app/provider-compare-v3.js"), context, {
-    filename: "provider-compare-v3.js"
+  vm.runInContext(await source("app/provider-compare-v4.js"), context, {
+    filename: "provider-compare-v4.js"
   });
 
   assert.equal(window.HKCinemaProviderCompare.open("date-refinement"), true);
