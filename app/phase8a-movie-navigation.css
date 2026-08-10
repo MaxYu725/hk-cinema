@@ -1,14 +1,5 @@
 /* Phase 8A / 8E — movie-first home navigation */
 
-#homeProviderFilters {
-  display: none !important;
-}
-
-.phase8a-movie-card .provider-badges,
-.phase8a-movie-card .movie-variant-summary {
-  display: none !important;
-}
-
 .phase8a-movie-card .movie-info {
   gap: 8px;
 }
