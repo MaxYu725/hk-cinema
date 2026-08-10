@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("PWA shell registers, keeps cache same-origin, and can reopen offline", async ({ page, context }) => {
+test("PWA shell registers, keeps cache same-origin, reports connectivity, and can reopen offline", async ({ page, context }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await page.waitForFunction(() => window.HKCinemaPWA?.getState?.().ready === true, null, { timeout: 15_000 });
@@ -25,6 +25,7 @@ test("PWA shell registers, keeps cache same-origin, and can reopen offline", asy
 
   expect(pwa.state.ready).toBe(true);
   expect(pwa.state.error).toBeNull();
+  expect(pwa.state.updateReady).toBe(false);
   expect(pwa.scope).toContain("127.0.0.1:4173");
   expect(pwa.cachedUrls.length).toBeGreaterThan(3);
   expect(pwa.cachedUrls.every(url => new URL(url).origin === pwa.origin)).toBe(true);
@@ -34,5 +35,10 @@ test("PWA shell registers, keeps cache same-origin, and can reopen offline", asy
   await page.reload({ waitUntil: "domcontentloaded", timeout: 15_000 });
   await expect(page.locator(".topbar")).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
+  await expect(page.locator("[data-pwa-notice-title]")).toHaveText("目前離線");
+
   await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.locator("[data-pwa-notice-title]")).toHaveText("已恢復連線");
+  await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(true);
 });
