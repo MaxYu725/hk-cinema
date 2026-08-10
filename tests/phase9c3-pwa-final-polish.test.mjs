@@ -17,7 +17,7 @@ test("Service Worker waits for explicit update acceptance", () => {
   assert.match(sw, /Cinema APIs, MCL, Worker and all other live data stay outside the PWA cache/);
 });
 
-test("PWA runtime exposes controlled update and connection state", () => {
+test("PWA runtime exposes controlled update and connection state without a redundant eager update", () => {
   const runtime = fs.readFileSync(path.join(app, "pwa-runtime.js"), "utf8");
 
   assert.match(runtime, /version:\s*"9c3-1"/);
@@ -28,6 +28,7 @@ test("PWA runtime exposes controlled update and connection state", () => {
   assert.match(runtime, /已恢復連線/);
   assert.match(runtime, /updateReady:\s*state\.updateReady/);
   assert.match(runtime, /noticeKind:\s*state\.noticeKind/);
+  assert.doesNotMatch(runtime, /registration\.update\(\)/);
 });
 
 test("offline notice has priority over asynchronous update-ready events", () => {
