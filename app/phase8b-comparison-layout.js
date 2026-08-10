@@ -52,15 +52,16 @@
     return [facts.classification, facts.duration, facts.releaseDate].filter(Boolean);
   }
 
-  function renderMovieDetails(facts) {
+  function movieDetailsBody(facts) {
     const rows = [];
     if (facts.releaseDate) rows.push(["上映日期", facts.releaseDate]);
     if (facts.duration) rows.push(["片長", facts.duration]);
     if (facts.classification) rows.push(["級別", facts.classification]);
-    if (!rows.length) return "";
+    if (!rows.length) return null;
 
-    return `
-      <details class="phase8b-movie-details" data-phase8b-movie-details>
+    return {
+      signature: JSON.stringify(rows),
+      html: `
         <summary>
           <span>電影資料</span>
           <small>${rows.length} 項基本資料</small>
@@ -70,8 +71,13 @@
             <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>
           `).join("")}
         </dl>
-      </details>
-    `;
+      `
+    };
+  }
+
+  function placeAfter(anchor, element) {
+    if (!anchor || !element || anchor.nextElementSibling === element) return;
+    anchor.insertAdjacentElement("afterend", element);
   }
 
   function decorateHero(root) {
@@ -82,7 +88,7 @@
     const facts = movieFacts(aggregate);
     const info = hero.querySelector(":scope > div:last-child");
     const eyebrow = info?.querySelector(":scope > .eyebrow");
-    if (eyebrow) eyebrow.textContent = "MOVIE";
+    if (eyebrow && eyebrow.textContent !== "MOVIE") eyebrow.textContent = "MOVIE";
 
     const title = info?.querySelector("h1");
     const secondary = aggregate?.title?.secondary;
@@ -94,7 +100,7 @@
         secondaryNode.className = "phase8b-secondary-title";
         title?.insertAdjacentElement("afterend", secondaryNode);
       }
-      secondaryNode.textContent = secondary;
+      if (secondaryNode.textContent !== secondary) secondaryNode.textContent = secondary;
     } else {
       secondaryNode?.remove();
     }
@@ -102,19 +108,36 @@
     const status = info?.querySelector(".provider-compare-status");
     if (status) {
       const chips = visibleFactChips(facts);
-      status.classList.add("phase8b-movie-facts");
-      status.innerHTML = chips.length
+      const html = chips.length
         ? chips.map(value => `<span>${escapeHtml(value)}</span>`).join("")
         : "<span>電影場次比較</span>";
+      status.classList.add("phase8b-movie-facts");
+      if (status.innerHTML !== html) status.innerHTML = html;
     }
 
-    root.querySelector("[data-phase8b-movie-details]")?.remove();
-    const detailsHtml = renderMovieDetails(facts);
-    if (detailsHtml) hero.insertAdjacentHTML("afterend", detailsHtml);
+    const detailModel = movieDetailsBody(facts);
+    let details = root.querySelector("[data-phase8b-movie-details]");
+    if (!detailModel) {
+      details?.remove();
+      details = null;
+    } else {
+      if (!details) {
+        details = document.createElement("details");
+        details.className = "phase8b-movie-details";
+        details.dataset.phase8bMovieDetails = "true";
+        hero.insertAdjacentElement("afterend", details);
+      }
+      if (details.dataset.signature !== detailModel.signature) {
+        const wasOpen = details.open;
+        details.innerHTML = detailModel.html;
+        details.dataset.signature = detailModel.signature;
+        details.open = wasOpen;
+      }
+      placeAfter(hero, details);
+    }
 
-    const details = root.querySelector("[data-phase8b-movie-details]");
     const versionRail = root.querySelector("[data-phase8a-version-rail]");
-    if (details && versionRail) details.insertAdjacentElement("afterend", versionRail);
+    if (versionRail) placeAfter(details || hero, versionRail);
   }
 
   function recommendationSummary(panel) {
@@ -139,12 +162,14 @@
       panel.insertAdjacentElement("beforebegin", toggle);
     }
 
-    toggle.setAttribute("aria-expanded", String(recommendationExpanded));
-    toggle.innerHTML = `
+    const expanded = String(recommendationExpanded);
+    if (toggle.getAttribute("aria-expanded") !== expanded) toggle.setAttribute("aria-expanded", expanded);
+    const html = `
       <span><strong>推薦場次</strong><small>${escapeHtml(recommendationSummary(panel))}</small></span>
       <em aria-hidden="true">⌄</em>
     `;
-    panel.hidden = !recommendationExpanded;
+    if (toggle.innerHTML !== html) toggle.innerHTML = html;
+    if (panel.hidden === recommendationExpanded) panel.hidden = !recommendationExpanded;
     panel.classList.add("phase8b-recommendation-panel");
     return toggle;
   }
@@ -166,7 +191,8 @@
 
     if (insights) {
       insights.classList.add("phase8b-filter-section");
-      insights.querySelector(".provider-compare-insight-grid")?.setAttribute("hidden", "");
+      const grid = insights.querySelector(".provider-compare-insight-grid");
+      if (grid && !grid.hidden) grid.hidden = true;
     }
 
     if (recommendations) ensureRecommendationToggle(section, recommendations);
@@ -174,22 +200,22 @@
     if (heading) {
       heading.classList.add("phase8b-showtime-heading");
       const title = heading.querySelector("h2");
-      if (title) title.textContent = "全部場次";
+      if (title && title.textContent !== "全部場次") title.textContent = "全部場次";
     }
 
     if (dateRail && section.firstElementChild !== dateRail) section.prepend(dateRail);
-    if (insights && dateRail) dateRail.insertAdjacentElement("afterend", insights);
+    if (insights && dateRail) placeAfter(dateRail, insights);
 
     const recommendationToggle = section.querySelector("[data-phase8b-recommendation-toggle]");
     const beforeRecommendation = insights || dateRail;
-    if (recommendationToggle && beforeRecommendation) beforeRecommendation.insertAdjacentElement("afterend", recommendationToggle);
-    if (recommendations && recommendationToggle) recommendationToggle.insertAdjacentElement("afterend", recommendations);
+    if (recommendationToggle && beforeRecommendation) placeAfter(beforeRecommendation, recommendationToggle);
+    if (recommendations && recommendationToggle) placeAfter(recommendationToggle, recommendations);
 
     const beforeHeading = recommendations || recommendationToggle || insights || dateRail;
-    if (heading && beforeHeading) beforeHeading.insertAdjacentElement("afterend", heading);
-    if (result && heading) heading.insertAdjacentElement("afterend", result);
-    if (result) result.insertAdjacentElement("afterend", timeline);
-    else if (heading) heading.insertAdjacentElement("afterend", timeline);
+    if (heading && beforeHeading) placeAfter(beforeHeading, heading);
+    if (result && heading) placeAfter(heading, result);
+    if (result) placeAfter(result, timeline);
+    else if (heading) placeAfter(heading, timeline);
   }
 
   function resetForComparison() {
@@ -242,7 +268,9 @@
         const target = record.target?.nodeType === Node.ELEMENT_NODE
           ? record.target
           : record.target?.parentElement;
-        return Boolean(target?.closest?.("#providerCompareContent"));
+        if (!target?.closest?.("#providerCompareContent")) return false;
+        if (target.closest?.("[data-phase8b-recommendation-toggle], [data-phase8b-movie-details]")) return false;
+        return true;
       });
       if (relevant) schedule();
     });
