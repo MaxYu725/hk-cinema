@@ -331,9 +331,9 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   const [index, multiProvider, compare, insights, preferences, phase6m, fixture, browserMcl, hybridMcl, workerMcl, workerIndex] = await Promise.all([
     source("app/index.html"),
     source("app/multi-provider.js"),
-    source("app/provider-compare-v3.js"),
-    source("app/provider-compare-insights-v3.js"),
-    source("app/provider-compare-preferences.js"),
+    source("app/provider-compare-v4.js"),
+    source("app/provider-compare-insights-v4.js"),
+    source("app/provider-compare-preferences-v2.js"),
     source("app/provider-compare-phase6m.js"),
     source("tests/provider-compare-phase6o-visual.html"),
     source("app/mcl-ticketing-worker.js"),
@@ -343,8 +343,9 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   ]);
 
   assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=7a3"));
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v3.js?v=7a3"));
-  assert.match(index, /provider-compare-insights-v3\.js\?v=7a4/);
+  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=8c1"));
+  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
+  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
   assert.match(index, /mcl-ticketing-worker\.js\?v=7a1/);
   assert.match(index, /mcl-ticketing-hybrid\.js\?v=7a2/);
   assert.match(multiProvider, /genericMCL/);
@@ -360,7 +361,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   assert.match(compare, /signal: lifecycle\.controller\.signal/);
   assert.match(compare, /key !== "mcl" \|\| state\.data\[key\]\?\.metadataComplete === true/);
   assert.match(compare, /data-show-language/);
-  assert.match(compare, /MCL 按\$\{criteriaLanguages\.join/);
+  assert.match(compare, /if \(aggregateForMatch\(match\)\) return false/);
 
   for (const kind of ["language", "subtitle", "format"]) {
     assert.match(insights, new RegExp(`data-insight-\\$\\{escapeHtml\\(kind\\)\\}`));
