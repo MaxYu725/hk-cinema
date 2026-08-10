@@ -44,8 +44,3 @@ test('comparison hero is movie-first rather than provider-match-first', () => {
   assert.ok(layout.includes('片長'));
   assert.ok(layout.includes('級別'));
 });
-
-test('Phase 8B keeps the Phase 8A version rail as a temporary reachable control', () => {
-  assert.ok(layout.includes('data-phase8a-version-rail'));
-  assert.ok(!layout.includes('versionRail.remove()'));
-});

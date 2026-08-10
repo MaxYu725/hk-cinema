@@ -8,14 +8,18 @@ async function read(path) {
   return readFile(new URL(path, APP), "utf8");
 }
 
-test("Phase 8A loads movie-first navigation after the comparison stack", async () => {
+test("movie-first navigation loads after the active comparison engine", async () => {
   const index = await read("index.html");
-  assert.match(index, /phase8a-movie-navigation\.css\?v=8a1/);
-  assert.match(index, /phase8a-movie-navigation\.js\?v=8a1/);
-  assert.ok(index.indexOf("provider-compare-v3.js") < index.indexOf("phase8a-movie-navigation.js"));
+  const compare = index.indexOf("provider-compare-v4.js");
+  const navigation = index.indexOf("phase8a-movie-navigation.js");
+
+  assert.match(index, /phase8a-movie-navigation\.css\?v=8e1/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=8e1/);
+  assert.ok(compare >= 0);
+  assert.ok(navigation > compare);
 });
 
-test("Phase 8A hides provider-first home affordances and exposes aggregate navigation", async () => {
+test("movie-first home keeps aggregate navigation without provider-first affordances", async () => {
   const source = await read("phase8a-movie-navigation.js");
   const css = await read("phase8a-movie-navigation.css");
 
@@ -24,14 +28,16 @@ test("Phase 8A hides provider-first home affordances and exposes aggregate navig
   assert.match(source, /window\.HKCinemaProviderMatches =/);
   assert.match(source, /#movieGrid \.movie-card:not\(\.movie-group-member\)/);
   assert.match(source, /HKCinemaProviderCompare\?\.open/);
-  assert.match(source, /data-phase8a-variant-open/);
+  assert.match(source, /version: "8e1"/);
+  assert.doesNotMatch(source, /data-phase8a-variant-open/);
+  assert.doesNotMatch(source, /phase8a-version-rail/);
   assert.match(css, /#homeProviderFilters\s*\{[\s\S]*display:\s*none\s*!important/);
   assert.match(css, /\.phase8a-movie-card \.provider-badges/);
-  assert.match(css, /\.phase8a-movie-card \.movie-variant-summary/);
+  assert.doesNotMatch(css, /phase8a-version-rail/);
 });
 
 test("common comparison navigation accepts single-provider movie aggregates", async () => {
-  const source = await read("provider-compare-v3.js");
+  const source = await read("provider-compare-v4.js");
   assert.match(source, /activeProviders\(match\)\.length < 1/);
   assert.doesNotMatch(source, /activeProviders\(match\)\.length < 2/);
 });

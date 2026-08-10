@@ -1,10 +1,5 @@
 (() => {
   const PROVIDERS = ["broadway", "mcl", "emperor"];
-  const PROVIDER_LABELS = {
-    broadway: "Broadway",
-    mcl: "MCL",
-    emperor: "Emperor"
-  };
 
   const baseRegistry = window.HKCinemaProviderMatches || {
     get() { return null; },
@@ -12,9 +7,7 @@
   };
   const aggregateRecords = new Map();
   const aggregates = new Map();
-  const matchToAggregate = new Map();
   let scheduled = false;
-  let compareScheduled = false;
 
   function normalizeSourceId(provider, value) {
     return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
@@ -75,10 +68,9 @@
     return PROVIDERS.filter(provider => Boolean(record?.[provider])).length;
   }
 
-  function registerMatch(record, aggregateId) {
+  function registerMatch(record) {
     if (!record?.id) return null;
     aggregateRecords.set(record.id, record);
-    if (aggregateId) matchToAggregate.set(record.id, aggregateId);
     return record;
   }
 
@@ -113,7 +105,7 @@
       emperor: sourceIds.emperor ? providerEntry("emperor", sourceIds.emperor) : null
     };
 
-    registerMatch(record, id);
+    registerMatch(record);
     const aggregate = {
       kind: "movie-aggregate",
       schemaVersion: 1,
@@ -180,7 +172,7 @@
         mcl: sourceIds.mcl ? providerEntry("mcl", sourceIds.mcl) : null,
         emperor: sourceIds.emperor ? providerEntry("emperor", sourceIds.emperor) : null
       };
-      registerMatch(record, aggregateId);
+      registerMatch(record);
       variantModels.push({
         id: `${aggregateId}:model:${index + 1}`,
         matchId,
@@ -207,7 +199,7 @@
       confidence: 1,
       aggregateId
     };
-    registerMatch(aggregateMatch, aggregateId);
+    registerMatch(aggregateMatch);
 
     const aggregate = {
       kind: "movie-aggregate",
@@ -271,69 +263,6 @@
     return window.HKCinemaProviderCompare?.open?.(aggregate.id) !== false;
   }
 
-  function activeAggregateContext() {
-    const currentMatchId = window.HKCinemaProviderCompare?.getState?.()?.match?.id;
-    if (!currentMatchId) return null;
-    const aggregateId = matchToAggregate.get(currentMatchId) || (aggregates.has(currentMatchId) ? currentMatchId : null);
-    if (!aggregateId) return null;
-    return {
-      aggregate: aggregates.get(aggregateId),
-      currentMatchId
-    };
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function decorateCompare() {
-    compareScheduled = false;
-    const root = document.querySelector("#providerCompareContent");
-    const hero = root?.querySelector(".provider-compare-hero");
-    if (!root || !hero) return;
-    root.querySelector("[data-phase8a-version-rail]")?.remove();
-
-    const context = activeAggregateContext();
-    if (!context?.aggregate || context.aggregate.variants.length < 2) return;
-    const { aggregate, currentMatchId } = context;
-    const activeMatchId = currentMatchId === aggregate.id ? aggregate.primaryMatchId : currentMatchId;
-    const rail = document.createElement("section");
-    rail.className = "phase8a-version-rail";
-    rail.dataset.phase8aVersionRail = "true";
-    rail.setAttribute("aria-label", "電影版本");
-    rail.innerHTML = `
-      <div class="phase8a-version-heading">
-        <strong>版本</strong>
-        <span>${aggregate.variants.length} 個放映版本</span>
-      </div>
-      <div class="phase8a-version-options">
-        ${aggregate.variants.map(variant => `
-          <button
-            type="button"
-            data-phase8a-variant-open="${escapeHtml(variant.matchId)}"
-            class="${variant.matchId === activeMatchId ? "active" : ""}"
-            aria-pressed="${variant.matchId === activeMatchId}"
-          >
-            <strong>${escapeHtml(variant.label)}</strong>
-            <span>${variant.providerCount} 院線</span>
-          </button>
-        `).join("")}
-      </div>
-    `;
-    hero.insertAdjacentElement("afterend", rail);
-  }
-
-  function scheduleCompareRefresh() {
-    if (compareScheduled) return;
-    compareScheduled = true;
-    requestAnimationFrame(decorateCompare);
-  }
-
   window.HKCinemaProviderMatches = {
     get(id) {
       return aggregateRecords.get(String(id)) || baseRegistry.get?.(id) || null;
@@ -347,7 +276,7 @@
   };
 
   window.HKCinemaMovieAggregates = Object.freeze({
-    version: "8a1",
+    version: "8e1",
     get(id) {
       return aggregates.get(String(id)) || null;
     },
@@ -363,15 +292,6 @@
   });
 
   window.addEventListener("click", event => {
-    const variantButton = event.target.closest?.("[data-phase8a-variant-open]");
-    if (variantButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      window.HKCinemaProviderCompare?.open?.(variantButton.dataset.phase8aVariantOpen);
-      return;
-    }
-
     if (event.button !== 0 || event.target.closest?.("[data-movie-favorite]")) return;
     const card = event.target.closest?.("#movieGrid .movie-card:not(.movie-group-member)");
     if (!card) return;
@@ -392,22 +312,14 @@
     openCard(card);
   }, true);
 
-  window.addEventListener("hkcinema:provider-matches", () => {
-    scheduleHomeRefresh();
-  });
-  window.addEventListener("hkcinema:provider-compare-open", scheduleCompareRefresh);
-  window.addEventListener("hkcinema:provider-compare-lifecycle", scheduleCompareRefresh);
+  window.addEventListener("hkcinema:provider-matches", scheduleHomeRefresh);
 
   const observer = new MutationObserver(records => {
     if (records.some(record => record.target?.closest?.("#movieGrid") || record.target?.id === "movieGrid")) {
       scheduleHomeRefresh();
     }
-    if (records.some(record => record.target?.closest?.("#providerCompareContent") || record.target?.id === "providerCompareContent")) {
-      scheduleCompareRefresh();
-    }
   });
   if (document.body) observer.observe(document.body, { childList: true, subtree: true });
 
-  window.HKCinemaHomeProviderFilters?.clear?.();
   scheduleHomeRefresh();
 })();
