@@ -6,6 +6,7 @@
     ready: false,
     updateReady: false,
     online: navigator.onLine,
+    noticeKind: null,
     reloading: false
   };
 
@@ -37,8 +38,11 @@
   }
 
   function renderNotice(kind, title, detail, { action = false, autoHide = 0 } = {}) {
+    if (state.noticeKind === "offline" && kind !== "offline") return false;
+
     const notice = ensureNotice();
     clearTimeout(networkNoticeTimer);
+    state.noticeKind = kind;
     notice.dataset.kind = kind;
     notice.querySelector("[data-pwa-notice-title]").textContent = title;
     notice.querySelector("[data-pwa-notice-detail]").textContent = detail;
@@ -48,15 +52,17 @@
 
     if (autoHide > 0) {
       networkNoticeTimer = setTimeout(() => {
-        if (state.updateReady || !state.online) return;
+        if (state.updateReady || !state.online || state.noticeKind !== kind) return;
+        state.noticeKind = null;
         notice.hidden = true;
       }, autoHide);
     }
+    return true;
   }
 
   function renderUpdateNotice() {
-    if (!state.updateReady || !state.online) return;
-    renderNotice(
+    if (!state.updateReady || !state.online || !navigator.onLine || state.noticeKind === "offline") return false;
+    return renderNotice(
       "update",
       "新版 HK Cinema 已準備好",
       "重新載入後套用新版；目前操作不會被自動中斷。",
@@ -109,6 +115,8 @@
       return;
     }
 
+    if (state.noticeKind === "offline") state.noticeKind = null;
+
     if (state.updateReady) {
       renderUpdateNotice();
       return;
@@ -157,7 +165,8 @@
         error: state.error,
         scope: state.registration?.scope || null,
         updateReady: state.updateReady,
-        online: state.online
+        online: state.online,
+        noticeKind: state.noticeKind
       };
     }
   });
