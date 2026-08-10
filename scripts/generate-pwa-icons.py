@@ -11,9 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "app" / "icons"
 
-BG = (23, 25, 29)
+# Shared app-family branding: saturated blue tile with a bold white pictogram.
+BLUE = (10, 87, 181)
 WHITE = (255, 255, 255)
-GREEN = (28, 143, 91)
 
 
 def inside_round_rect(x: int, y: int, left: int, top: int, right: int, bottom: int, radius: int) -> bool:
@@ -38,25 +38,16 @@ def inside_triangle(px: int, py: int, a, b, c) -> bool:
 
 
 def pixel(size: int, x: int, y: int) -> tuple[int, int, int]:
-    # The glyph stays inside the central ~60% safe zone so maskable crops remain readable.
+    # Keep the cinema-screen/play glyph inside the maskable central safe zone.
     outer = (
-        int(size * 0.20),
-        int(size * 0.23),
-        int(size * 0.80),
-        int(size * 0.77),
-        max(2, int(size * 0.055)),
+        int(size * 0.18),
+        int(size * 0.245),
+        int(size * 0.82),
+        int(size * 0.72),
+        max(2, int(size * 0.062)),
     )
-    inner = (
-        int(size * 0.31),
-        int(size * 0.34),
-        int(size * 0.69),
-        int(size * 0.66),
-        max(2, int(size * 0.035)),
-    )
-    stroke = max(2, int(size * 0.04))
-
+    stroke = max(2, int(size * 0.052))
     ol, ot, or_, ob, rr = outer
-    il, it, ir, ib, irr = inner
 
     in_outer = inside_round_rect(x, y, ol, ot, or_, ob, rr)
     in_outer_inner = inside_round_rect(
@@ -68,19 +59,27 @@ def pixel(size: int, x: int, y: int) -> tuple[int, int, int]:
         ob - stroke,
         max(1, rr - stroke),
     )
-
     if in_outer and not in_outer_inner:
         return WHITE
 
-    if inside_round_rect(x, y, il, it, ir, ib, irr):
-        tri = (
-            (int(size * 0.455), int(size * 0.405)),
-            (int(size * 0.455), int(size * 0.595)),
-            (int(size * 0.605), int(size * 0.50)),
-        )
-        return GREEN if inside_triangle(x, y, *tri) else WHITE
+    play = (
+        (int(size * 0.435), int(size * 0.365)),
+        (int(size * 0.435), int(size * 0.605)),
+        (int(size * 0.625), int(size * 0.485)),
+    )
+    if inside_triangle(x, y, *play):
+        return WHITE
 
-    return BG
+    # Two small feet make the pictogram read as a cinema screen rather than a generic video button.
+    foot_y1 = int(size * 0.72)
+    foot_y2 = int(size * 0.775)
+    if foot_y1 <= y <= foot_y2:
+        if int(size * 0.30) <= x <= int(size * 0.405):
+            return WHITE
+        if int(size * 0.595) <= x <= int(size * 0.70):
+            return WHITE
+
+    return BLUE
 
 
 def png_chunk(kind: bytes, data: bytes) -> bytes:
