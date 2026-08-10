@@ -9,9 +9,12 @@ Turn the Phase 8A temporary version selector into real showtime facets. A movie 
 - comparison engine accepts multiple movie source IDs per provider when the active entry is a `MovieAggregate`
 - source IDs are deduplicated before requests
 - provider results merge available dates, selected-date sessions and all-session metadata
+- after choosing a date, aggregate providers are explicitly refetched for that date before their sessions are reused, preventing different variants' default dates from leaking into one timeline
 - a partial failure from one variant source does not discard successful sources from the same cinema chain
 - aggregate mode no longer applies a single variant's bridge criteria to the whole movie
 - variant tags supplement missing session language / presentation metadata through `versionName`
+- when one shared provider source belongs to conflicting language / subtitle / format variants, ambiguous fallback tags stay unknown instead of inventing a facet; explicit session metadata still wins
+- `IMAX with Laser` is normalized as a distinct screening-format facet instead of being collapsed into ordinary IMAX
 - top Phase 8A version rail is removed from the visible browsing flow
 - all merged sessions remain in one timeline
 - `制式` is renamed to `放映方式`
@@ -50,5 +53,5 @@ Legacy Phase 8A version-rail code remains in the source tree for rollback compat
 
 ## Validation
 
-- `provider-compare-v4.js`, `provider-compare-insights-v4.js` and `provider-compare-preferences-v2.js` are syntax checked by `npm test`
-- deterministic Phase 8C contract tests verify aggregate multi-source loading, version metadata enrichment, rich-filter dimensions and removal of the visible version rail
+- `provider-compare-v4.js`, `provider-compare-insights-v4.js`, `provider-compare-preferences-v2.js` and the updated showtime metadata normalizer are syntax checked by `npm test`
+- deterministic Phase 8C contract tests verify aggregate multi-source loading, selected-date refetching, version metadata enrichment, distinct Laser IMAX classification, conservative shared-source fallbacks, rich-filter dimensions and removal of the visible version rail
