@@ -746,7 +746,7 @@
 
   function open(matchId) {
     const match = getMatch(matchId);
-    if (!match || activeProviders(match).length < 2) return false;
+    if (!match || activeProviders(match).length < 1) return false;
     loadInitial(match);
     window.dispatchEvent(new CustomEvent("hkcinema:provider-compare-open", {
       detail: { matchId }
