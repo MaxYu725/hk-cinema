@@ -79,6 +79,20 @@ test('today recommendations exclude already-started sessions from earliest pick'
   assert.equal(model.pool.some(item => item.key === 'past'), false);
 });
 
+test('confirmed sold-out rows are excluded while unknown seat rows remain eligible', () => {
+  const smart = loadSmartPicks('2026-08-11');
+  const model = smart.buildRecommendations([
+    entry({ key: 'sold-out', price: 50, time: '11:00', timeMinutes: 660, seats: { available: 0, total: 100, ratio: 0 } }),
+    entry({ key: 'unknown-seats', index: 1, price: 70, time: '12:00', timeMinutes: 720, seats: null }),
+    entry({ key: 'available', index: 2, price: 80, time: '13:00', timeMinutes: 780, seats: { available: 20, total: 100, ratio: 0.2 } })
+  ]);
+
+  assert.equal(model.pool.some(item => item.key === 'sold-out'), false);
+  assert.equal(model.pool.some(item => item.key === 'unknown-seats'), true);
+  assert.equal(model.picks.find(pick => pick.key === 'cheapest').entry.key, 'unknown-seats');
+  assert.equal(model.picks.find(pick => pick.key === 'earliest').entry.key, 'unknown-seats');
+});
+
 test('Smart Picks 2 selects four evidence-based recommendation types when data is complete', () => {
   const smart = loadSmartPicks('2026-08-11');
   const model = smart.buildRecommendations([
