@@ -23,7 +23,7 @@ Each aggregate keeps:
 - all known release variants;
 - one primary comparison match used by the current Phase 7 comparison renderer.
 
-The aggregate layer wraps the existing `HKCinemaProviderMatches` registry instead of changing provider parsers. Existing match IDs remain valid.
+The aggregate layer wraps the existing `HKCinemaProviderMatches` registry instead of changing provider parsers. Existing match IDs remain valid. Aggregate card identities are invalidated and rebuilt when provider catalogues or match groups change, so an early Broadway-only card cannot remain stale after MCL or Emperor data arrives.
 
 ## Versions
 
