@@ -95,12 +95,12 @@
   .pwa-notice {
     width: auto;
   }
+}
 
-  @media (display-mode: standalone) {
-    .provider-compare-sheet {
-      padding-left: max(14px, var(--pwa-safe-left));
-      padding-right: max(14px, var(--pwa-safe-right));
-    }
+@media (max-width: 640px) and (display-mode: standalone) {
+  .provider-compare-sheet {
+    padding-left: max(14px, var(--pwa-safe-left));
+    padding-right: max(14px, var(--pwa-safe-right));
   }
 }
 
