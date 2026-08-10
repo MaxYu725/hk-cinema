@@ -1,8 +1,21 @@
 import { test, expect } from "@playwright/test";
 
 test("PWA shell registers, keeps cache same-origin, reports connectivity, and can reopen offline", async ({ page, context }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // Start from a same-origin page that does not boot the app runtime, then remove
+  // any worker/cache left by another browser smoke. Controlled updates deliberately
+  // keep an old active worker alive, so release acceptance must install the current
+  // build from a deterministic clean origin state.
+  await page.goto("/manifest.json", { waitUntil: "domcontentloaded" });
+  await page.evaluate(async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration => registration.unregister()));
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames
+      .filter(name => name.startsWith("hk-cinema-shell-"))
+      .map(name => caches.delete(name)));
+  });
 
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.HKCinemaPWA?.getState?.().ready === true, null, { timeout: 15_000 });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), null, { timeout: 15_000 });
 
@@ -41,9 +54,5 @@ test("PWA shell registers, keeps cache same-origin, reports connectivity, and ca
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(true);
-
-  const updateReady = await page.evaluate(() => window.HKCinemaPWA?.getState?.().updateReady === true);
-  await expect(page.locator("[data-pwa-notice-title]")).toHaveText(
-    updateReady ? "新版 HK Cinema 已準備好" : "已恢復連線"
-  );
+  await expect(page.locator("[data-pwa-notice-title]")).toHaveText("已恢復連線");
 });
