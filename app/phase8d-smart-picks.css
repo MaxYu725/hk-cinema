@@ -1,0 +1,121 @@
+/* Phase 8D: Smart Picks 2 */
+
+#providerCompareContent .phase8d-smart-picks {
+  padding: 14px;
+}
+
+#providerCompareContent .phase8d-smart-heading {
+  align-items: flex-start;
+}
+
+#providerCompareContent .phase8d-smart-heading > small {
+  max-width: 52%;
+  line-height: 1.35;
+  text-align: right;
+}
+
+#providerCompareContent .phase8d-smart-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+#providerCompareContent .phase8d-smart-pick {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 13px;
+  border: 1px solid #eceef0;
+  background: #f7f8f9;
+}
+
+#providerCompareContent .phase8d-smart-pick.cheapest {
+  background: #f5f8f6;
+}
+
+#providerCompareContent .phase8d-smart-pick.earliest {
+  background: #f7f8fa;
+}
+
+#providerCompareContent .phase8d-smart-pick.roomiest {
+  background: #f4f8f7;
+}
+
+#providerCompareContent .phase8d-smart-pick.balanced {
+  background: #edf7f2;
+  border-color: #d5eadf;
+}
+
+#providerCompareContent .phase8d-smart-pick strong {
+  font-size: 1.06rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+#providerCompareContent .phase8d-smart-pick small {
+  flex: 1;
+  font-size: .63rem;
+  line-height: 1.45;
+}
+
+#providerCompareContent .phase8d-smart-pick em {
+  margin-top: 10px;
+}
+
+#providerCompareContent .phase8d-smart-note p + p {
+  margin-top: 7px;
+}
+
+@media (max-width: 700px) {
+  #providerCompareContent .phase8d-smart-picks {
+    padding: 11px;
+  }
+
+  #providerCompareContent .phase8d-smart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #providerCompareContent .phase8d-smart-pick,
+  #providerCompareContent .provider-compare-recommendation.balanced.phase8d-smart-pick {
+    grid-column: auto;
+    min-height: 140px;
+    padding: 11px;
+  }
+
+  #providerCompareContent .phase8d-smart-pick strong {
+    font-size: 1rem;
+  }
+
+  #providerCompareContent .phase8d-smart-heading > small {
+    max-width: 48%;
+    font-size: .61rem;
+  }
+
+  #providerCompareContent .phase8d-smart-grid.pick-count-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  #providerCompareContent .phase8d-smart-picks {
+    padding: 10px;
+  }
+
+  #providerCompareContent .phase8d-smart-grid {
+    gap: 7px;
+  }
+
+  #providerCompareContent .phase8d-smart-pick {
+    min-height: 132px;
+    padding: 10px;
+  }
+
+  #providerCompareContent .phase8d-smart-pick strong {
+    font-size: .94rem;
+  }
+
+  #providerCompareContent .phase8d-smart-pick small {
+    font-size: .6rem;
+  }
+}
