@@ -75,7 +75,7 @@ test("language and presentation facets compose across categories", async () => {
   assert.deepEqual(Array.from(detailLanguages.language), ["english", "mandarin", "thai"]);
 });
 
-test("Phase 6I search, library and card actions stay wired", async () => {
+test("movie-first search, favorites and recent activity stay wired", async () => {
   const [index, app, multiProvider, library, styles] = await Promise.all([
     source("app/index.html"),
     source("app/app.js"),
@@ -85,23 +85,20 @@ test("Phase 6I search, library and card actions stay wired", async () => {
   ]);
 
   assert.ok(index.indexOf("home-library-core.js?v=6k1") < index.indexOf("home-library.js?v=6k1"));
-  assert.ok(index.indexOf("multi-provider.js?v=7a3") < index.indexOf("home-library-core.js?v=6k1"));
+  assert.ok(index.indexOf("multi-provider.js?v=8e2") < index.indexOf("home-library-core.js?v=6k1"));
   assert.match(app, /data-movie-favorite/);
-  assert.match(multiProvider, /providerVisible/);
+  assert.doesNotMatch(multiProvider, /providerVisible/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
   assert.match(library, /data-home-movie-search/);
   assert.match(library, /data-home-library-view/);
   assert.match(library, /data-home-recent-clear/);
-  assert.match(library, /data-home-facet/);
-  assert.match(library, /HKCinemaHomeProviderFilters/);
   assert.match(library, /homeLanguages/);
-  assert.match(library, /data-home-filter-toggle/);
   assert.match(library, /data-home-region/);
   assert.match(library, /provider-compare-filters:v1/);
   assert.match(styles, /\.movie-favorite-button/);
 });
 
-test("Phase 6K propagates catalogue and detail metadata into home facets", async () => {
+test("catalogue and detail metadata continue feeding movie aggregates", async () => {
   const [app, multiProvider, mclDetail, health, style, providerStyle, compare, library] = await Promise.all([
     source("app/app.js"),
     source("app/multi-provider.js"),
@@ -109,7 +106,7 @@ test("Phase 6K propagates catalogue and detail metadata into home facets", async
     source("app/data-health.js"),
     source("app/home-library.css"),
     source("app/multi-provider.css"),
-    source("app/provider-compare-v3.js"),
+    source("app/provider-compare-v4.js"),
     source("app/home-library.js")
   ]);
 
@@ -118,10 +115,12 @@ test("Phase 6K propagates catalogue and detail metadata into home facets", async
   assert.match(app, /hkcinema:home-tab/);
   assert.match(multiProvider, /mergeMovieMetadata/);
   assert.match(multiProvider, /hkcinema:movie-metadata/);
+  assert.match(multiProvider, /HKCinemaMovieGroups/);
   assert.match(mclDetail, /reportMovieMetadata/);
   assert.match(health, /syncRefreshButton/);
   assert.match(style, /\.home-library-tools\.is-stuck/);
-  assert.match(providerStyle, /\.home-provider-filters\.collapsed/);
+  assert.doesNotMatch(providerStyle, /\.home-provider-filters/);
+  assert.match(providerStyle, /\.movie-group-member/);
   assert.match(compare, /hkcinema:provider-compare-open/);
   assert.match(library, /restoreRegionPreferenceToCompare/);
 });

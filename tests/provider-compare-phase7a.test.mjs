@@ -342,7 +342,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
     source("worker/src/index.js")
   ]);
 
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=7a3"));
+  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=8e2"));
   assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=8c1"));
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
@@ -351,7 +351,8 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   assert.match(multiProvider, /genericMCL/);
   assert.match(multiProvider, /isGenericBridgeSource/);
   assert.match(multiProvider, /comparisonMclSourceId/);
-  assert.match(multiProvider, /MCL 會按每場語言加入此版本比較/);
+  assert.match(multiProvider, /sessionCriteria/);
+  assert.doesNotMatch(multiProvider, /MCL 會按每場語言加入此版本比較/);
   assert.match(compare, /filteredRawSessions/);
   assert.match(compare, /availableDatesFor/);
   assert.match(compare, /criteriaDateDecisions/);

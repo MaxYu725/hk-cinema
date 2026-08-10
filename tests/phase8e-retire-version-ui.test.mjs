@@ -17,7 +17,7 @@ test('Phase 8E keeps a single movie entry and retires the temporary top-level ve
   ]);
 
   assert.match(index, /phase8a-movie-navigation\.js\?v=8e1/);
-  assert.match(index, /phase8a-movie-navigation\.css\?v=8e1/);
+  assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
   assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
   assert.doesNotMatch(navigation, /data-phase8a-variant-open/);
   assert.doesNotMatch(navigation, /phase8a-version-rail/);
