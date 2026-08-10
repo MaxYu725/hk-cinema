@@ -36,9 +36,14 @@ test("PWA shell registers, keeps cache same-origin, reports connectivity, and ca
   await expect(page.locator(".topbar")).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
   await expect(page.locator("[data-pwa-notice-title]")).toHaveText("目前離線");
+  await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(false);
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
-  await expect(page.locator("[data-pwa-notice-title]")).toHaveText("已恢復連線");
   await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(true);
+
+  const updateReady = await page.evaluate(() => window.HKCinemaPWA?.getState?.().updateReady === true);
+  await expect(page.locator("[data-pwa-notice-title]")).toHaveText(
+    updateReady ? "新版 HK Cinema 已準備好" : "已恢復連線"
+  );
 });
