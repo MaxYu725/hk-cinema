@@ -89,22 +89,22 @@ test("English language labels are treated as versions without removing release y
   assert.equal(year.base, "ATEEZ: Light The Way (2026)");
 });
 
-test("Phase 6H home discovery controls and version chooser stay wired", async () => {
-  const [index, multiProvider, styles, health, compare] = await Promise.all([
+test("home discovery grouping stays wired after retiring provider-first controls", async () => {
+  const [index, multiProvider, styles, health] = await Promise.all([
     source("app/index.html"),
     source("app/multi-provider.js"),
     source("app/multi-provider.css"),
-    source("app/data-health.js"),
-    source("app/provider-compare-v3.js")
+    source("app/data-health.js")
   ]);
 
-  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=7a3"));
-  assert.match(multiProvider, /data-home-provider/);
+  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=8e2"));
   assert.match(multiProvider, /applyVariantGrouping/);
-  assert.match(multiProvider, /data-movie-group-provider/);
-  assert.match(styles, /\.home-provider-filters/);
-  assert.match(styles, /\.movie-group-sheet/);
+  assert.match(multiProvider, /coalesceVariants/);
+  assert.match(multiProvider, /window\.HKCinemaMovieGroups/);
+  assert.doesNotMatch(multiProvider, /data-home-provider/);
+  assert.doesNotMatch(multiProvider, /data-movie-group-provider/);
+  assert.doesNotMatch(styles, /\.home-provider-filters/);
+  assert.doesNotMatch(styles, /\.movie-group-sheet/);
+  assert.match(styles, /\.movie-group-member/);
   assert.match(health, /document\.createElement\("details"\)/);
-  assert.match(compare, /normalized-variant/);
-  assert.match(compare, /版本配對/);
 });
