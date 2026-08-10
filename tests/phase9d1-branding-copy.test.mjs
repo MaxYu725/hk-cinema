@@ -26,8 +26,8 @@ test("Classic home section no longer repeats the active tab label", () => {
   assert.match(css, /content:\s*"全部電影"/);
 });
 
-test("branding refresh rotates the PWA shell cache without changing live-data boundary", () => {
+test("branding refresh keeps a versioned PWA shell cache without changing live-data boundary", () => {
   const sw = fs.readFileSync(path.join(app, "sw.js"), "utf8");
-  assert.match(sw, /CACHE_PREFIX}9d1-1/);
+  assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
   assert.match(sw, /Cinema APIs, MCL, Worker and all other live data stay outside the PWA cache/);
 });

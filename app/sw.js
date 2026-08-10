@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "hk-cinema-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}9d1-1`;
+const CACHE_NAME = `${CACHE_PREFIX}9c3-1`;
 const SCOPE_URL = new URL(self.registration.scope);
 const INDEX_URL = new URL("./index.html", self.registration.scope).href;
 const ROOT_URL = new URL("./", self.registration.scope).href;
@@ -66,10 +66,13 @@ async function staleWhileRevalidate(request) {
 }
 
 self.addEventListener("install", event => {
-  event.waitUntil((async () => {
-    await precacheShell();
-    await self.skipWaiting();
-  })());
+  // Precache the new shell, but do not interrupt an already-open app session.
+  // pwa-runtime.js explicitly asks a waiting worker to activate after the user accepts the update.
+  event.waitUntil(precacheShell());
+});
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {

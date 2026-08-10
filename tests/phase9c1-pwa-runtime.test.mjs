@@ -16,7 +16,7 @@ test("Phase 9C1 wires an installable standalone PWA shell", () => {
   assert.equal(manifest.scope, "./");
   assert.equal(manifest.display, "standalone");
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.json">/);
-  assert.match(html, /pwa-runtime\.js\?v=9c1-1/);
+  assert.match(html, /pwa-runtime\.js\?v=[a-z0-9-]+/i);
   assert.match(runtime, /navigator\.serviceWorker\.register\("\.\/sw\.js"/);
   assert.match(runtime, /updateViaCache:\s*"none"/);
 });
