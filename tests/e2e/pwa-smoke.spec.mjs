@@ -5,9 +5,9 @@ const pixel7 = devices["Pixel 7"];
 test("PWA shell registers, keeps cache same-origin, reports connectivity, and can reopen offline", async ({ browser }) => {
   // A Service Worker that was active before unregister() can keep controlling the
   // original client until that client goes away. Release acceptance therefore uses
-  // a brand-new BrowserContext instead of trying to recycle/unregister the current
-  // page. This keeps the production lifecycle controlled while making the smoke
-  // deterministic against the current build.
+  // a brand-new BrowserContext instead of trying to recycle/unregister an existing
+  // page. The first page only bootstraps an active worker; the smoke assertions run
+  // in a second, new client that is controlled from navigation start.
   const context = await browser.newContext({
     baseURL: "http://127.0.0.1:4173",
     viewport: { width: 390, height: 844 },
@@ -18,12 +18,35 @@ test("PWA shell registers, keeps cache same-origin, reports connectivity, and ca
     hasTouch: pixel7.hasTouch,
     serviceWorkers: "allow"
   });
-  const page = await context.newPage();
 
   try {
+    const bootstrapPage = await context.newPage();
+    await bootstrapPage.goto("/", { waitUntil: "domcontentloaded" });
+    await bootstrapPage.waitForFunction(
+      () => window.HKCinemaPWA?.getState?.().ready === true,
+      null,
+      { timeout: 15_000 }
+    );
+    await bootstrapPage.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration.active) {
+        throw new Error("Service Worker did not become active");
+      }
+    });
+    await bootstrapPage.close();
+
+    const page = await context.newPage();
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.HKCinemaPWA?.getState?.().ready === true, null, { timeout: 15_000 });
-    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), null, { timeout: 15_000 });
+    await page.waitForFunction(
+      () => window.HKCinemaPWA?.getState?.().ready === true,
+      null,
+      { timeout: 15_000 }
+    );
+    await page.waitForFunction(
+      () => Boolean(navigator.serviceWorker.controller),
+      null,
+      { timeout: 15_000 }
+    );
 
     const pwa = await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.ready;
