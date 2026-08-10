@@ -106,9 +106,10 @@
   }
 
   function recommendationPool(items, now = new Date()) {
+    const available = items.filter(entry => !entry.seats || entry.seats.available > 0);
     const clock = hongKongClock(now);
-    if (selectedDate() !== clock.date) return items;
-    return items.filter(entry => (
+    if (selectedDate() !== clock.date) return available;
+    return available.filter(entry => (
       !Number.isFinite(entry.timeMinutes) || entry.timeMinutes >= clock.minutes
     ));
   }
