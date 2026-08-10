@@ -1,0 +1,211 @@
+/* Phase 9B3: date-rail fixes + compact Classic filter navigation. */
+
+/* 9B2 raised the base date-card specificity above the legacy active rule.
+   Reassert selected state explicitly so active text can never become white-on-white. */
+html[data-skin="classic"] .provider-compare-date.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  box-shadow: 0 7px 18px rgba(20, 25, 30, .16);
+}
+
+html[data-skin="classic"] .provider-compare-date.active strong,
+html[data-skin="classic"] .provider-compare-date.active span {
+  color: var(--color-accent-contrast);
+}
+
+/* Today and selected date are separate concepts. */
+html[data-skin="classic"] .provider-compare-date[data-phase9b3-today="true"] {
+  position: relative;
+  padding-top: 16px;
+}
+
+html[data-skin="classic"] .provider-compare-date[data-phase9b3-today="true"]::after {
+  content: "今日";
+  position: absolute;
+  top: 4px;
+  right: 7px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+html[data-skin="classic"] .provider-compare-date.active[data-phase9b3-today="true"]::after {
+  background: rgba(255, 255, 255, .16);
+  color: #fff;
+}
+
+/* Compact accordion rows. Existing filter buttons/select remain the actual controls. */
+html[data-skin="classic"] .phase8c-controls[data-phase9b3-compact="true"] {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 0;
+}
+
+html[data-skin="classic"] .phase8c-controls[data-phase9b3-compact="true"] > [data-phase9b3-group] {
+  display: block;
+  width: 100%;
+  overflow: clip;
+  box-sizing: border-box;
+  border: 1px solid var(--classic-hairline);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-summary {
+  appearance: none;
+  width: 100%;
+  min-height: 44px !important;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 18px;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  padding: 8px 11px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text) !important;
+  font: inherit;
+  text-align: left;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-label {
+  color: var(--color-text-muted);
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: .72rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-summary em {
+  color: var(--color-text-muted);
+  font-size: .88rem;
+  font-style: normal;
+  text-align: center;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+html[data-skin="classic"] [data-phase9b3-group].phase9b3-open > .phase9b3-filter-group-summary {
+  border-bottom: 1px solid var(--classic-hairline) !important;
+  background: color-mix(in srgb, var(--color-surface-subtle) 58%, var(--color-surface)) !important;
+}
+
+html[data-skin="classic"] [data-phase9b3-group].phase9b3-open > .phase9b3-filter-group-summary em {
+  transform: rotate(180deg);
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-body[hidden] {
+  display: none !important;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-body:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-body > span {
+  display: none;
+}
+
+html[data-skin="classic"] .phase9b3-filter-group-body > button {
+  min-height: 36px;
+  padding: 6px 11px;
+  border-color: var(--classic-hairline);
+}
+
+html[data-skin="classic"] [data-phase9b3-group="district"] .phase9b3-filter-group-body {
+  max-height: 174px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: flex-start;
+}
+
+html[data-skin="classic"] [data-phase9b3-group="cinema"] .phase9b3-filter-group-body {
+  display: block;
+}
+
+html[data-skin="classic"] [data-phase9b3-group="cinema"] select {
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
+  border-color: var(--classic-hairline);
+  border-radius: 10px;
+}
+
+@media (max-width: 700px) {
+  /* Keep the scroll container itself flush to the viewport. Moving its former
+     top padding into content lets sticky positioning use the true sheet top. */
+  html[data-skin="classic"] .provider-compare-sheet {
+    padding-top: 0 !important;
+  }
+
+  html[data-skin="classic"] #providerCompareContent {
+    padding-top: calc(50px + env(safe-area-inset-top));
+  }
+
+  html[data-skin="classic"] .provider-compare-date-rail.phase8b-date-section {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40;
+    isolation: isolate;
+    margin: 0 -10px 10px !important;
+    padding: 8px 56px 8px 10px !important;
+    border-bottom: 1px solid var(--classic-hairline) !important;
+    background: var(--color-background) !important;
+    box-shadow: 0 7px 16px rgba(20, 25, 30, .07);
+    backdrop-filter: none;
+  }
+
+  html[data-skin="classic"] .provider-compare-date-rail.phase8b-date-section::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: var(--color-background);
+  }
+
+  html[data-skin="classic"] .provider-compare-date-label {
+    min-width: 42px;
+  }
+
+  html[data-skin="classic"] .provider-compare-date[data-phase9b3-today="true"] {
+    min-height: 56px;
+  }
+
+  html[data-skin="classic"] .phase8c-controls[data-phase9b3-compact="true"] {
+    gap: 5px;
+  }
+
+  html[data-skin="classic"] .phase9b3-filter-group-summary {
+    min-height: 42px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  html[data-skin="classic"] .provider-compare-date-rail.phase8b-date-section {
+    padding-right: 50px !important;
+  }
+
+  html[data-skin="classic"] .phase9b3-filter-group-summary {
+    grid-template-columns: 64px minmax(0, 1fr) 16px;
+    padding-inline: 9px !important;
+  }
+}
