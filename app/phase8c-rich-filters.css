@@ -1,8 +1,4 @@
-/* Phase 8C: merged variants + richer filters */
-
-#providerCompareContent .phase8a-version-rail {
-  display: none !important;
-}
+/* Phase 8C / 8E: merged variants + richer filters */
 
 #providerCompareContent .phase8c-insights {
   margin: 0;
