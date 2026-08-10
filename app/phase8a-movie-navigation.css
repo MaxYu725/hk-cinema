@@ -1,0 +1,119 @@
+/* Phase 8A — movie-first home navigation */
+
+#homeProviderFilters {
+  display: none !important;
+}
+
+.phase8a-movie-card .provider-badges,
+.phase8a-movie-card .movie-variant-summary {
+  display: none !important;
+}
+
+.phase8a-movie-card .movie-info {
+  gap: 8px;
+}
+
+.phase8a-movie-card {
+  cursor: pointer;
+}
+
+.phase8a-movie-card:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .24);
+  outline-offset: 4px;
+}
+
+.phase8a-version-rail {
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid #e1e4e9;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.phase8a-version-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.phase8a-version-heading strong {
+  font-size: .92rem;
+}
+
+.phase8a-version-heading span {
+  color: #858b93;
+  font-size: .7rem;
+}
+
+.phase8a-version-options {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.phase8a-version-options::-webkit-scrollbar {
+  display: none;
+}
+
+.phase8a-version-options button {
+  flex: 0 0 auto;
+  min-width: 116px;
+  min-height: 54px;
+  padding: 9px 12px;
+  border: 1px solid #dde1e6;
+  border-radius: 16px;
+  background: #f8f9fa;
+  color: #34383e;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phase8a-version-options button strong,
+.phase8a-version-options button span {
+  display: block;
+}
+
+.phase8a-version-options button strong {
+  font-size: .78rem;
+  line-height: 1.25;
+}
+
+.phase8a-version-options button span {
+  margin-top: 3px;
+  color: #858b93;
+  font-size: .64rem;
+}
+
+.phase8a-version-options button.active {
+  border-color: #17191d;
+  background: #17191d;
+  color: #fff;
+}
+
+.phase8a-version-options button.active span {
+  color: rgba(255, 255, 255, .72);
+}
+
+.phase8a-version-options button:focus-visible {
+  outline: 3px solid rgba(23, 25, 29, .18);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .phase8a-version-rail {
+    margin-left: -2px;
+    margin-right: -2px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .phase8a-version-options button {
+    min-width: 104px;
+  }
+}
