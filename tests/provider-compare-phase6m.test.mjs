@@ -11,14 +11,14 @@ async function source(path) {
 test("Phase 6M separates seat-map and official booking actions", async () => {
   const [index, compare, phase6m, broadwaySeats, mclSeats, emperorSeats] = await Promise.all([
     source("app/index.html"),
-    source("app/provider-compare-v3.js"),
+    source("app/provider-compare-v4.js"),
     source("app/provider-compare-phase6m.js"),
     source("app/seatmap.js"),
     source("app/mcl-seatmap.js"),
     source("app/emperor-seatmap.js")
   ]);
 
-  assert.match(index, /provider-compare-v3\.js\?v=7a3/);
+  assert.match(index, /provider-compare-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-phase6m\.js\?v=7a1/);
   assert.match(index, /provider-compare-seats\.js\?v=6o1/);
   assert.match(index, /emperor-seatmap\.js\?v=7b3/);
