@@ -1,0 +1,271 @@
+/* Phase 8B: movie detail -> date -> filters -> recommendations -> showtimes */
+
+#providerCompareContent .provider-compare-hero {
+  margin-bottom: 12px;
+}
+
+#providerCompareContent .provider-compare-hero .eyebrow {
+  margin-bottom: 4px;
+}
+
+#providerCompareContent .phase8b-secondary-title {
+  margin: 4px 0 8px;
+  color: #777d86;
+  font-size: .92rem;
+  line-height: 1.35;
+}
+
+#providerCompareContent .provider-compare-status.phase8b-movie-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+#providerCompareContent .provider-compare-status.phase8b-movie-facts span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid #e2e5e9;
+  border-radius: 999px;
+  background: #f5f6f8;
+  color: #5e646d;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+#providerCompareContent .phase8b-movie-details {
+  margin: 0 0 14px;
+  border: 1px solid #e3e6e9;
+  border-radius: 18px;
+  background: #fff;
+  overflow: hidden;
+}
+
+#providerCompareContent .phase8b-movie-details summary {
+  min-height: 52px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+#providerCompareContent .phase8b-movie-details summary::-webkit-details-marker {
+  display: none;
+}
+
+#providerCompareContent .phase8b-movie-details summary span {
+  color: #202328;
+  font-weight: 850;
+}
+
+#providerCompareContent .phase8b-movie-details summary small {
+  color: #858b93;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+#providerCompareContent .phase8b-movie-details summary::after {
+  content: "⌄";
+  color: #757b84;
+  font-size: 1rem;
+  transition: transform .18s ease;
+}
+
+#providerCompareContent .phase8b-movie-details[open] summary::after {
+  transform: rotate(180deg);
+}
+
+#providerCompareContent .phase8b-movie-details dl {
+  margin: 0;
+  padding: 0 16px 14px;
+}
+
+#providerCompareContent .phase8b-movie-details dl > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #eef0f2;
+}
+
+#providerCompareContent .phase8b-movie-details dt {
+  color: #8a9098;
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+#providerCompareContent .phase8b-movie-details dd {
+  margin: 0;
+  color: #34383e;
+  font-size: .8rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+#providerCompareContent .phase8b-timeline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#providerCompareContent .phase8b-date-section {
+  order: 1;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+#providerCompareContent .phase8b-filter-section {
+  order: 2;
+  margin: 0 0 10px;
+}
+
+#providerCompareContent .phase8b-filter-section .provider-compare-insight-grid[hidden] {
+  display: none !important;
+}
+
+#providerCompareContent .phase8b-filter-section .provider-compare-filter-bar {
+  margin-top: 0;
+}
+
+#providerCompareContent .phase6m-filter-shortcut {
+  display: none !important;
+}
+
+#providerCompareContent .phase8b-section-toggle {
+  width: 100%;
+  min-height: 58px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 10px 15px;
+  border: 1px solid #e2e5e8;
+  border-radius: 16px;
+  background: #fff;
+  color: #202328;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#providerCompareContent .phase8b-section-toggle > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+#providerCompareContent .phase8b-section-toggle strong {
+  font-size: .88rem;
+  font-weight: 850;
+}
+
+#providerCompareContent .phase8b-section-toggle small {
+  overflow: hidden;
+  color: #7b818a;
+  font-size: .7rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#providerCompareContent .phase8b-section-toggle em {
+  color: #737982;
+  font-size: 1rem;
+  font-style: normal;
+  transition: transform .18s ease;
+}
+
+#providerCompareContent .phase8b-section-toggle[aria-expanded="true"] em {
+  transform: rotate(180deg);
+}
+
+#providerCompareContent .phase8b-recommendation-toggle {
+  order: 3;
+}
+
+#providerCompareContent .phase8b-recommendation-panel {
+  order: 4;
+  margin: 0 0 14px;
+}
+
+#providerCompareContent .phase8b-recommendation-panel[hidden] {
+  display: none !important;
+}
+
+#providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation-heading {
+  display: none;
+}
+
+#providerCompareContent .phase8b-showtime-heading {
+  order: 5;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #e8eaed;
+}
+
+#providerCompareContent [data-insight-result] {
+  order: 6;
+}
+
+#providerCompareContent .provider-compare-timeline {
+  order: 7;
+}
+
+#providerCompareContent .provider-compare-note,
+#providerCompareContent .provider-compare-empty {
+  order: 8;
+}
+
+@media (max-width: 640px) {
+  #providerCompareContent .provider-compare-hero {
+    align-items: flex-start;
+    gap: 13px;
+  }
+
+  #providerCompareContent .provider-compare-hero > img,
+  #providerCompareContent .provider-compare-poster-placeholder {
+    width: 82px;
+    min-width: 82px;
+    height: 122px;
+    border-radius: 12px;
+  }
+
+  #providerCompareContent .provider-compare-hero h1 {
+    font-size: clamp(1.35rem, 6vw, 1.7rem);
+    line-height: 1.08;
+  }
+
+  #providerCompareContent .phase8b-movie-details {
+    border-radius: 15px;
+  }
+
+  #providerCompareContent .phase8b-date-section {
+    margin-inline: -2px;
+  }
+
+  #providerCompareContent .phase8b-filter-section .provider-compare-controls {
+    padding-top: 8px;
+  }
+
+  #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation {
+    min-width: 0;
+  }
+
+  #providerCompareContent .phase8b-recommendation-panel .provider-compare-provider-picks {
+    display: none;
+  }
+}
