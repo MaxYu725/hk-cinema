@@ -1,5 +1,42 @@
 import { test, expect } from "@playwright/test";
 
+async function openComparisonWithMultipleDates(page) {
+  const movies = page.locator("#movieGrid .movie-card:not(.movie-group-member)");
+  await expect(movies.first()).toBeVisible({ timeout: 30_000 });
+
+  const overlay = page.locator("#providerCompareOverlay");
+  const candidateCount = Math.min(await movies.count(), 12);
+
+  for (let index = 0; index < candidateCount; index += 1) {
+    await movies.nth(index).click();
+    await expect(overlay).toBeVisible({ timeout: 12_000 });
+    await expect(overlay.locator(".provider-compare-timeline")).toBeVisible({ timeout: 30_000 });
+
+    const dates = overlay.locator("[data-provider-compare-date]");
+    await expect(dates.first()).toBeVisible({ timeout: 10_000 });
+
+    let dateCount = await dates.count();
+    if (dateCount < 2) {
+      try {
+        await expect.poll(() => dates.count(), {
+          timeout: 2_500,
+          intervals: [250, 500, 1_000]
+        }).toBeGreaterThan(1);
+      } catch {
+        // A genuine single-date movie is not a test failure; try the next live candidate.
+      }
+      dateCount = await dates.count();
+    }
+
+    if (dateCount > 1) return overlay;
+
+    await overlay.locator("[data-provider-compare-close]").click();
+    await expect(overlay).toBeHidden({ timeout: 5_000 });
+  }
+
+  throw new Error(`No movie with at least two comparison dates found among ${candidateCount} live candidates`);
+}
+
 test("final Classic homepage puts movie tabs first and relocates data health beneath sort", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
@@ -71,13 +108,7 @@ test("final Classic homepage puts movie tabs first and relocates data health ben
 test("final Classic comparison uses full-width date rail and keeps the selected date visible after rerender", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
-  await expect(firstMovie).toBeVisible({ timeout: 30_000 });
-  await firstMovie.click();
-
-  const overlay = page.locator("#providerCompareOverlay");
-  await expect(overlay).toBeVisible({ timeout: 12_000 });
-  await expect(overlay.locator(".provider-compare-timeline")).toBeVisible({ timeout: 30_000 });
+  const overlay = await openComparisonWithMultipleDates(page);
 
   await expect(overlay.locator(".provider-compare-date-label")).toBeHidden();
   const railGeometry = await overlay.locator(".provider-compare-date-rail").evaluate(rail => {
