@@ -286,13 +286,25 @@ export default {
             : "no-store"
         });
       } catch (error) {
+        const httpStatus = Number(error?.httpStatus) === 504 ? 504 : 502;
+        const upstreamStatus = Number.isFinite(Number(error?.upstreamStatus))
+          ? Number(error.upstreamStatus)
+          : null;
+        const elapsedMs = Number.isFinite(Number(error?.elapsedMs))
+          ? Number(error.elapsedMs)
+          : null;
+
         return json({
           ok: false,
           error: {
             code: "MCL_TICKETING_ERROR",
-            message: error instanceof Error ? error.message : String(error)
+            category: error?.category || "upstream_error",
+            causeCode: error?.causeCode || "MCL_UPSTREAM_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+            upstreamStatus,
+            elapsedMs
           }
-        }, 502);
+        }, httpStatus, { "cache-control": "no-store" });
       }
     }
 
