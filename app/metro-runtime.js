@@ -67,6 +67,13 @@
     controls.appendChild(panel);
   }
 
+  function suppressRedundantComparisonLabel(sheet) {
+    const status = sheet?.querySelector("#providerCompareContent .provider-compare-status.phase8b-movie-facts");
+    if (!status) return;
+    const redundant = status.textContent?.trim() === "電影場次比較";
+    status.hidden = redundant;
+  }
+
   function syncComparisonShell() {
     const sheet = document.querySelector("#providerCompareOverlay .provider-compare-sheet");
     if (!sheet) return false;
@@ -85,8 +92,14 @@
     const actions = nav.querySelector(".metro-compare-actions");
     const close = sheet.querySelector(".provider-compare-close");
     const health = sheet.querySelector("[data-provider-resilience]");
+
     if (actions && health && health.parentElement !== actions) actions.appendChild(health);
     if (actions && close && close.parentElement !== actions) actions.appendChild(close);
+    if (actions && health && close && health.nextElementSibling !== close) {
+      actions.insertBefore(health, close);
+    }
+
+    suppressRedundantComparisonLabel(sheet);
     sheet.dataset.metroComparisonShell = "true";
     return true;
   }
@@ -104,6 +117,14 @@
 
       const fragment = document.createDocumentFragment();
       parts.forEach((part, index) => {
+        if (index > 0) {
+          const separator = document.createElement("span");
+          separator.className = "metro-meta-separator";
+          separator.setAttribute("aria-hidden", "true");
+          separator.textContent = " · ";
+          fragment.appendChild(separator);
+        }
+
         const span = document.createElement("span");
         const isDuration = /分鐘/.test(part);
         const isDate = /^\d{4}-\d{2}-\d{2}$/.test(part);
@@ -175,7 +196,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m3-1",
+    version: "m3-2",
     refresh: scheduleSync,
     syncComparisonShell
   });

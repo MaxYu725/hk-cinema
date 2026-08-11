@@ -20,13 +20,17 @@ test("Phase M3 comparison shell follows the supplied Metro structure without for
     read("app/phase10r3a-mobile-shell-date-strip.js")
   ]);
 
+  assert.match(css, /provider-compare-overlay\[hidden\][\s\S]*display:\s*none\s*!important/);
   assert.match(css, /html\[data-skin="metro"\] \.provider-compare-sheet[\s\S]*width:\s*min\(100%,\s*500px\)/);
   assert.match(css, /\.metro-compare-nav[\s\S]*justify-content:\s*space-between/);
-  assert.match(css, /\.provider-compare-hero[\s\S]*grid-template-columns:\s*80px minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.provider-compare-hero[\s\S]*grid-template-columns:\s*92px minmax\(0,\s*1fr\)/);
   assert.match(css, /\.provider-compare-date\.active[\s\S]*background:\s*var\(--metro-accent\)/);
+  assert.match(css, /phase8b-movie-details[\s\S]*display:\s*none\s*!important/);
+  assert.match(css, /data-mcl-seat-lazy-note[\s\S]*display:\s*none\s*!important/);
   assert.match(runtime, /MOVIEMETRO \/ 場次比較/);
-  assert.match(runtime, /actions\.appendChild\(health\)/);
-  assert.match(runtime, /actions\.appendChild\(close\)/);
+  assert.match(runtime, /actions\.insertBefore\(health, close\)/);
+  assert.match(runtime, /metro-meta-separator/);
+  assert.match(runtime, /電影場次比較/);
   assert.match(runtime, /syncComparisonShell/);
   assert.match(phase10, /dataset\.skin === "metro"\) return false/);
   assert.doesNotMatch(runtime, /fetch\(|API_BASE|providerSourceIds/);
@@ -34,7 +38,7 @@ test("Phase M3 comparison shell follows the supplied Metro structure without for
 
 test("Phase M3 rotates the controlled shell cache while preserving explicit activation", async () => {
   const worker = await read("app/sw.js");
-  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m3-1`/);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m3-2`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
