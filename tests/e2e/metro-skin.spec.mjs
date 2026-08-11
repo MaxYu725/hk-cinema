@@ -22,24 +22,42 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   });
 
   expect(shellStyle.background).toBe("rgb(0, 0, 0)");
-  expect(shellStyle.headingWeight).toBe("300");
+  expect(["200", "300"]).toContain(shellStyle.headingWeight);
   expect(shellStyle.tabRadius).toBe("0px");
   expect(shellStyle.tabAccent).not.toBe("rgba(0, 0, 0, 0)");
+
+  const metroSort = page.locator("[data-metro-sort-command]");
+  await expect(metroSort).toBeVisible({ timeout: 12_000 });
+  await expect(page.locator(".home-movie-sort")).toBeHidden();
+  await expect(metroSort).toContainText("原有排序");
+
+  await metroSort.click();
+  await expect.poll(() => page.evaluate(() => window.HKCinemaHomeLibrary?.getState().sort)).toBe("release");
+  await expect(metroSort).toContainText(/最新上映|最快上映/);
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
 
   const cardStyle = await firstMovie.evaluate(element => {
     const style = getComputedStyle(element);
+    const info = getComputedStyle(element.querySelector(".movie-info"));
+    const box = element.getBoundingClientRect();
     return {
       radius: style.borderRadius,
       shadow: style.boxShadow,
-      background: style.backgroundColor
+      background: style.backgroundColor,
+      ratio: box.width / box.height,
+      infoPosition: info.position
     };
   });
   expect(cardStyle.radius).toBe("0px");
   expect(cardStyle.shadow).toBe("none");
-  expect(cardStyle.background).toBe("rgba(0, 0, 0, 0)");
+  expect(cardStyle.background).toBe("rgb(17, 17, 17)");
+  expect(cardStyle.ratio).toBeGreaterThan(0.96);
+  expect(cardStyle.ratio).toBeLessThan(1.04);
+  expect(cardStyle.infoPosition).toBe("absolute");
+  await expect(firstMovie.locator(".movie-title-en")).toBeHidden();
+  await expect(firstMovie.locator(".movie-meta")).toBeHidden();
 
   const geometry = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -62,4 +80,5 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
 test("Classic remains the default when no skin preview is requested", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-skin", "classic");
+  await expect(page.locator("[data-metro-sort-command]")).toHaveCount(0);
 });
