@@ -1,0 +1,274 @@
+/* Phase M3: Metro comparison presentation. Enabled only with html[data-skin="metro"]. */
+
+html[data-skin="metro"] .provider-compare-overlay {
+  display: block;
+  background: var(--metro-bg);
+}
+
+html[data-skin="metro"] .provider-compare-backdrop {
+  display: none;
+}
+
+html[data-skin="metro"] .provider-compare-sheet {
+  width: min(100%, 500px);
+  height: 100dvh;
+  margin: 0 auto;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(32px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: var(--metro-bg);
+  color: var(--metro-fg);
+  overflow-y: auto;
+}
+
+html[data-skin="metro"] .metro-compare-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 32px;
+  margin: 0 0 16px;
+}
+
+html[data-skin="metro"] .metro-compare-title {
+  min-width: 0;
+  color: var(--metro-subtext);
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+html[data-skin="metro"] .metro-compare-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+html[data-skin="metro"] .provider-compare-close {
+  position: static;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--metro-border);
+  background: transparent;
+  color: var(--metro-fg);
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 30px;
+}
+
+html[data-skin="metro"] .provider-compare-close:active {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-compare-resilience {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-resilience-compact {
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .72rem;
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-resilience-compact small {
+  display: none;
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-resilience-compact em {
+  font-style: normal;
+  color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-resilience-detail {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 8;
+  width: min(350px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--metro-border);
+  background: #0a0a0a;
+}
+
+html[data-skin="metro"] .metro-compare-actions .provider-resilience-source {
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+}
+
+html[data-skin="metro"] .provider-compare-hero {
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+}
+
+html[data-skin="metro"] .provider-compare-hero img,
+html[data-skin="metro"] .provider-compare-poster-placeholder {
+  width: 80px;
+  height: 115px;
+  aspect-ratio: auto;
+  object-fit: cover;
+  background: #222;
+}
+
+html[data-skin="metro"] .provider-compare-hero .eyebrow {
+  margin: 0 0 3px;
+  color: var(--metro-accent);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+html[data-skin="metro"] .provider-compare-hero h1 {
+  margin: 0 0 8px;
+  color: var(--metro-fg);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+html[data-skin="metro"] .provider-compare-status {
+  gap: 6px;
+}
+
+html[data-skin="metro"] .provider-compare-status span,
+html[data-skin="metro"] .provider-compare-status small {
+  padding: 2px 6px;
+  border: 1px solid var(--metro-border);
+  background: #252525;
+  color: #ccc;
+  font-size: .68rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .provider-compare-status span {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+html[data-skin="metro"] .provider-compare-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] .provider-compare-timeline-section {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html[data-skin="metro"] .provider-compare-dates {
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  scrollbar-width: none;
+}
+
+html[data-skin="metro"] .provider-compare-dates::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-skin="metro"] .provider-compare-date {
+  flex: 0 0 100px;
+  min-width: 100px;
+  padding: 10px 8px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+  text-align: center;
+}
+
+html[data-skin="metro"] .provider-compare-date strong {
+  font-size: .88rem;
+  font-weight: 600;
+}
+
+html[data-skin="metro"] .provider-compare-date span {
+  margin-top: 3px;
+  color: var(--metro-subtext);
+  font-size: .68rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .provider-compare-date.active {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+  color: #fff;
+}
+
+html[data-skin="metro"] .provider-compare-date.active span {
+  color: rgba(255,255,255,.8);
+}
+
+html[data-skin="metro"] .provider-compare-section-heading {
+  margin: 20px 0 10px;
+}
+
+html[data-skin="metro"] .provider-compare-section-heading .eyebrow {
+  color: var(--metro-subtext);
+  font-size: .7rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+html[data-skin="metro"] .provider-compare-section-heading h2 {
+  color: var(--metro-fg);
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .provider-compare-section-heading small,
+html[data-skin="metro"] .provider-compare-loading span,
+html[data-skin="metro"] .provider-compare-empty span,
+html[data-skin="metro"] .provider-compare-note {
+  color: var(--metro-subtext);
+}
+
+@media (max-width: 380px) {
+  html[data-skin="metro"] .metro-compare-title {
+    max-width: 135px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  html[data-skin="metro"] .provider-compare-hero {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  html[data-skin="metro"] .provider-compare-hero img,
+  html[data-skin="metro"] .provider-compare-poster-placeholder {
+    width: 72px;
+    height: 104px;
+  }
+}

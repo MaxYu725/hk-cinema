@@ -67,6 +67,30 @@
     controls.appendChild(panel);
   }
 
+  function syncComparisonShell() {
+    const sheet = document.querySelector("#providerCompareOverlay .provider-compare-sheet");
+    if (!sheet) return false;
+
+    let nav = sheet.querySelector(":scope > .metro-compare-nav");
+    if (!nav) {
+      nav = document.createElement("div");
+      nav.className = "metro-compare-nav";
+      nav.innerHTML = `
+        <div class="metro-compare-title">MOVIEMETRO / 場次比較</div>
+        <div class="metro-compare-actions"></div>
+      `;
+      sheet.insertBefore(nav, sheet.firstChild);
+    }
+
+    const actions = nav.querySelector(".metro-compare-actions");
+    const close = sheet.querySelector(".provider-compare-close");
+    const health = sheet.querySelector("[data-provider-resilience]");
+    if (actions && health && health.parentElement !== actions) actions.appendChild(health);
+    if (actions && close && close.parentElement !== actions) actions.appendChild(close);
+    sheet.dataset.metroComparisonShell = "true";
+    return true;
+  }
+
   function decorateMovieMetadata() {
     document.querySelectorAll(".movie-card .movie-meta:not([data-metro-decorated])").forEach(meta => {
       const parts = (meta.textContent || "")
@@ -103,6 +127,7 @@
     syncSortLabel();
     syncLegacyStickyState();
     moveDataHealthIntoControls();
+    syncComparisonShell();
     decorateMovieMetadata();
   }
 
@@ -123,7 +148,9 @@
       "hkcinema:mcl-catalogue",
       "hkcinema:emperor-catalogue",
       "hkcinema:provider-matches",
-      "hkcinema:data-health"
+      "hkcinema:data-health",
+      "hkcinema:provider-compare-open",
+      "hkcinema:provider-compare-lifecycle"
     ].forEach(name => window.addEventListener(name, scheduleSync));
 
     window.addEventListener("scroll", scheduleSync, { passive: true });
@@ -134,11 +161,11 @@
         const target = record.target?.nodeType === Node.ELEMENT_NODE
           ? record.target
           : record.target?.parentElement;
-        if (target?.closest?.("#movieGrid, #homeLibraryTools, #topbarActions, .tabs")) return true;
+        if (target?.closest?.("#movieGrid, #homeLibraryTools, #topbarActions, .tabs, #providerCompareOverlay")) return true;
         return Array.from(record.addedNodes || []).some(node => (
           node?.nodeType === Node.ELEMENT_NODE && (
-            node.matches?.("#dataHealth, .movie-card, #homeLibraryTools") ||
-            node.querySelector?.("#dataHealth, .movie-card, #homeLibraryTools")
+            node.matches?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, [data-provider-resilience]") ||
+            node.querySelector?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, [data-provider-resilience]")
           )
         ));
       });
@@ -148,8 +175,9 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m2-1",
-    refresh: scheduleSync
+    version: "m3-1",
+    refresh: scheduleSync,
+    syncComparisonShell
   });
 
   if (document.readyState === "loading") {

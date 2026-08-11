@@ -23,6 +23,8 @@
   }
 
   function placeComparisonDataHealth() {
+    if (document.documentElement.dataset.skin === "metro") return false;
+
     const overlay = document.querySelector("#providerCompareOverlay");
     const content = overlay?.querySelector("#providerCompareContent");
     const panel = overlay?.querySelector("[data-provider-resilience]");
@@ -101,7 +103,7 @@
   }
 
   window.HKCinemaPhase10R3A = Object.freeze({
-    version: "10r3b-m1-1",
+    version: "10r3b-m3-1",
     refresh: schedule,
     centerSelectedDate,
     placeHomeDataHealth,
