@@ -29,7 +29,7 @@ test("Phase 10R3A makes movie tabs first and places data health beneath the sort
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3a-1/);
   assert.match(css, /\.topbar\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(132px,\s*0\.34fr\)/s);
-  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(130px,\s*0\.82fr\)/s);
+  assert.match(css, /@media \(max-width:\s*600px\)[\s\S]*\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(130px,\s*0\.82fr\)/s);
   assert.match(css, /#dataHealth\[data-phase10r3a-home-health="true"\][\s\S]*grid-column:\s*2[\s\S]*grid-row:\s*2[\s\S]*justify-self:\s*center/s);
   assert.match(runtime, /panel\.dataset\.phase10r3aHomeHealth = "true"/);
   assert.match(runtime, /filters\.insertAdjacentElement\("afterend", panel\)/);
