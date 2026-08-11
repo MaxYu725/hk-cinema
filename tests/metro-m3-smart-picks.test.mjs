@@ -45,8 +45,8 @@ test("Metro Smart Pick jump highlights the target showtime card border", () => {
   assert.match(css, /provider-compare-show\.is-recommendation-jump[\s\S]*transform:\s*none\s*!important/);
 });
 
-test("Metro Smart Picks shell cache rotates without automatic activation", () => {
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m3-3`/);
+test("Metro Smart Picks remain compatible with the current controlled shell cache", () => {
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m4-1`/);
   assert.doesNotMatch(sw, /install[\s\S]{0,260}skipWaiting\s*\(/);
   assert.match(sw, /event\.data\?\.type\s*===\s*"SKIP_WAITING"/);
 });

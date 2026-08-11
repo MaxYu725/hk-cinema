@@ -1,0 +1,421 @@
+/* Phase M4A: Metro seat-map presentation. The shared seat-map data/rendering stays intact. */
+
+html[data-skin="metro"] .shared-seatmap-overlay {
+  justify-content: center;
+  background: var(--metro-bg);
+}
+
+html[data-skin="metro"] .shared-seatmap-backdrop {
+  display: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-sheet {
+  width: min(100%, 500px);
+  height: 100dvh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: var(--metro-bg);
+  color: var(--metro-fg);
+  box-shadow: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-close {
+  position: fixed;
+  z-index: 40;
+  top: max(16px, env(safe-area-inset-top));
+  left: calc(50% + min(250px, 50vw) - 54px);
+  right: auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--metro-border);
+  border-radius: 0;
+  background: #000;
+  color: var(--metro-fg);
+  box-shadow: none;
+  font-size: 1.45rem;
+  font-weight: 300;
+}
+
+html[data-skin="metro"] .shared-seatmap-close:active {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+}
+
+html[data-skin="metro"] .shared-seatmap-header {
+  padding-right: 52px;
+}
+
+html[data-skin="metro"] .shared-seatmap-header .eyebrow,
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"] .shared-seatmap-header .eyebrow {
+  margin: 0 0 18px;
+  color: var(--metro-subtext);
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+html[data-skin="metro"] .shared-seatmap-header h2 {
+  margin: 0;
+  color: var(--metro-accent);
+  font-size: clamp(1.35rem, 6vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.18;
+}
+
+html[data-skin="metro"] .shared-seatmap-header > p:last-child {
+  margin: 7px 0 0;
+  color: var(--metro-subtext);
+  font-size: .78rem;
+  line-height: 1.4;
+}
+
+html[data-skin="metro"] .shared-seatmap-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+html[data-skin="metro"] .shared-seatmap-summary > div {
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px 8px;
+  border: 1px solid var(--metro-border);
+  border-radius: 0;
+  background: var(--metro-tile);
+}
+
+html[data-skin="metro"] .shared-seatmap-summary > div.status-available {
+  border-top: 3px solid #0f8a48;
+}
+
+html[data-skin="metro"] .shared-seatmap-summary strong {
+  color: var(--metro-fg);
+  font-size: 1.18rem;
+  font-weight: 600;
+}
+
+html[data-skin="metro"] .shared-seatmap-summary .status-available strong {
+  color: #0f8a48;
+}
+
+html[data-skin="metro"] .shared-seatmap-summary span {
+  margin-top: 12px;
+  color: var(--metro-subtext);
+  font-size: .64rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+html[data-skin="metro"] .shared-seatmap-legends {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+}
+
+html[data-skin="metro"] .shared-seatmap-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 8px 12px;
+  color: var(--metro-fg);
+  font-size: .68rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .shared-seatmap-legend + .shared-seatmap-legend {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--metro-border);
+}
+
+html[data-skin="metro"] .shared-seatmap-legend span {
+  gap: 7px;
+}
+
+html[data-skin="metro"] .shared-seatmap-legend i {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+}
+
+html[data-skin="metro"] .shared-seatmap-layout {
+  position: relative;
+  margin-top: 46px;
+  padding: 14px 8px 12px;
+  border: 1px solid var(--metro-border);
+  background: #060606;
+}
+
+html[data-skin="metro"] .shared-seatmap-scroll-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -32px;
+  margin: 0;
+  color: var(--metro-subtext);
+  font-size: .66rem;
+  text-align: center;
+}
+
+html[data-skin="metro"] .shared-seatmap-screen {
+  width: min(84%, 520px);
+  height: 42px;
+  margin: 0 auto 8px;
+}
+
+html[data-skin="metro"] .shared-seatmap-screen::before {
+  top: 0;
+  left: 5%;
+  right: 5%;
+  height: 0;
+  border-top: 3px solid var(--metro-accent);
+  border-radius: 0;
+}
+
+html[data-skin="metro"] .shared-seatmap-screen span {
+  margin-top: 12px;
+  padding: 0 9px;
+  background: #060606;
+  color: var(--metro-subtext);
+  font-size: .63rem;
+  font-weight: 400;
+  letter-spacing: .24em;
+}
+
+html[data-skin="metro"] .shared-seatmap-viewport,
+html[data-skin="metro"] .shared-seatmap-positioned-canvas,
+html[data-skin="metro"] .shared-seatmap-section {
+  border-radius: 0;
+}
+
+html[data-skin="metro"] .shared-seatmap-scroll {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
+  scrollbar-color: #3b3b3b #060606;
+}
+
+html[data-skin="metro"] .shared-seatmap-grid {
+  padding: 8px 0 12px;
+}
+
+html[data-skin="metro"] .shared-seatmap-row-label,
+html[data-skin="metro"] .shared-seat.area-cell.label,
+html[data-skin="metro"] .shared-seatmap-fixed-rows > span,
+html[data-skin="metro"] .shared-seatmap-positioned-rows span {
+  color: var(--metro-subtext);
+  font-weight: 600;
+}
+
+html[data-skin="metro"] .shared-seatmap-row-label {
+  background: #060606;
+}
+
+html[data-skin="metro"] .shared-seatmap-fixed-rows {
+  background: linear-gradient(90deg, #060606 72%, rgba(6, 6, 6, 0));
+}
+
+html[data-skin="metro"] .shared-seat {
+  border-radius: 0;
+  font-weight: 500;
+}
+
+html[data-skin="metro"] .shared-seat.status-available,
+html[data-skin="metro"] .shared-seatmap-legend i.status-available {
+  border-color: #0f8a48;
+  background: #0f7a42;
+  color: #fff;
+}
+
+html[data-skin="metro"] .shared-seat.status-held,
+html[data-skin="metro"] .shared-seatmap-legend i.status-held {
+  border-color: #9b782c;
+  background: #72591f;
+  color: #fff;
+}
+
+html[data-skin="metro"] .shared-seat.status-sold,
+html[data-skin="metro"] .shared-seatmap-legend i.status-sold {
+  border-color: #3a3a3a;
+  background: #2c2c2c;
+  color: #aaa;
+}
+
+html[data-skin="metro"] .shared-seat.status-blocked,
+html[data-skin="metro"] .shared-seatmap-legend i.status-blocked {
+  border-color: #6d3036;
+  background: #59282d;
+  color: #c9a0a4;
+}
+
+html[data-skin="metro"] .shared-seat.status-unavailable,
+html[data-skin="metro"] .shared-seatmap-legend i.status-unavailable {
+  border-color: #353535;
+  background: #242424;
+  color: #7a7a7a;
+}
+
+html[data-skin="metro"] .shared-seat.status-unknown,
+html[data-skin="metro"] .shared-seatmap-legend i.status-unknown {
+  border-color: #554d64;
+  background: #393344;
+  color: #b0a6bf;
+}
+
+/* Wheelchair is a seat type, not an inventory state. Keep held/sold/blocked fills visible. */
+html[data-skin="metro"] .shared-seat.type-wheelchair {
+  border-color: var(--metro-accent);
+  box-shadow: inset 0 0 0 1px var(--metro-accent);
+}
+
+html[data-skin="metro"] .shared-seatmap-legend i.type-wheelchair {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+html[data-skin="metro"] .shared-seat.type-sofa,
+html[data-skin="metro"] .shared-seat.type-couple,
+html[data-skin="metro"] .shared-seat.type-recliner {
+  border-radius: 0;
+}
+
+html[data-skin="metro"] .shared-seatmap-legend i.type-sofa,
+html[data-skin="metro"] .shared-seatmap-legend i.type-couple,
+html[data-skin="metro"] .shared-seatmap-legend i.type-recliner,
+html[data-skin="metro"] .shared-seatmap-legend i.type-motion,
+html[data-skin="metro"] .shared-seatmap-legend i.type-special {
+  border-color: var(--metro-border);
+  background: var(--metro-tile-strong);
+}
+
+html[data-skin="metro"] .shared-seatmap-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--metro-border);
+  background: #060606;
+}
+
+html[data-skin="metro"] .shared-seatmap-section-heading strong {
+  color: var(--metro-fg);
+  font-weight: 600;
+}
+
+html[data-skin="metro"] .shared-seatmap-section-heading span,
+html[data-skin="metro"] .shared-seatmap-zone-list span {
+  color: var(--metro-subtext);
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .shared-seatmap-zone-list span {
+  border-radius: 0;
+  background: var(--metro-tile-strong);
+}
+
+html[data-skin="metro"] .positioned-viewport,
+html[data-skin="metro"] .shared-seatmap-positioned-canvas {
+  background: #060606;
+}
+
+html[data-skin="metro"] .shared-seatmap-positioned-rows {
+  background: linear-gradient(90deg, #060606 0 76%, rgba(6, 6, 6, 0));
+}
+
+html[data-skin="metro"] .shared-seatmap-notices {
+  margin: 14px 8px 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--metro-subtext);
+  font-size: .68rem;
+}
+
+html[data-skin="metro"] .shared-seatmap-footer {
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+html[data-skin="metro"] .shared-seatmap-footer p {
+  max-width: none;
+  color: var(--metro-subtext);
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+html[data-skin="metro"] .shared-seatmap-booking,
+html[data-skin="metro"] .shared-seatmap-state button {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--metro-accent);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 500;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="mcl"] .shared-seatmap-booking {
+  background: #0f8a48;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"] .shared-seatmap-booking {
+  background: #8f2738;
+}
+
+html[data-skin="metro"] .shared-seatmap-state,
+html[data-skin="metro"] .shared-seatmap-empty {
+  min-height: 170px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--metro-border);
+  border-radius: 0;
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] .shared-seatmap-state > span,
+html[data-skin="metro"] .shared-seatmap-empty > span {
+  color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] .shared-seatmap-state.error strong {
+  color: #d36a6a;
+}
+
+html[data-skin="metro"] .shared-seatmap-spinner {
+  border-color: #333;
+  border-top-color: var(--metro-accent);
+}
+
+@media (max-width: 380px) {
+  html[data-skin="metro"] .shared-seatmap-sheet {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  html[data-skin="metro"] .shared-seatmap-summary {
+    gap: 6px;
+  }
+
+  html[data-skin="metro"] .shared-seatmap-summary > div {
+    padding: 9px 6px;
+  }
+
+  html[data-skin="metro"] .shared-seatmap-summary strong {
+    font-size: 1.05rem;
+  }
+
+  html[data-skin="metro"] .shared-seatmap-summary span {
+    font-size: .58rem;
+  }
+}

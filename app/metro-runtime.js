@@ -104,6 +104,19 @@
     return true;
   }
 
+  function syncSeatMapShell() {
+    const sheet = document.querySelector("#sharedSeatMapOverlay .shared-seatmap-sheet");
+    if (!sheet) return false;
+
+    const eyebrow = sheet.querySelector(".shared-seatmap-header .eyebrow");
+    if (eyebrow && eyebrow.textContent !== "MOVIEMETRO / 座位圖") {
+      eyebrow.textContent = "MOVIEMETRO / 座位圖";
+    }
+
+    sheet.dataset.metroSeatmapShell = "true";
+    return true;
+  }
+
   function decorateMovieMetadata() {
     document.querySelectorAll(".movie-card .movie-meta:not([data-metro-decorated])").forEach(meta => {
       const parts = (meta.textContent || "")
@@ -149,6 +162,7 @@
     syncLegacyStickyState();
     moveDataHealthIntoControls();
     syncComparisonShell();
+    syncSeatMapShell();
     decorateMovieMetadata();
   }
 
@@ -171,7 +185,8 @@
       "hkcinema:provider-matches",
       "hkcinema:data-health",
       "hkcinema:provider-compare-open",
-      "hkcinema:provider-compare-lifecycle"
+      "hkcinema:provider-compare-lifecycle",
+      "hkcinema:seatmap-opening"
     ].forEach(name => window.addEventListener(name, scheduleSync));
 
     window.addEventListener("scroll", scheduleSync, { passive: true });
@@ -182,11 +197,11 @@
         const target = record.target?.nodeType === Node.ELEMENT_NODE
           ? record.target
           : record.target?.parentElement;
-        if (target?.closest?.("#movieGrid, #homeLibraryTools, #topbarActions, .tabs, #providerCompareOverlay")) return true;
+        if (target?.closest?.("#movieGrid, #homeLibraryTools, #topbarActions, .tabs, #providerCompareOverlay, #sharedSeatMapOverlay")) return true;
         return Array.from(record.addedNodes || []).some(node => (
           node?.nodeType === Node.ELEMENT_NODE && (
-            node.matches?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, [data-provider-resilience]") ||
-            node.querySelector?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, [data-provider-resilience]")
+            node.matches?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, #sharedSeatMapOverlay, [data-provider-resilience]") ||
+            node.querySelector?.("#dataHealth, .movie-card, #homeLibraryTools, #providerCompareOverlay, #sharedSeatMapOverlay, [data-provider-resilience]")
           )
         ));
       });
@@ -196,9 +211,10 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m3-2",
+    version: "m4-1",
     refresh: scheduleSync,
-    syncComparisonShell
+    syncComparisonShell,
+    syncSeatMapShell
   });
 
   if (document.readyState === "loading") {
