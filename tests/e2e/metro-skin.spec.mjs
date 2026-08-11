@@ -27,8 +27,27 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   expect(shellStyle.tabAccent).not.toBe("rgba(0, 0, 0, 0)");
 
   const health = page.locator("#dataHealth");
+  const healthSummary = health.locator("summary");
+  const refreshButton = page.locator("#refreshButton");
   await expect(health).toBeVisible({ timeout: 12_000 });
-  await health.locator("summary").click();
+  await expect(refreshButton).toBeEnabled({ timeout: 30_000 });
+
+  if (await health.evaluate(element => element.open)) {
+    await healthSummary.click();
+    await expect(health.locator(".data-health-body")).toBeHidden();
+  }
+
+  await page.evaluate(() => {
+    window.__healthRefreshClicks = 0;
+    document.querySelector("#refreshButton")?.addEventListener("click", () => {
+      window.__healthRefreshClicks += 1;
+    });
+  });
+
+  await healthSummary.click();
+  await expect(health.locator(".data-health-body")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__healthRefreshClicks)).toBe(1);
+  await page.waitForTimeout(300);
   await expect(health.locator(".data-health-body")).toBeVisible();
   await expect(health.locator(".data-health-source")).toHaveCount(3);
   await expect(health.locator(".data-health-source-detail").first()).toBeHidden();
@@ -39,7 +58,7 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   });
   expect(healthGeometry.width).toBeLessThanOrEqual(300);
   expect(healthGeometry.height).toBeLessThanOrEqual(260);
-  await health.locator("summary").click();
+  await healthSummary.click();
 
   const metroSort = page.locator("[data-metro-sort-command]");
   await expect(metroSort).toBeVisible({ timeout: 12_000 });
