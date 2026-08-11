@@ -13,7 +13,9 @@ on:
     paths:
       - ".github/workflows/live-provider-validation.yml"
       - "scripts/live-production-validation.mjs"
+      - "scripts/phase10r2e-production-revalidation.mjs"
       - "tests/phase10r2-live-validation-contract.test.mjs"
+      - "tests/phase10r2e-production-revalidation.test.mjs"
 
 permissions:
   contents: read
@@ -25,6 +27,7 @@ jobs:
     timeout-minutes: 5
     env:
       HK_CINEMA_WORKER_URL: ${{ inputs.worker_url || 'https://hk-cinema-api.max-yu-jp.workers.dev' }}
+      HK_CINEMA_EXPECTED_COMMIT: ${{ github.event.pull_request.base.sha || github.sha }}
       LIVE_VALIDATION_REPORT: live-validation.json
 
     steps:
@@ -38,6 +41,9 @@ jobs:
 
       - name: Validate production provider flows
         run: node scripts/live-production-validation.mjs
+
+      - name: Re-validate deployed 10R2D diagnostics
+        run: node scripts/phase10r2e-production-revalidation.mjs
 
       - name: Upload live validation report
         if: always()
