@@ -1,0 +1,49 @@
+name: Live Provider Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      worker_url:
+        description: Production Worker base URL
+        required: false
+        default: https://hk-cinema-api.max-yu-jp.workers.dev
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/live-provider-validation.yml"
+      - "scripts/live-production-validation.mjs"
+      - "tests/phase10r2-live-validation-contract.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  live-validation:
+    name: production-live-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HK_CINEMA_WORKER_URL: ${{ inputs.worker_url || 'https://hk-cinema-api.max-yu-jp.workers.dev' }}
+      LIVE_VALIDATION_REPORT: live-validation.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate production provider flows
+        run: node scripts/live-production-validation.mjs
+
+      - name: Upload live validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-provider-validation-${{ github.run_id }}
+          path: live-validation.json
+          if-no-files-found: warn
+          retention-days: 7
