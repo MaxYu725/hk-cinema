@@ -26,6 +26,21 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   expect(shellStyle.tabRadius).toBe("0px");
   expect(shellStyle.tabAccent).not.toBe("rgba(0, 0, 0, 0)");
 
+  const health = page.locator("#dataHealth");
+  await expect(health).toBeVisible({ timeout: 12_000 });
+  await health.locator("summary").click();
+  await expect(health.locator(".data-health-body")).toBeVisible();
+  await expect(health.locator(".data-health-source")).toHaveCount(3);
+  await expect(health.locator(".data-health-source-detail").first()).toBeHidden();
+
+  const healthGeometry = await health.locator(".data-health-body").evaluate(element => {
+    const box = element.getBoundingClientRect();
+    return { width: box.width, height: box.height };
+  });
+  expect(healthGeometry.width).toBeLessThanOrEqual(300);
+  expect(healthGeometry.height).toBeLessThanOrEqual(260);
+  await health.locator("summary").click();
+
   const metroSort = page.locator("[data-metro-sort-command]");
   await expect(metroSort).toBeVisible({ timeout: 12_000 });
   await expect(page.locator(".home-movie-sort")).toBeHidden();
@@ -59,11 +74,32 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   await expect(firstMovie.locator(".movie-title-en")).toBeHidden();
   await expect(firstMovie.locator(".movie-meta")).toBeHidden();
 
+  const posterMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member):has(.movie-poster img)").first();
+  await expect(posterMovie).toBeVisible({ timeout: 30_000 });
+  const posterFit = await posterMovie.locator(".movie-poster img").evaluate(element => getComputedStyle(element).objectFit);
+  expect(posterFit).toBe("contain");
+
   const geometry = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth
   }));
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+
+  const tools = page.locator("#homeLibraryTools");
+  const toolsTop = await tools.evaluate(element => {
+    let top = 0;
+    let node = element;
+    while (node) {
+      top += Number(node.offsetTop) || 0;
+      node = node.offsetParent;
+    }
+    return top;
+  });
+  await page.evaluate(top => window.scrollTo(0, top + 240), toolsTop);
+  await expect.poll(() => tools.evaluate(element => element.classList.contains("is-stuck-latched"))).toBe(true);
+  const stickyHeight = await tools.evaluate(element => element.getBoundingClientRect().height);
+  expect(stickyHeight).toBeLessThan(50);
+  await expect(metroSort.locator("span")).toBeHidden();
 
   await firstMovie.click();
   const overlay = page.locator("#providerCompareOverlay");
