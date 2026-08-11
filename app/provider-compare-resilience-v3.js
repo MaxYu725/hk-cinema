@@ -218,12 +218,18 @@
   function install() {
     const bodyObserver = new MutationObserver(() => {
       const content = document.querySelector("#providerCompareContent");
-      if (!content || content.dataset.resilienceObservedV3 === "true") {
-        schedule();
-        return;
-      }
+      if (!content || content.dataset.resilienceObservedV3 === "true") return;
+
       content.dataset.resilienceObservedV3 = "true";
-      const contentObserver = new MutationObserver(schedule);
+      const contentObserver = new MutationObserver(records => {
+        const relevant = records.some(record => {
+          const target = record.target?.nodeType === Node.ELEMENT_NODE
+            ? record.target
+            : record.target?.parentElement;
+          return !target?.closest?.("[data-provider-resilience]");
+        });
+        if (relevant) schedule();
+      });
       contentObserver.observe(content, {
         childList: true,
         subtree: true,
