@@ -49,7 +49,7 @@ test("home tabs remain interactive on the mobile viewport", async ({ page }) => 
 });
 
 test("Classic mobile polish stays inside the viewport and keeps key touch targets usable", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
@@ -80,7 +80,7 @@ test("Classic mobile polish stays inside the viewport and keeps key touch target
 });
 
 test("selected date stays legible, date rail pins, and filters use one-open compact groups", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
