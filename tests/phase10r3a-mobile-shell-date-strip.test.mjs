@@ -13,11 +13,11 @@ const [index, manifestText, css, runtime, worker] = await Promise.all([
 ]);
 const manifest = JSON.parse(manifestText);
 
-test("Phase 10R3A/M3 keeps fullscreen PWA semantics while rotating the controlled shell cache", () => {
+test("Phase 10R3A keeps fullscreen PWA semantics under the current controlled shell cache", () => {
   assert.equal(manifest.display, "fullscreen");
   assert.deepEqual(manifest.display_override.slice(0, 2), ["fullscreen", "standalone"]);
   assert.match(index, /manifest\.json\?v=10r3a-1/);
-  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m3-3`/);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m4-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
