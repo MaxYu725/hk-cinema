@@ -30,7 +30,7 @@ async function openComparisonWithMultipleDates(page) {
 
     if (dateCount > 1) return overlay;
 
-    await overlay.locator("[data-provider-compare-close]").click();
+    await overlay.locator(".provider-compare-close").click();
     await expect(overlay).toBeHidden({ timeout: 5_000 });
   }
 
