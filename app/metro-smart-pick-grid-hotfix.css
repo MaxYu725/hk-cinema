@@ -1,0 +1,32 @@
+/* Phase 10B2.1 — Smart Pick real-device grid hotfix.
+   Reset the legacy compact-density horizontal auto-flow that can leak into the
+   Metro recommendation Pivot on mobile and squeeze later cards into implicit
+   columns. Presentation only; recommendation scoring and targets stay intact. */
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="picks"] .phase8d-smart-grid {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
+  grid-auto-columns: auto;
+  grid-auto-rows: auto;
+  overflow-x: visible;
+  padding-bottom: 0;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="picks"] .phase8d-smart-pick,
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="picks"] .provider-compare-recommendation.balanced.phase8d-smart-pick {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+  grid-column: auto;
+  word-break: normal;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="picks"] .phase8d-smart-pick strong,
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="picks"] .phase8d-smart-pick small {
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
