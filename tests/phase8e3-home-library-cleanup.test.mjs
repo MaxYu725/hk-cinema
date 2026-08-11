@@ -65,7 +65,7 @@ test("production keeps only the current comparison generations while historical 
   assert.match(index, /provider-compare-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=8d1/);
+  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-1/);
 
   assert.doesNotMatch(index, /<script src="\.\/provider-compare\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);

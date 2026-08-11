@@ -12,7 +12,7 @@ test("production loads MCL lazy price enrichment beside lazy seat enrichment", a
   const index = await read("app/index.html");
   const seats = index.indexOf("provider-compare-seats.js?v=6o1");
   const prices = index.indexOf("provider-compare-prices.js?v=8d3");
-  const recommendations = index.indexOf("provider-compare-recommendations-v4.js?v=8d1");
+  const recommendations = index.indexOf("provider-compare-recommendations-v4.js?v=10r3b-1");
 
   assert.ok(seats >= 0);
   assert.ok(prices > seats);

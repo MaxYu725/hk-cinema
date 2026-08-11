@@ -110,7 +110,7 @@
     const clock = hongKongClock(now);
     if (selectedDate() !== clock.date) return available;
     return available.filter(entry => (
-      !Number.isFinite(entry.timeMinutes) || entry.timeMinutes >= clock.minutes
+      !Number.isFinite(entry.timeMinutes) || entry.timeMinutes > clock.minutes
     ));
   }
 
@@ -177,7 +177,6 @@
       } else if (mode === "seat-time") {
         score = seatScore * 0.70 + timeScore * 0.30;
       }
-
       return { ...entry, score, balanceMode: mode };
     });
   }
