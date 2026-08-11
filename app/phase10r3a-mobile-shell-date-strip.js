@@ -6,11 +6,18 @@
     const panel = document.querySelector("#dataHealth");
     if (!tools || !panel) return false;
 
-    if (panel.parentElement !== tools) {
-      const filters = tools.querySelector(".home-library-filter-options");
+    const filters = tools.querySelector(".home-library-filter-options");
+    const metro = document.documentElement.dataset.skin === "metro";
+
+    if (metro) {
+      if (filters && panel.parentElement !== filters) filters.appendChild(panel);
+      else if (!filters && panel.parentElement !== tools) tools.appendChild(panel);
+      panel.dataset.metroHomeHealth = "true";
+    } else if (panel.parentElement !== tools) {
       if (filters) filters.insertAdjacentElement("afterend", panel);
       else tools.appendChild(panel);
     }
+
     panel.dataset.phase10r3aHomeHealth = "true";
     return true;
   }
@@ -94,7 +101,7 @@
   }
 
   window.HKCinemaPhase10R3A = Object.freeze({
-    version: "10r3b-1",
+    version: "10r3b-m1-1",
     refresh: schedule,
     centerSelectedDate,
     placeHomeDataHealth,
