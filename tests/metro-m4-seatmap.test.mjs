@@ -20,16 +20,26 @@ test("Metro loads the seat-map layer after comparison Smart Picks", () => {
 test("Metro seat-map shell matches the square black reference structure", () => {
   assert.match(css, /html\[data-skin="metro"\] \.shared-seatmap-sheet[\s\S]*width:\s*min\(100%,\s*500px\)/);
   assert.match(css, /shared-seatmap-sheet[\s\S]*background:\s*var\(--metro-bg\)/);
+  assert.match(css, /shared-seatmap-close[\s\S]*position:\s*fixed/);
   assert.match(css, /shared-seatmap-close[\s\S]*border-radius:\s*0/);
   assert.match(css, /shared-seatmap-summary[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /shared-seatmap-layout[\s\S]*border:\s*1px solid var\(--metro-border\)/);
   assert.match(css, /shared-seatmap-screen::before[\s\S]*border-top:\s*3px solid var\(--metro-accent\)/);
 });
 
+test("Metro keeps wide maps reachable inside the capped seat-map shell", () => {
+  assert.match(css, /shared-seatmap-scroll\s*\{[\s\S]*overflow-x:\s*auto\s*!important/);
+  assert.match(css, /shared-seatmap-scroll\s*\{[\s\S]*touch-action:\s*pan-x\s+pan-y/);
+});
+
 test("Metro seat states and booking action use the supplied visual hierarchy", () => {
   assert.match(css, /shared-seat\.status-available[\s\S]*background:\s*#0f7a42/);
   assert.match(css, /shared-seat\.status-blocked[\s\S]*background:\s*#59282d/);
-  assert.match(css, /shared-seat\.type-wheelchair[\s\S]*background:\s*var\(--metro-accent\)/);
+  const wheelchairSeatRule = css.match(/html\[data-skin="metro"\] \.shared-seat\.type-wheelchair\s*\{[^}]*\}/)?.[0] || "";
+  assert.ok(wheelchairSeatRule);
+  assert.match(wheelchairSeatRule, /border-color:\s*var\(--metro-accent\)/);
+  assert.doesNotMatch(wheelchairSeatRule, /background\s*:/);
+  assert.match(css, /shared-seatmap-legend i\.type-wheelchair[\s\S]*background:\s*var\(--metro-accent\)/);
   assert.match(css, /shared-seatmap-booking[\s\S]*width:\s*100%/);
   assert.match(css, /data-seatmap-provider="mcl"[\s\S]*shared-seatmap-booking[\s\S]*background:\s*#0f8a48/);
 });
