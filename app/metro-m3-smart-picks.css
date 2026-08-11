@@ -1,0 +1,136 @@
+/* M3 Smart Picks hotfix: keep Metro recommendations compact, balanced and scannable. */
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel {
+  margin: -6px 0 14px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--metro-border);
+  background: #0c0c0c;
+}
+
+/* Phase 6L switches recommendation cards to a horizontal auto-flow carousel on phones.
+   Metro's final comparison design uses a fixed 2x2 matrix instead. Reset every implicit
+   grid property so cards cannot become extremely tall or create off-screen columns. */
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  grid-auto-columns: auto !important;
+  grid-auto-rows: auto !important;
+  align-items: stretch;
+  gap: 8px;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid.pick-count-1 {
+  grid-template-columns: 1fr !important;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick,
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation.balanced.phase8d-smart-pick {
+  width: auto;
+  min-width: 0;
+  min-height: 138px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--metro-border);
+  border-radius: 0;
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick.cheapest,
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick.earliest,
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick.roomiest,
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick.balanced {
+  background: var(--metro-tile);
+  border-color: var(--metro-border);
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick span {
+  color: var(--metro-subtext);
+  font-size: .68rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick strong {
+  margin-top: 7px;
+  color: var(--metro-accent);
+  font-size: 1.16rem;
+  font-weight: 600;
+  line-height: 1.12;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick small {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  color: var(--metro-subtext);
+  font-size: .65rem;
+  font-weight: 400;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick em {
+  margin-top: auto;
+  padding-top: 12px;
+  color: var(--metro-accent);
+  font-size: .64rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick:active {
+  border-color: var(--metro-accent);
+  background: #161616;
+  transform: none;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick:focus-visible {
+  outline: 2px solid var(--metro-accent);
+  outline-offset: -2px;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation-note {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--metro-border);
+  color: var(--metro-subtext);
+  font-size: .62rem;
+  line-height: 1.45;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation-note summary {
+  color: var(--metro-subtext);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+@media (max-width: 380px) {
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel {
+    padding: 10px;
+  }
+
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid {
+    gap: 7px;
+  }
+
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick,
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation.balanced.phase8d-smart-pick {
+    min-height: 132px;
+    padding: 10px;
+  }
+
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick strong {
+    font-size: 1.06rem;
+  }
+}
