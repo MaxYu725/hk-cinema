@@ -36,6 +36,10 @@
     if (label && label.textContent !== "排序：") label.textContent = "排序：";
   }
 
+  function syncLegacyStickyState() {
+    document.querySelector("#homeLibraryTools")?.classList.remove("is-stuck");
+  }
+
   function moveDataHealthIntoControls() {
     const panel = document.querySelector("#dataHealth");
     const controls = document.querySelector(".home-library-filter-options");
@@ -77,6 +81,7 @@
     syncAppLabel();
     syncPivotLabels();
     syncSortLabel();
+    syncLegacyStickyState();
     moveDataHealthIntoControls();
     decorateMovieMetadata();
   }
@@ -101,6 +106,9 @@
       "hkcinema:data-health"
     ].forEach(name => window.addEventListener(name, scheduleSync));
 
+    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("resize", scheduleSync, { passive: true });
+
     observer = new MutationObserver(records => {
       const relevant = records.some(record => {
         const target = record.target?.nodeType === Node.ELEMENT_NODE
@@ -120,7 +128,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m1-1",
+    version: "m1-2",
     refresh: scheduleSync
   });
 
