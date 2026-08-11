@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("final Classic homepage puts movie tabs first and relocates data health beside library filters", async ({ page }) => {
+test("final Classic homepage puts movie tabs first and relocates data health beneath sort", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
@@ -19,6 +19,8 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
     const tabs = document.querySelector(".tabs")?.getBoundingClientRect();
     const tools = document.querySelector("#homeLibraryTools")?.getBoundingClientRect();
     const filters = document.querySelector(".home-library-filter-options")?.getBoundingClientRect();
+    const sort = document.querySelector(".home-library-sort")?.getBoundingClientRect();
+    const summary = document.querySelector("#homeLibrarySummary")?.getBoundingClientRect();
     const panel = document.querySelector("#dataHealth")?.getBoundingClientRect();
     const heading = document.querySelector("#dataHealth .data-health-heading");
     const style = heading ? getComputedStyle(heading) : null;
@@ -32,7 +34,16 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
       filterHeight: filters?.height ?? 0,
       panelHeight: panel?.height ?? 0,
       verticalOverlap,
-      rightGap: tools && panel ? tools.right - panel.right : null,
+      filterRight: filters?.right ?? null,
+      sortLeft: sort?.left ?? null,
+      sortRight: sort?.right ?? null,
+      sortBottom: sort?.bottom ?? null,
+      healthLeft: panel?.left ?? null,
+      healthRight: panel?.right ?? null,
+      healthTop: panel?.top ?? null,
+      healthBottom: panel?.bottom ?? null,
+      healthCenter: panel ? (panel.left + panel.right) / 2 : null,
+      summaryTop: summary?.top ?? null,
       boxShadow: style?.boxShadow || "",
       borderRadius: parseFloat(style?.borderRadius || "0")
     };
@@ -41,7 +52,13 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
   expect(geometry.healthParent).toBe("homeLibraryTools");
   expect(geometry.tabsTop).toBeLessThan(geometry.toolsTop);
   expect(geometry.verticalOverlap).toBeGreaterThanOrEqual(Math.min(geometry.filterHeight, geometry.panelHeight) * 0.5);
-  expect(geometry.rightGap).toBeLessThanOrEqual(12);
+  expect(geometry.healthTop).toBeGreaterThanOrEqual(geometry.sortBottom + 2);
+  expect(geometry.healthLeft).toBeGreaterThanOrEqual(geometry.filterRight + 2);
+  expect(geometry.healthLeft).toBeGreaterThanOrEqual(geometry.sortLeft - 4);
+  expect(geometry.healthRight).toBeLessThanOrEqual(geometry.sortRight + 4);
+  expect(geometry.healthCenter).toBeGreaterThan(geometry.sortLeft);
+  expect(geometry.healthCenter).toBeLessThan(geometry.sortRight);
+  expect(geometry.healthBottom).toBeLessThanOrEqual(geometry.summaryTop);
   expect(geometry.boxShadow).toBe("none");
   expect(geometry.borderRadius).toBeLessThanOrEqual(10);
 
