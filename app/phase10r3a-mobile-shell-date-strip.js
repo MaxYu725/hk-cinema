@@ -15,6 +15,21 @@
     return true;
   }
 
+  function placeComparisonDataHealth() {
+    const overlay = document.querySelector("#providerCompareOverlay");
+    const content = overlay?.querySelector("#providerCompareContent");
+    const panel = overlay?.querySelector("[data-provider-resilience]");
+    const hero = content?.querySelector(".provider-compare-hero");
+    const firstSection = content?.querySelector(".provider-compare-section");
+    if (!content || !panel || !hero || !firstSection) return false;
+
+    if (panel.parentElement !== content || panel.nextElementSibling !== firstSection) {
+      firstSection.insertAdjacentElement("beforebegin", panel);
+    }
+    panel.dataset.phase10r3bComparisonHealth = "below-hero";
+    return true;
+  }
+
   function centerSelectedDate() {
     const overlay = document.querySelector("#providerCompareOverlay");
     if (!overlay || overlay.hidden) return false;
@@ -36,6 +51,7 @@
   function apply() {
     scheduled = false;
     placeHomeDataHealth();
+    placeComparisonDataHealth();
     centerSelectedDate();
   }
 
@@ -54,16 +70,21 @@
 
   function install() {
     placeHomeDataHealth();
+    placeComparisonDataHealth();
     schedule();
 
     window.addEventListener("hkcinema:data-health", schedule);
     window.addEventListener("hkcinema:provider-compare-open", schedule);
+    window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
     window.addEventListener("hkcinema:home-tab", schedule);
 
     const observer = new MutationObserver(records => {
       const relevant = records.some(record => Array.from(record.addedNodes || []).some(node => (
         addedContains(node, "#dataHealth") ||
         addedContains(node, "#homeLibraryTools") ||
+        addedContains(node, "[data-provider-resilience]") ||
+        addedContains(node, ".provider-compare-hero") ||
+        addedContains(node, ".provider-compare-section") ||
         addedContains(node, ".provider-compare-date-rail")
       )));
       if (relevant) schedule();
@@ -72,10 +93,11 @@
   }
 
   window.HKCinemaPhase10R3A = Object.freeze({
-    version: "10r3a-1",
+    version: "10r3b-1",
     refresh: schedule,
     centerSelectedDate,
-    placeHomeDataHealth
+    placeHomeDataHealth,
+    placeComparisonDataHealth
   });
 
   if (document.readyState === "loading") {
