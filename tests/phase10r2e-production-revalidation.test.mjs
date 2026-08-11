@@ -16,15 +16,21 @@ test('Phase 10R2E revalidates the already-deployed production Worker', () => {
   assert.match(workflow, /github\.event\.pull_request\.base\.sha \|\| github\.sha/);
   assert.match(workflow, /phase10r2e-production-revalidation\.mjs/);
   assert.match(workflow, /Re-validate deployed 10R2D diagnostics/);
+  assert.match(workflow, /retention-days: 7/);
   assert.doesNotMatch(workflow, /wrangler deploy/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
 
 test('Phase 10R2E records stable MCL diagnostic fields without making provider health a gate', () => {
+  assert.match(script, /readFile\(reportPath/);
+  assert.match(script, /\/api\/mcl\/ticketing\?movieSetId=/);
+  assert.match(script, /expectedCommit/);
   assert.match(script, /MCL_TICKETING_ERROR/);
   assert.match(script, /MCL_UPSTREAM_TIMEOUT/);
   assert.match(script, /diagnosticsContractPresent/);
   assert.match(script, /timeoutContractMatches/);
+  assert.match(script, /cacheControl/);
+  assert.match(script, /requestId/);
   assert.match(script, /category/);
   assert.match(script, /causeCode/);
   assert.match(script, /upstreamStatus/);
