@@ -107,6 +107,10 @@ html[data-skin="classic"] #providerCompareContent > .provider-compare-resilience
   background: var(--color-surface);
 }
 
+html[data-skin="classic"] #providerCompareContent[data-phase10r3b-comparison-health="true"] > .provider-compare-warning {
+  display: none !important;
+}
+
 /* Remove the grey backing layers while preserving the sticky date behaviour and
    the actual bordered date/filter controls. */
 html[data-skin="classic"] #providerCompareContent .provider-compare-date-rail.phase8b-date-section {
