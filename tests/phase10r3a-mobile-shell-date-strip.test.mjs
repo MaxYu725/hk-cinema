@@ -19,7 +19,9 @@ test("Phase 10R3A promotes the installed shell to fullscreen and rotates the con
   assert.match(index, /manifest\.json\?v=10r3a-1/);
   assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}10r3a-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
-  assert.doesNotMatch(worker, /addEventListener\("install"[\s\S]{0,240}skipWaiting\(\)/);
+  const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
+  assert.ok(installBlock);
+  assert.doesNotMatch(installBlock, /skipWaiting\(\)/);
 });
 
 test("Phase 10R3A makes movie tabs the first visible home row and relocates data health into the library tools", () => {
@@ -38,7 +40,8 @@ test("Phase 10R3A removes obsolete date-rail gutters and recenters the active se
   assert.match(css, /provider-compare-dates[\s\S]*margin-right:\s*0\s*!important/);
   assert.doesNotMatch(css, /padding-right:\s*(?:4[4-9]|5\d|6\d)px\s*!important/);
   assert.match(runtime, /provider-compare-date\.active\[data-provider-compare-date\]/);
-  assert.match(runtime, /selected\.offsetLeft/);
+  assert.match(runtime, /selected\.getBoundingClientRect\(\)/);
+  assert.match(runtime, /scroller\.getBoundingClientRect\(\)/);
   assert.match(runtime, /scroller\.clientWidth/);
   assert.match(runtime, /scroller\.scrollLeft\s*=/);
   assert.doesNotMatch(runtime, /today|今日/i);
