@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("Metro filter Pivot opens rich controls as dark command groups", async ({ page }) => {
+test("Metro filter Pivot opens rich controls as full-width dark command groups", async ({ page }) => {
   await page.goto("/?skin=metro", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
@@ -31,7 +31,28 @@ test("Metro filter Pivot opens rich controls as dark command groups", async ({ p
   expect(filterStyle.radius).toBe("0px");
   expect(filterStyle.color).toBe("rgb(255, 255, 255)");
 
-  const firstActive = controls.locator(".provider-compare-control-group button.active").first();
+  const providerGroup = controls.locator('[data-phase9b3-group="provider"]');
+  const providerSummary = providerGroup.locator(".phase9b3-filter-group-summary");
+  await expect(providerSummary).toBeVisible();
+  const summaryStyle = await providerSummary.evaluate(element => {
+    const style = getComputedStyle(element);
+    const box = element.getBoundingClientRect();
+    const parentBox = element.parentElement.getBoundingClientRect();
+    return {
+      background: style.backgroundColor,
+      color: style.color,
+      radius: style.borderRadius,
+      widthDelta: Math.abs(box.width - parentBox.width)
+    };
+  });
+  expect(summaryStyle.background).toBe("rgb(13, 13, 13)");
+  expect(summaryStyle.color).toBe("rgb(255, 255, 255)");
+  expect(summaryStyle.radius).toBe("0px");
+  expect(summaryStyle.widthDelta).toBeLessThanOrEqual(1);
+
+  await providerSummary.click();
+  await expect(providerSummary).toHaveAttribute("aria-expanded", "true");
+  const firstActive = providerGroup.locator(".phase9b3-filter-group-body button.active").first();
   await expect(firstActive).toBeVisible();
   const activeStyle = await firstActive.evaluate(element => {
     const style = getComputedStyle(element);
@@ -45,7 +66,19 @@ test("Metro filter Pivot opens rich controls as dark command groups", async ({ p
   expect(activeStyle.color).toBe("rgb(255, 255, 255)");
   expect(activeStyle.radius).toBe("0px");
 
-  const cinema = controls.locator("[data-insight-cinema]");
+  const cinemaGroup = controls.locator('[data-phase9b3-group="cinema"]');
+  const cinemaSummary = cinemaGroup.locator(".phase9b3-filter-group-summary");
+  await expect(cinemaSummary).toBeVisible();
+  const cinemaSummaryStyle = await cinemaSummary.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color, radius: style.borderRadius };
+  });
+  expect(cinemaSummaryStyle.background).toBe("rgb(13, 13, 13)");
+  expect(cinemaSummaryStyle.color).toBe("rgb(255, 255, 255)");
+  expect(cinemaSummaryStyle.radius).toBe("0px");
+
+  await cinemaSummary.click();
+  const cinema = cinemaGroup.locator("[data-insight-cinema]");
   await expect(cinema).toBeVisible();
   const cinemaStyle = await cinema.evaluate(element => {
     const style = getComputedStyle(element);
