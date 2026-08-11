@@ -41,5 +41,5 @@ test("production and syntax checks point at the current comparison stack", async
   }
 
   assert.match(index, /provider-compare-main-cache-v3\.js\?v=6d1/);
-  assert.match(index, /provider-compare-resilience-v3\.js\?v=6l1/);
+  assert.match(index, /provider-compare-resilience-v3\.js\?v=10r3b-1/);
 });
