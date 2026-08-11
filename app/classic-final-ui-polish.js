@@ -96,6 +96,7 @@
   }
 
   function wireDataHealthRefresh() {
+    if (document.documentElement.dataset.skin === "metro") return;
     const panel = document.querySelector("#dataHealth");
     if (!panel || panel.dataset.classicFinalRefresh === "true") return;
     panel.dataset.classicFinalRefresh = "true";
@@ -177,7 +178,7 @@
   }
 
   window.HKCinemaClassicFinalPolish = Object.freeze({
-    version: "classic-final-1",
+    version: "classic-final-m2-1",
     refresh: scheduleSync,
     getTabCounts() { return Object.fromEntries(tabCounts); }
   });
