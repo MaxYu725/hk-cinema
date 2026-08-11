@@ -123,10 +123,48 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   await firstMovie.click();
   const overlay = page.locator("#providerCompareOverlay");
   await expect(overlay).toBeVisible({ timeout: 12_000 });
-  await expect(overlay.locator(".provider-compare-sheet")).toBeVisible();
+  const sheet = overlay.locator(".provider-compare-sheet");
+  await expect(sheet).toBeVisible();
 
-  const sheetBackground = await overlay.locator(".provider-compare-sheet").evaluate(element => getComputedStyle(element).backgroundColor);
-  expect(sheetBackground).toBe("rgb(0, 0, 0)");
+  const sheetStyle = await sheet.evaluate(element => {
+    const style = getComputedStyle(element);
+    const box = element.getBoundingClientRect();
+    return {
+      background: style.backgroundColor,
+      radius: style.borderRadius,
+      width: box.width,
+      viewportWidth: document.documentElement.clientWidth
+    };
+  });
+  expect(sheetStyle.background).toBe("rgb(0, 0, 0)");
+  expect(sheetStyle.radius).toBe("0px");
+  expect(Math.abs(sheetStyle.width - sheetStyle.viewportWidth)).toBeLessThanOrEqual(1);
+  await expect(overlay.locator(".provider-compare-close")).toHaveText("←");
+
+  const pivot = overlay.locator("[data-metro-comparison-pivot]");
+  await expect(pivot).toBeVisible({ timeout: 30_000 });
+  const pivotTabs = pivot.locator("[data-metro-comparison-pivot-tab]");
+  await expect(pivotTabs).toHaveCount(3);
+
+  const showtimesPivot = pivot.locator('[data-metro-comparison-pivot-tab="showtimes"]');
+  const picksPivot = pivot.locator('[data-metro-comparison-pivot-tab="picks"]');
+  const filtersPivot = pivot.locator('[data-metro-comparison-pivot-tab="filters"]');
+  await expect(showtimesPivot).toHaveAttribute("aria-selected", "true");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "showtimes");
+
+  await filtersPivot.click();
+  await expect(filtersPivot).toHaveAttribute("aria-selected", "true");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "filters");
+  await expect(overlay.locator(".phase8b-filter-section")).toBeVisible();
+  await expect(overlay.locator(".provider-compare-timeline")).toBeHidden();
+
+  await picksPivot.click();
+  await expect(picksPivot).toHaveAttribute("aria-selected", "true");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "picks");
+
+  await picksPivot.press("ArrowLeft");
+  await expect(showtimesPivot).toHaveAttribute("aria-selected", "true");
+  await expect(overlay.locator(".provider-compare-timeline")).toBeVisible();
 
   await overlay.locator(".provider-compare-close").click();
   await expect(overlay).toBeHidden();
@@ -136,4 +174,5 @@ test("Classic remains the default when no skin preview is requested", async ({ p
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-skin", "classic");
   await expect(page.locator("[data-metro-sort-command]")).toHaveCount(0);
+  await expect(page.locator("[data-metro-comparison-pivot]")).toHaveCount(0);
 });
