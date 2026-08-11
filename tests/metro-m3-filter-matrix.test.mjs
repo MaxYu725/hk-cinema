@@ -11,7 +11,7 @@ const [index, css] = await Promise.all([
 
 test("Metro loads the final filter matrix after the base M3 comparison skin", () => {
   const base = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  const matrix = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-1");
+  const matrix = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-2");
   assert.ok(base >= 0 && matrix > base);
 });
 
@@ -28,4 +28,14 @@ test("Metro expanded filters keep one full-width active group and a full-width r
   assert.match(css, /\.provider-compare-reset[\s\S]*display:\s*block\s*!important[\s\S]*width:\s*100%/);
   assert.match(css, /provider-compare-filter-bar[\s\S]*display:\s*contents\s*!important/);
   assert.match(css, /provider-compare-insight-note[\s\S]*display:\s*none\s*!important/);
+});
+
+test("Metro cinema filter stacks its shared label control and keeps the portalled list inside viewport gutters", () => {
+  assert.match(css, /data-phase9b3-group=\"cinema\"\][\s\S]*display:\s*block\s*!important/);
+  assert.match(css, /data-phase9b3-group=\"cinema\"[\s\S]*phase9b3-filter-group-body:not\(\[hidden\]\)[\s\S]*display:\s*block\s*!important/);
+  assert.match(css, /data-phase9b3-group=\"cinema\"[\s\S]*phase9b3-filter-group-body\s*>\s*span[\s\S]*display:\s*none\s*!important/);
+  assert.match(css, /select\[data-insight-cinema\][\s\S]*width:\s*100%\s*!important[\s\S]*box-sizing:\s*border-box/);
+  assert.match(css, /\.provider-compare-cinema-portal[\s\S]*left:\s*max\(12px,\s*env\(safe-area-inset-left\)\)\s*!important/);
+  assert.match(css, /\.provider-compare-cinema-portal[\s\S]*right:\s*max\(12px,\s*env\(safe-area-inset-right\)\)\s*!important/);
+  assert.match(css, /\.provider-compare-cinema-portal[\s\S]*width:\s*auto\s*!important/);
 });
