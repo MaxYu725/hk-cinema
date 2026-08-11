@@ -7,12 +7,13 @@ html[data-skin="classic"] .topbar {
   display: none !important;
 }
 
-/* Keep the outer tools grid on the same two-column track as the search/sort row.
-   This gives the compact data-health control a dedicated cell directly beneath
-   Sort instead of letting an auto-sized second column drift against the card edge. */
+/* Keep the outer tools grid on exactly the same two-column track as the nested
+   search/sort row. Data health therefore occupies the same horizontal bounds as
+   Sort, directly beneath it, rather than drifting inside an independently sized
+   auto/fractional column. */
 html[data-skin="classic"] .home-library-tools {
-  grid-template-columns: minmax(0, 1fr) minmax(132px, 0.34fr);
-  column-gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  column-gap: 8px;
 }
 
 html[data-skin="classic"] .home-library-primary,
@@ -36,14 +37,14 @@ html[data-skin="classic"] #dataHealth[data-phase10r3a-home-health="true"] {
   margin: 0;
 }
 
-@media (max-width: 600px) {
-  html[data-skin="classic"] .home-library-tools {
-    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.82fr);
-    column-gap: 8px;
-  }
-}
-
 @media (max-width: 640px) {
+  /* The base mobile sort track is 118px. Give both rows a slightly roomier,
+     shared 126px track so the full compact health label fits without overflow. */
+  html[data-skin="classic"] .home-library-tools,
+  html[data-skin="classic"] .home-library-primary {
+    grid-template-columns: minmax(0, 1fr) 126px;
+  }
+
   html[data-skin="classic"] .home-library-tools.is-stuck > #dataHealth[data-phase10r3a-home-health="true"] {
     display: none !important;
   }
