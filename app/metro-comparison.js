@@ -108,8 +108,8 @@
     setShown(note, showShowtimes);
     setShown(empty, showShowtimes);
 
-    root.dataset.metroComparisonPivot = activePivot;
-    section.dataset.metroComparisonPivot = activePivot;
+    root.dataset.metroComparisonActivePivot = activePivot;
+    section.dataset.metroComparisonActivePivot = activePivot;
 
     nav.querySelectorAll("[data-metro-comparison-pivot-tab]").forEach(button => {
       const selected = button.dataset.metroComparisonPivotTab === activePivot;
