@@ -5,14 +5,14 @@ import { readFile } from "node:fs/promises";
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [index, css, runtime, sw] = await Promise.all([
   read("app/index.html"),
-  read("app/metro-m4-seatmap.css"),
+  read("app/metro-m4-seat-view.css"),
   read("app/metro-runtime.js"),
   read("app/sw.js")
 ]);
 
 test("Metro loads the seat-map layer after comparison Smart Picks", () => {
   const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
-  const seatmap = index.indexOf("metro-m4-seatmap.css?v=m4-seatmap-1");
+  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m4-seatmap-1");
   assert.ok(picks >= 0 && seatmap > picks);
   assert.match(index, /metro-runtime\.js\?v=m4-1/);
 });
