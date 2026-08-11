@@ -328,3 +328,106 @@ html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-piv
     min-height: 40px;
   }
 }
+
+/* Phase 9B3 compact-filter bridge. Its JS also decorates Metro, but its visual
+   stylesheet is Classic-scoped, so 10B2 must own the visible summary rows. */
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase8c-controls[data-phase9b3-compact="true"] > [data-phase9b3-group] {
+  display: block;
+  width: 100%;
+  overflow: clip;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .13);
+  background: transparent;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-summary {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-left: 4px solid transparent;
+  border-radius: 0;
+  background: #0d0d0d;
+  color: #ffffff;
+  box-shadow: none;
+  text-align: left;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-label {
+  color: #8c8c8c;
+  font-size: .68rem;
+  font-weight: 600;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-value {
+  min-width: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: .75rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-summary em {
+  color: #838383;
+  font-style: normal;
+  text-align: center;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] [data-phase9b3-group].phase9b3-open > .phase9b3-filter-group-summary {
+  border-left-color: var(--color-accent);
+  background: #151515;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] [data-phase9b3-group].phase9b3-open > .phase9b3-filter-group-summary em {
+  transform: rotate(180deg);
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-summary:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-body[hidden] {
+  display: none !important;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-body:not([hidden]) {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 10px 12px 14px;
+  background: #070707;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-body > span {
+  display: none;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] [data-phase9b3-group="cinema"] .phase9b3-filter-group-body:not([hidden]) {
+  display: block;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] [data-phase9b3-group="cinema"] .phase9b3-filter-group-body select {
+  width: 100%;
+  margin: 0;
+  background: #0d0d0d;
+  color: #ffffff;
+}
+
+@media (max-width: 420px) {
+  html[data-skin="metro"] #providerCompareContent[data-metro-comparison-active-pivot="filters"] .phase9b3-filter-group-summary {
+    grid-template-columns: 70px minmax(0, 1fr) 16px;
+    min-height: 46px;
+    padding-inline: 9px;
+  }
+}
