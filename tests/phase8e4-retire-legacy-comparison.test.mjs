@@ -30,7 +30,7 @@ test("production and syntax checks point at the current comparison stack", async
     "provider-compare-v4.js?v=8c1",
     "provider-compare-insights-v4.js?v=8c1",
     "provider-compare-preferences-v2.js?v=8c1",
-    "provider-compare-recommendations-v4.js?v=8d1"
+    "provider-compare-recommendations-v4.js?v=10r3b-1"
   ]) {
     assert.match(index, new RegExp(current.replaceAll(".", "\\.").replace("?", "\\?")));
   }
