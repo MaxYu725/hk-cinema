@@ -78,11 +78,21 @@
     recommendations.hidden = false;
   }
 
+  function ensureFiltersExpanded(section) {
+    const controls = section?.querySelector(".phase8c-controls");
+    if (!controls || !controls.hidden) return;
+
+    const toggle = section.querySelector("[data-provider-filter-toggle]");
+    if (!toggle) return;
+    toggle.click();
+  }
+
   function applyPivotState(root, nav) {
     const section = root.querySelector(".phase8b-timeline-section");
     if (!section || !nav) return;
 
     if (activePivot === "picks") ensureRecommendationsExpanded(section);
+    if (activePivot === "filters") ensureFiltersExpanded(section);
 
     const dateSection = section.querySelector(".phase8b-date-section");
     const filterSection = section.querySelector(".phase8b-filter-section");
@@ -225,7 +235,7 @@
   }
 
   window.HKCinemaMetroComparison = Object.freeze({
-    version: "10b1",
+    version: "10b2",
     refresh: schedule,
     setPivot,
     getState() {
