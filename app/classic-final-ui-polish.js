@@ -84,11 +84,13 @@
       const badge = ensureTabCount(tab);
       if (!badge) continue;
       const value = tabCounts.get(tab);
-      badge.textContent = Number.isFinite(value) ? `${value}` : "—";
+      const text = Number.isFinite(value) ? `${value}` : "—";
+      if (badge.textContent !== text) badge.textContent = text;
       const button = badge.closest(".tab");
       if (button) {
         const label = tab === "now" ? "現正上映" : "即將上映";
-        button.setAttribute("aria-label", Number.isFinite(value) ? `${label}，${value} 部` : label);
+        const ariaLabel = Number.isFinite(value) ? `${label}，${value} 部` : label;
+        if (button.getAttribute("aria-label") !== ariaLabel) button.setAttribute("aria-label", ariaLabel);
       }
     }
   }
