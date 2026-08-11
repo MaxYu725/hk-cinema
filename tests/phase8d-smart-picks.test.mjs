@@ -59,7 +59,7 @@ function entry(overrides = {}) {
 }
 
 test('Phase 8D wires Smart Picks 2 and a mobile 2x2 grid', () => {
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=8d1/);
+  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-1/);
   assert.match(index, /phase8d-smart-picks\.css\?v=8d1/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-recommendations-v3\.js/);
   assert.match(css, /grid-template-columns:\s*repeat\(4/);
