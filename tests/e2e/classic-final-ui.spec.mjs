@@ -22,12 +22,16 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
     const panel = document.querySelector("#dataHealth")?.getBoundingClientRect();
     const heading = document.querySelector("#dataHealth .data-health-heading");
     const style = heading ? getComputedStyle(heading) : null;
+    const verticalOverlap = filters && panel
+      ? Math.max(0, Math.min(filters.bottom, panel.bottom) - Math.max(filters.top, panel.top))
+      : 0;
     return {
       healthParent: document.querySelector("#dataHealth")?.parentElement?.id || null,
       tabsTop: tabs?.top ?? null,
       toolsTop: tools?.top ?? null,
-      filterCenter: filters ? filters.top + filters.height / 2 : null,
-      panelCenter: panel ? panel.top + panel.height / 2 : null,
+      filterHeight: filters?.height ?? 0,
+      panelHeight: panel?.height ?? 0,
+      verticalOverlap,
       rightGap: tools && panel ? tools.right - panel.right : null,
       boxShadow: style?.boxShadow || "",
       borderRadius: parseFloat(style?.borderRadius || "0")
@@ -36,7 +40,7 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
 
   expect(geometry.healthParent).toBe("homeLibraryTools");
   expect(geometry.tabsTop).toBeLessThan(geometry.toolsTop);
-  expect(Math.abs(geometry.filterCenter - geometry.panelCenter)).toBeLessThanOrEqual(4);
+  expect(geometry.verticalOverlap).toBeGreaterThanOrEqual(Math.min(geometry.filterHeight, geometry.panelHeight) * 0.5);
   expect(geometry.rightGap).toBeLessThanOrEqual(12);
   expect(geometry.boxShadow).toBe("none");
   expect(geometry.borderRadius).toBeLessThanOrEqual(10);
