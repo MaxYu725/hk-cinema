@@ -1,30 +1,43 @@
 import { test, expect } from "@playwright/test";
 
-test("final Classic homepage centers flat data health and moves counts into tabs", async ({ page }) => {
+test("final Classic homepage puts movie tabs first and relocates data health beside library filters", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
 
+  await expect(page.locator(".topbar")).toBeHidden();
   await expect(page.locator(".topbar-brand")).toBeHidden();
   await expect(page.locator("#refreshButton")).toBeHidden();
   await expect(page.locator(".section-heading")).toBeHidden();
 
   const health = page.locator("#dataHealth");
   await expect(health).toBeVisible({ timeout: 15_000 });
+  await expect(health).toHaveAttribute("data-phase10r3a-home-health", "true");
+
   const geometry = await page.evaluate(() => {
-    const topbar = document.querySelector(".topbar")?.getBoundingClientRect();
+    const tabs = document.querySelector(".tabs")?.getBoundingClientRect();
+    const tools = document.querySelector("#homeLibraryTools")?.getBoundingClientRect();
+    const filters = document.querySelector(".home-library-filter-options")?.getBoundingClientRect();
     const panel = document.querySelector("#dataHealth")?.getBoundingClientRect();
     const heading = document.querySelector("#dataHealth .data-health-heading");
     const style = heading ? getComputedStyle(heading) : null;
     return {
-      topbarCenter: topbar ? topbar.left + topbar.width / 2 : 0,
-      panelCenter: panel ? panel.left + panel.width / 2 : 0,
+      healthParent: document.querySelector("#dataHealth")?.parentElement?.id || null,
+      tabsTop: tabs?.top ?? null,
+      toolsTop: tools?.top ?? null,
+      filterCenter: filters ? filters.top + filters.height / 2 : null,
+      panelCenter: panel ? panel.top + panel.height / 2 : null,
+      rightGap: tools && panel ? tools.right - panel.right : null,
       boxShadow: style?.boxShadow || "",
       borderRadius: parseFloat(style?.borderRadius || "0")
     };
   });
-  expect(Math.abs(geometry.topbarCenter - geometry.panelCenter)).toBeLessThanOrEqual(3);
+
+  expect(geometry.healthParent).toBe("homeLibraryTools");
+  expect(geometry.tabsTop).toBeLessThan(geometry.toolsTop);
+  expect(Math.abs(geometry.filterCenter - geometry.panelCenter)).toBeLessThanOrEqual(4);
+  expect(geometry.rightGap).toBeLessThanOrEqual(12);
   expect(geometry.boxShadow).toBe("none");
   expect(geometry.borderRadius).toBeLessThanOrEqual(10);
 
@@ -32,7 +45,7 @@ test("final Classic homepage centers flat data health and moves counts into tabs
   await expect(page.locator('[data-classic-final-tab-count="coming"]')).toHaveText(/^\d+$/, { timeout: 15_000 });
 });
 
-test("final Classic comparison removes repeated UI and uses the 3-column filter matrix", async ({ page }) => {
+test("final Classic comparison uses full-width date rail and keeps the selected date visible after rerender", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
@@ -42,6 +55,52 @@ test("final Classic comparison removes repeated UI and uses the 3-column filter 
   const overlay = page.locator("#providerCompareOverlay");
   await expect(overlay).toBeVisible({ timeout: 12_000 });
   await expect(overlay.locator(".provider-compare-timeline")).toBeVisible({ timeout: 30_000 });
+
+  await expect(overlay.locator(".provider-compare-date-label")).toBeHidden();
+  const railGeometry = await overlay.locator(".provider-compare-date-rail").evaluate(rail => {
+    const scroller = rail.querySelector(".provider-compare-dates");
+    const railRect = rail.getBoundingClientRect();
+    const scrollerRect = scroller?.getBoundingClientRect();
+    return {
+      rightGap: railRect.right - (scrollerRect?.right || railRect.left),
+      scrollerWidth: scrollerRect?.width || 0,
+      railWidth: railRect.width
+    };
+  });
+  expect(railGeometry.rightGap).toBeLessThan(20);
+  expect(railGeometry.scrollerWidth).toBeGreaterThan(railGeometry.railWidth * 0.85);
+
+  const dateCount = await overlay.locator("[data-provider-compare-date]").count();
+  expect(dateCount).toBeGreaterThan(1);
+  await page.evaluate(() => {
+    const rail = document.querySelector("#providerCompareOverlay .provider-compare-date-rail");
+    const buttons = Array.from(rail?.querySelectorAll("[data-provider-compare-date]") || []);
+    if (!rail || buttons.length < 2) return;
+    buttons.forEach(button => button.classList.remove("active"));
+    const target = buttons.at(-1);
+    target.classList.add("active");
+    window.__phase10r3aTestDate = target.dataset.providerCompareDate;
+    rail.replaceWith(rail.cloneNode(true));
+  });
+
+  await page.waitForTimeout(120);
+  const selectedGeometry = await page.evaluate(() => {
+    const scroller = document.querySelector("#providerCompareOverlay .provider-compare-dates");
+    const selected = scroller?.querySelector(`.provider-compare-date.active[data-provider-compare-date="${window.__phase10r3aTestDate}"]`);
+    const scrollerRect = scroller?.getBoundingClientRect();
+    const selectedRect = selected?.getBoundingClientRect();
+    return {
+      selectedDate: selected?.dataset.providerCompareDate || null,
+      expectedDate: window.__phase10r3aTestDate || null,
+      left: selectedRect?.left ?? null,
+      right: selectedRect?.right ?? null,
+      viewportLeft: scrollerRect?.left ?? null,
+      viewportRight: scrollerRect?.right ?? null
+    };
+  });
+  expect(selectedGeometry.selectedDate).toBe(selectedGeometry.expectedDate);
+  expect(selectedGeometry.left).toBeGreaterThanOrEqual(selectedGeometry.viewportLeft - 2);
+  expect(selectedGeometry.right).toBeLessThanOrEqual(selectedGeometry.viewportRight + 2);
 
   const repeatedMovieDetails = overlay.locator(".phase8b-movie-details");
   if (await repeatedMovieDetails.count()) await expect(repeatedMovieDetails).toBeHidden();
