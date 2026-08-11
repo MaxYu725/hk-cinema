@@ -29,6 +29,15 @@ const json = (data, status = 200, extraHeaders = {}) =>
     }
   });
 
+const finiteNumberOrNull = value => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -287,12 +296,8 @@ export default {
         });
       } catch (error) {
         const httpStatus = Number(error?.httpStatus) === 504 ? 504 : 502;
-        const upstreamStatus = Number.isFinite(Number(error?.upstreamStatus))
-          ? Number(error.upstreamStatus)
-          : null;
-        const elapsedMs = Number.isFinite(Number(error?.elapsedMs))
-          ? Number(error.elapsedMs)
-          : null;
+        const upstreamStatus = finiteNumberOrNull(error?.upstreamStatus);
+        const elapsedMs = finiteNumberOrNull(error?.elapsedMs);
 
         return json({
           ok: false,
