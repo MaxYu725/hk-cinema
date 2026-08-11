@@ -80,6 +80,20 @@ test('today recommendations exclude already-started sessions from earliest pick'
   assert.equal(model.pool.some(item => item.key === 'past'), false);
 });
 
+test('today recommendations exclude sessions starting in the current Hong Kong minute', () => {
+  const smart = loadSmartPicks();
+  const now = new Date('2026-08-10T07:23:30Z'); // 15:23 in Hong Kong.
+  const model = smart.buildRecommendations([
+    entry({ key: 'same-minute', time: '15:23', timeMinutes: 15 * 60 + 23, price: 60 }),
+    entry({ key: 'next-minute', index: 1, time: '15:24', timeMinutes: 15 * 60 + 24, price: 80 }),
+    entry({ key: 'later', index: 2, time: '16:00', timeMinutes: 16 * 60, price: 70 })
+  ], now);
+
+  assert.equal(model.pool.some(item => item.key === 'same-minute'), false);
+  assert.equal(model.picks.find(pick => pick.key === 'earliest').entry.key, 'next-minute');
+  assert.equal(model.picks.find(pick => pick.key === 'cheapest').entry.key, 'later');
+});
+
 test('confirmed sold-out rows are excluded while unknown seat rows remain eligible', () => {
   const smart = loadSmartPicks('2026-08-11');
   const model = smart.buildRecommendations([
