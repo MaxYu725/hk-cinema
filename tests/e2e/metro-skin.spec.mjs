@@ -142,6 +142,7 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   await expect(overlay.locator(".provider-compare-close")).toHaveText("←");
 
   const pivot = overlay.locator("[data-metro-comparison-pivot]");
+  await expect(pivot).toHaveCount(1);
   await expect(pivot).toBeVisible({ timeout: 30_000 });
   const pivotTabs = pivot.locator("[data-metro-comparison-pivot-tab]");
   await expect(pivotTabs).toHaveCount(3);
@@ -150,20 +151,21 @@ test("Metro preview applies the Windows Phone shell without breaking movie navig
   const picksPivot = pivot.locator('[data-metro-comparison-pivot-tab="picks"]');
   const filtersPivot = pivot.locator('[data-metro-comparison-pivot-tab="filters"]');
   await expect(showtimesPivot).toHaveAttribute("aria-selected", "true");
-  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "showtimes");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-active-pivot", "showtimes");
 
   await filtersPivot.click();
   await expect(filtersPivot).toHaveAttribute("aria-selected", "true");
-  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "filters");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-active-pivot", "filters");
   await expect(overlay.locator(".phase8b-filter-section")).toBeVisible();
   await expect(overlay.locator(".provider-compare-timeline")).toBeHidden();
 
   await picksPivot.click();
   await expect(picksPivot).toHaveAttribute("aria-selected", "true");
-  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-pivot", "picks");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-active-pivot", "picks");
 
   await picksPivot.press("ArrowLeft");
   await expect(showtimesPivot).toHaveAttribute("aria-selected", "true");
+  await expect(overlay.locator("#providerCompareContent")).toHaveAttribute("data-metro-comparison-active-pivot", "showtimes");
   await expect(overlay.locator(".provider-compare-timeline")).toBeVisible();
 
   await overlay.locator(".provider-compare-close").click();
