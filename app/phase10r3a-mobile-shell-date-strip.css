@@ -76,3 +76,99 @@ html[data-skin="classic"] #dataHealth[data-phase10r3a-home-health="true"] {
     scroll-padding-inline: 10px;
   }
 }
+
+/* Phase 10R3B: comparison-only cleanup. Keep the movie identity first, then a
+   compact provider-health disclosure before the comparison controls. */
+html[data-skin="classic"] #providerCompareContent > .provider-compare-resilience[data-phase10r3b-comparison-health="below-hero"],
+html[data-skin="classic"] .provider-compare-overlay[data-compare-data-state="ready"] #providerCompareContent > .provider-compare-resilience[data-phase10r3b-comparison-health="below-hero"] {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-skin="classic"] #providerCompareContent > .provider-compare-resilience[data-phase10r3b-comparison-health="below-hero"] .provider-resilience-compact {
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid var(--classic-hairline);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+html[data-skin="classic"] #providerCompareContent > .provider-compare-resilience[data-phase10r3b-comparison-health="below-hero"] .provider-resilience-detail {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--classic-hairline);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+/* Remove the grey backing layers while preserving the sticky date behaviour and
+   the actual bordered date/filter controls. */
+html[data-skin="classic"] #providerCompareContent .provider-compare-date-rail.phase8b-date-section {
+  border-bottom: 0 !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-skin="classic"] #providerCompareContent .provider-compare-date-rail.phase8b-date-section::before {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-skin="classic"] #providerCompareContent .provider-compare-insights.phase8b-filter-section {
+  margin: 0 0 10px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-skin="classic"] #providerCompareContent .phase8b-filter-section .provider-compare-filter-bar {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+
+/* Phase 6L still leaves horizontal auto-flow properties on recommendation grids.
+   Reset those properties explicitly so the later 2-column Classic layout cannot
+   create stacked/oversized implicit columns. */
+@media (max-width: 700px) {
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    grid-auto-rows: auto !important;
+    align-items: stretch;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid.pick-count-1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick,
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation.balanced.phase8d-smart-pick {
+    width: auto;
+    min-width: 0;
+    min-height: 126px;
+    height: auto;
+  }
+
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick small {
+    flex: 0 0 auto;
+  }
+
+  html[data-skin="classic"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick em {
+    margin-top: auto;
+    padding-top: 10px;
+  }
+}
