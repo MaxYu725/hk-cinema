@@ -1,5 +1,9 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
+import {
+  providerProbeRunner,
+  SUPPORTED_PROVIDERS
+} from "./provider-probe.js";
 
 const GEOMETRY_VERSION = "6e1-bounds-v2";
 
@@ -25,6 +29,48 @@ function errorResponse(error, fallbackCode) {
 
 async function routeRequest(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/providers/probe") {
+      const result = await providerProbeRunner.probeAll();
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "10R2B",
+          mode: "live-provider-probe",
+          updatedAt: new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    }
+
+    const providerProbeMatch = url.pathname.match(
+      /^\/api\/providers\/probe\/([^/]+)$/
+    );
+
+    if (providerProbeMatch) {
+      const provider = decodeURIComponent(providerProbeMatch[1]).toLowerCase();
+
+      if (!SUPPORTED_PROVIDERS.includes(provider)) {
+        return json({
+          ok: false,
+          error: {
+            code: "INVALID_PROVIDER",
+            message: "provider must be broadway, mcl or emperor"
+          }
+        }, 400, { "cache-control": "no-store" });
+      }
+
+      const result = await providerProbeRunner.probeProvider(provider);
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "10R2B",
+          mode: "live-provider-probe",
+          updatedAt: new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    }
 
     if (url.pathname === "/api/emperor/seatmap-health") {
       return json({
