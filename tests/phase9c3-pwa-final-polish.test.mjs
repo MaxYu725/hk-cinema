@@ -10,7 +10,7 @@ test("Service Worker waits for explicit update acceptance", () => {
   const sw = fs.readFileSync(path.join(app, "sw.js"), "utf8");
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
 
-  assert.match(sw, /CACHE_PREFIX}9c3-1/);
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
   assert.doesNotMatch(installBlock, /skipWaiting\(/);
   assert.match(sw, /event\.data\?\.type === "SKIP_WAITING"/);
   assert.match(sw, /self\.skipWaiting\(\)/);
@@ -39,14 +39,14 @@ test("offline notice has priority over asynchronous update-ready events", () => 
   assert.match(runtime, /!navigator\.onLine \|\| state\.noticeKind === "offline"/);
 });
 
-test("standalone polish protects safe areas and comparison controls", () => {
+test("installed-mode polish protects safe areas and comparison controls", () => {
   const css = fs.readFileSync(path.join(app, "phase9c3-pwa-final-polish.css"), "utf8");
 
   assert.match(css, /safe-area-inset-top/);
   assert.match(css, /safe-area-inset-right/);
   assert.match(css, /safe-area-inset-bottom/);
   assert.match(css, /safe-area-inset-left/);
-  assert.match(css, /@media \(display-mode: standalone\)/);
+  assert.match(css, /@media \(display-mode: standalone\), \(display-mode: fullscreen\)/);
   assert.match(css, /\.provider-compare-sheet/);
   assert.match(css, /\.provider-compare-close/);
   assert.match(css, /\.pwa-notice/);

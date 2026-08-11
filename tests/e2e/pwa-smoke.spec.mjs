@@ -79,7 +79,8 @@ test("PWA shell registers, keeps cache same-origin, reports connectivity, and ca
     // separately from the network/cache contract.
     await context.setOffline(true);
     await page.reload({ waitUntil: "domcontentloaded", timeout: 15_000 });
-    await expect(page.locator(".topbar")).toBeVisible();
+    await expect(page.locator(".topbar")).toBeHidden();
+    await expect(page.locator(".tabs")).toBeVisible();
     await expect(page.locator("#movieGrid")).toBeVisible();
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     await expect.poll(() => page.evaluate(() => window.HKCinemaPWA?.getState?.().online)).toBe(false);

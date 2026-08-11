@@ -38,8 +38,8 @@ test("final Classic comparison uses a 3 by 3 compact filter matrix and heading s
   assert.match(js, /setFilter\?\.\("sort"/);
 });
 
-test("installed PWA prefers fullscreen while retaining standalone fallback", async () => {
+test("installed PWA uses fullscreen while retaining standalone fallback", async () => {
   const manifest = JSON.parse(await read("app/manifest.json"));
-  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.display, "fullscreen");
   assert.deepEqual(manifest.display_override.slice(0, 2), ["fullscreen", "standalone"]);
 });

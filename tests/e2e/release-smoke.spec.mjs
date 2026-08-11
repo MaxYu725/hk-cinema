@@ -6,7 +6,7 @@ test("mobile release smoke keeps the movie-first comparison flow usable", async 
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator(".topbar")).toBeVisible();
+  await expect(page.locator(".topbar")).toBeHidden();
   await expect(page.locator('[data-tab="now"]')).toBeVisible();
   await expect(page.locator('[data-tab="coming"]')).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
@@ -100,6 +100,7 @@ test("selected date stays legible, date rail pins, and filters use one-open comp
   expect(activeStyle.background).not.toBe("rgb(255, 255, 255)");
   expect(activeStyle.background).not.toBe(activeStyle.color);
 
+  await expect(rail.locator(".provider-compare-date-label")).toBeHidden();
   const stickyStyle = await rail.evaluate(element => {
     const style = getComputedStyle(element);
     return { position: style.position, top: style.top };

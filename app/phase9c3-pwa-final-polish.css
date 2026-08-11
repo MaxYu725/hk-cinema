@@ -5,7 +5,7 @@
   --pwa-safe-left: env(safe-area-inset-left, 0px);
 }
 
-/* Keep the app shell clear of rounded / cut-out display edges in browser and standalone modes. */
+/* Keep the app shell clear of rounded / cut-out display edges in browser and installed modes. */
 .app-shell {
   padding-left: max(20px, var(--pwa-safe-left));
   padding-right: max(20px, var(--pwa-safe-right));
@@ -73,7 +73,7 @@
   background: rgba(50, 54, 61, .97);
 }
 
-@media (display-mode: standalone) {
+@media (display-mode: standalone), (display-mode: fullscreen) {
   .app-shell {
     padding-top: max(20px, var(--pwa-safe-top));
     padding-bottom: max(32px, var(--pwa-safe-bottom));
@@ -97,7 +97,8 @@
   }
 }
 
-@media (max-width: 640px) and (display-mode: standalone) {
+@media (max-width: 640px) and (display-mode: standalone),
+       (max-width: 640px) and (display-mode: fullscreen) {
   .provider-compare-sheet {
     padding-left: max(14px, var(--pwa-safe-left));
     padding-right: max(14px, var(--pwa-safe-right));

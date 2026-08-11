@@ -10,12 +10,13 @@ const [html, manifestText, runtime, worker] = await Promise.all([
 ]);
 const manifest = JSON.parse(manifestText);
 
-test("Phase 9C1 wires an installable standalone PWA shell", () => {
+test("Phase 9C1 wires an installable fullscreen PWA shell with standalone fallback", () => {
   assert.equal(manifest.id, "./");
   assert.equal(manifest.start_url, "./");
   assert.equal(manifest.scope, "./");
-  assert.equal(manifest.display, "standalone");
-  assert.match(html, /<link rel="manifest" href="\.\/manifest\.json">/);
+  assert.equal(manifest.display, "fullscreen");
+  assert.ok(manifest.display_override.includes("standalone"));
+  assert.match(html, /<link rel="manifest" href="\.\/manifest\.json\?v=[a-z0-9-]+">/i);
   assert.match(html, /pwa-runtime\.js\?v=[a-z0-9-]+/i);
   assert.match(runtime, /navigator\.serviceWorker\.register\("\.\/sw\.js"/);
   assert.match(runtime, /updateViaCache:\s*"none"/);
