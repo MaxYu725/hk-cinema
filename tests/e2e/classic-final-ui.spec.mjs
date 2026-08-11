@@ -1,6 +1,43 @@
 import { test, expect } from "@playwright/test";
 
-test("final Classic homepage puts movie tabs first and relocates data health beside library filters", async ({ page }) => {
+async function openComparisonWithMultipleDates(page) {
+  const movies = page.locator("#movieGrid .movie-card:not(.movie-group-member)");
+  await expect(movies.first()).toBeVisible({ timeout: 30_000 });
+
+  const overlay = page.locator("#providerCompareOverlay");
+  const candidateCount = Math.min(await movies.count(), 12);
+
+  for (let index = 0; index < candidateCount; index += 1) {
+    await movies.nth(index).click();
+    await expect(overlay).toBeVisible({ timeout: 12_000 });
+    await expect(overlay.locator(".provider-compare-timeline")).toBeVisible({ timeout: 30_000 });
+
+    const dates = overlay.locator("[data-provider-compare-date]");
+    await expect(dates.first()).toBeVisible({ timeout: 10_000 });
+
+    let dateCount = await dates.count();
+    if (dateCount < 2) {
+      try {
+        await expect.poll(() => dates.count(), {
+          timeout: 2_500,
+          intervals: [250, 500, 1_000]
+        }).toBeGreaterThan(1);
+      } catch {
+        // A genuine single-date movie is not a test failure; try the next live candidate.
+      }
+      dateCount = await dates.count();
+    }
+
+    if (dateCount > 1) return overlay;
+
+    await overlay.locator(".provider-compare-close").click();
+    await expect(overlay).toBeHidden({ timeout: 5_000 });
+  }
+
+  throw new Error(`No movie with at least two comparison dates found among ${candidateCount} live candidates`);
+}
+
+test("final Classic homepage puts movie tabs first and relocates data health beneath sort", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
@@ -19,16 +56,32 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
     const tabs = document.querySelector(".tabs")?.getBoundingClientRect();
     const tools = document.querySelector("#homeLibraryTools")?.getBoundingClientRect();
     const filters = document.querySelector(".home-library-filter-options")?.getBoundingClientRect();
+    const sort = document.querySelector(".home-movie-sort")?.getBoundingClientRect();
+    const summary = document.querySelector(".home-library-footer")?.getBoundingClientRect();
     const panel = document.querySelector("#dataHealth")?.getBoundingClientRect();
     const heading = document.querySelector("#dataHealth .data-health-heading");
     const style = heading ? getComputedStyle(heading) : null;
+    const verticalOverlap = filters && panel
+      ? Math.max(0, Math.min(filters.bottom, panel.bottom) - Math.max(filters.top, panel.top))
+      : 0;
     return {
       healthParent: document.querySelector("#dataHealth")?.parentElement?.id || null,
       tabsTop: tabs?.top ?? null,
       toolsTop: tools?.top ?? null,
-      filterCenter: filters ? filters.top + filters.height / 2 : null,
-      panelCenter: panel ? panel.top + panel.height / 2 : null,
-      rightGap: tools && panel ? tools.right - panel.right : null,
+      filterHeight: filters?.height ?? 0,
+      panelHeight: panel?.height ?? 0,
+      verticalOverlap,
+      filterRight: filters?.right ?? null,
+      sortLeft: sort?.left ?? null,
+      sortRight: sort?.right ?? null,
+      sortBottom: sort?.bottom ?? null,
+      healthLeft: panel?.left ?? null,
+      healthRight: panel?.right ?? null,
+      healthTop: panel?.top ?? null,
+      healthBottom: panel?.bottom ?? null,
+      healthCenter: panel ? (panel.left + panel.right) / 2 : null,
+      sortCenter: sort ? (sort.left + sort.right) / 2 : null,
+      summaryTop: summary?.top ?? null,
       boxShadow: style?.boxShadow || "",
       borderRadius: parseFloat(style?.borderRadius || "0")
     };
@@ -36,8 +89,15 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
 
   expect(geometry.healthParent).toBe("homeLibraryTools");
   expect(geometry.tabsTop).toBeLessThan(geometry.toolsTop);
-  expect(Math.abs(geometry.filterCenter - geometry.panelCenter)).toBeLessThanOrEqual(4);
-  expect(geometry.rightGap).toBeLessThanOrEqual(12);
+  expect(geometry.verticalOverlap).toBeGreaterThanOrEqual(Math.min(geometry.filterHeight, geometry.panelHeight) * 0.5);
+  expect(geometry.healthTop).toBeGreaterThanOrEqual(geometry.sortBottom + 2);
+  expect(geometry.healthLeft).toBeGreaterThanOrEqual(geometry.filterRight + 2);
+  expect(geometry.healthLeft).toBeGreaterThanOrEqual(geometry.sortLeft - 4);
+  expect(geometry.healthRight).toBeLessThanOrEqual(geometry.sortRight + 4);
+  expect(geometry.healthCenter).toBeGreaterThan(geometry.sortLeft);
+  expect(geometry.healthCenter).toBeLessThan(geometry.sortRight);
+  expect(Math.abs(geometry.healthCenter - geometry.sortCenter)).toBeLessThanOrEqual(4);
+  expect(geometry.healthBottom).toBeLessThanOrEqual(geometry.summaryTop);
   expect(geometry.boxShadow).toBe("none");
   expect(geometry.borderRadius).toBeLessThanOrEqual(10);
 
@@ -48,13 +108,7 @@ test("final Classic homepage puts movie tabs first and relocates data health bes
 test("final Classic comparison uses full-width date rail and keeps the selected date visible after rerender", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
-  await expect(firstMovie).toBeVisible({ timeout: 30_000 });
-  await firstMovie.click();
-
-  const overlay = page.locator("#providerCompareOverlay");
-  await expect(overlay).toBeVisible({ timeout: 12_000 });
-  await expect(overlay.locator(".provider-compare-timeline")).toBeVisible({ timeout: 30_000 });
+  const overlay = await openComparisonWithMultipleDates(page);
 
   await expect(overlay.locator(".provider-compare-date-label")).toBeHidden();
   const railGeometry = await overlay.locator(".provider-compare-date-rail").evaluate(rail => {
