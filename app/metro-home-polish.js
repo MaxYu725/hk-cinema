@@ -30,8 +30,11 @@
       tools.querySelector(".home-library-primary")?.append(command);
     }
 
-    command.innerHTML = `<span>排序</span><strong>${labelFor(select.value)}</strong>`;
+    const label = labelFor(select.value);
+    if (command.dataset.sort === select.value && command.dataset.label === label) return;
+    command.innerHTML = `<span>排序</span><strong>${label}</strong>`;
     command.dataset.sort = select.value;
+    command.dataset.label = label;
   }
 
   function cycleSort() {
@@ -55,9 +58,6 @@
 
   window.addEventListener("hkcinema:home-tab", () => requestAnimationFrame(syncCommand));
   window.addEventListener("hkcinema:provider-matches", () => requestAnimationFrame(syncCommand));
-
-  const observer = new MutationObserver(() => syncCommand());
-  observer.observe(document.body, { childList: true, subtree: true });
 
   syncCommand();
 })();
