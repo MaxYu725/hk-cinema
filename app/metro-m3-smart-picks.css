@@ -115,6 +115,57 @@ html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .p
   font-weight: 500;
 }
 
+/* Final showtime heading: keep the four-character title horizontal. The provider
+   count becomes its own readable row instead of squeezing the title to one glyph wide. */
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: 6px;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading > div {
+  width: 100%;
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: max-content minmax(0, 1fr) auto !important;
+  align-items: end;
+  gap: 4px 10px;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading > div > .eyebrow {
+  grid-column: 1 / -1;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading h2 {
+  grid-column: 1;
+  min-width: max-content;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading .classic-final-sort {
+  grid-column: 3;
+  justify-self: end;
+}
+
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading > small {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+
+/* A Smart Pick jump should identify the actual showtime card, not merely scroll to it. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-show.is-recommendation-jump {
+  position: relative;
+  z-index: 2;
+  border-color: var(--metro-accent) !important;
+  box-shadow: 0 0 0 2px var(--metro-accent) !important;
+  transform: none !important;
+}
+
 @media (max-width: 380px) {
   html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel {
     padding: 10px;
