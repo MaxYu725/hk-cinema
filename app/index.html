@@ -21,6 +21,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HK Cinema">
+  <script>
+    (() => {
+      try {
+        const skin = new URLSearchParams(window.location.search).get("skin");
+        if (skin === "metro") document.documentElement.dataset.skin = "metro";
+        else if (skin === "classic") document.documentElement.dataset.skin = "classic";
+      } catch {
+        // Keep the release-safe Classic default if URL parsing is unavailable.
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="./style.css?v=6k1">
   <link rel="stylesheet" href="./data-health.css?v=6j2">
   <link rel="stylesheet" href="./seatmap-shared.css?v=7b3">
@@ -52,6 +63,7 @@
   <link rel="stylesheet" href="./phase9c3-pwa-final-polish.css?v=9c3-1">
   <link rel="stylesheet" href="./classic-final-ui-polish.css?v=classic-final-1">
   <link rel="stylesheet" href="./phase10r3a-mobile-shell-date-strip.css?v=10r3b-1">
+  <link rel="stylesheet" href="./metro-theme.css?v=m1-1">
 </head>
 
 <body>
@@ -182,6 +194,7 @@
   <script src="./phase9b3-filter-compact.js?v=9b3"></script>
   <script src="./pwa-runtime.js?v=9c3-1"></script>
   <script src="./classic-final-ui-polish.js?v=classic-final-1"></script>
-  <script src="./phase10r3a-mobile-shell-date-strip.js?v=10r3b-1"></script>
+  <script src="./phase10r3a-mobile-shell-date-strip.js?v=10r3b-m1-1"></script>
+  <script src="./metro-runtime.js?v=m1-2"></script>
 </body>
 </html>
