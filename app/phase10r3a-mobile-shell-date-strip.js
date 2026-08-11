@@ -23,7 +23,11 @@
     const selected = scroller?.querySelector(".provider-compare-date.active[data-provider-compare-date]");
     if (!scroller || !selected || scroller.clientWidth <= 0) return false;
 
-    const target = selected.offsetLeft - ((scroller.clientWidth - selected.offsetWidth) / 2);
+    const scrollerRect = scroller.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    const selectedCenterInContent = scroller.scrollLeft +
+      (selectedRect.left - scrollerRect.left) + (selectedRect.width / 2);
+    const target = selectedCenterInContent - (scroller.clientWidth / 2);
     const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     scroller.scrollLeft = Math.min(maxScroll, Math.max(0, target));
     return true;
