@@ -1,0 +1,68 @@
+/* Phase 10R3A: mobile PWA shell, home status placement and comparison date rail. */
+
+/* The Classic release no longer has visible branding or a manual refresh action.
+   Data health is relocated into the home tools by the companion runtime, so the
+   empty topbar must not consume the first row above the movie tabs. */
+html[data-skin="classic"] .topbar {
+  display: none !important;
+}
+
+/* Use the otherwise empty space to the right of the home library chips for the
+   compact three-provider data-health control. */
+html[data-skin="classic"] .home-library-tools {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+html[data-skin="classic"] .home-library-primary,
+html[data-skin="classic"] .home-library-footer {
+  grid-column: 1 / -1;
+}
+
+html[data-skin="classic"] .home-library-filter-options {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+html[data-skin="classic"] #dataHealth[data-phase10r3a-home-health="true"] {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  justify-self: end;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  html[data-skin="classic"] .home-library-tools.is-stuck > #dataHealth[data-phase10r3a-home-health="true"] {
+    display: none !important;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Earlier mobile layouts reserved 50–56px at the right for a control that is
+     no longer in this rail. Reclaim the full width and remove the redundant
+     left-side "日期" label. */
+  html[data-skin="classic"] .provider-compare-date-rail.phase8b-date-section {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    box-sizing: border-box;
+    width: auto;
+    padding: 8px 10px !important;
+    overflow: hidden;
+  }
+
+  html[data-skin="classic"] .provider-compare-date-label {
+    display: none !important;
+  }
+
+  html[data-skin="classic"] .provider-compare-dates {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin-right: 0 !important;
+    padding: 2px 2px 6px !important;
+    scroll-padding-inline: 10px;
+  }
+}
