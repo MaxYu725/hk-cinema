@@ -17,7 +17,8 @@ test("final Classic homepage removes redundant branding and exposes tab counts",
   assert.match(css, /#refreshButton\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.section-heading\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(js, /dataset\.classicFinalTabCount\s*=\s*tab/);
-  assert.match(js, /document\.querySelector\("#refreshButton"\)\?\.click\(\)/);
+  assert.match(js, /function clickRefreshInsideDataHealth\(panel\)/);
+  assert.match(js, /clickRefreshInsideDataHealth\(panel\)/);
 });
 
 test("final Classic comparison uses a 3 by 3 compact filter matrix and heading sort", async () => {
