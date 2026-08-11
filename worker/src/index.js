@@ -29,6 +29,15 @@ const json = (data, status = 200, extraHeaders = {}) =>
     }
   });
 
+const finiteNumberOrNull = value => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -286,13 +295,21 @@ export default {
             : "no-store"
         });
       } catch (error) {
+        const httpStatus = Number(error?.httpStatus) === 504 ? 504 : 502;
+        const upstreamStatus = finiteNumberOrNull(error?.upstreamStatus);
+        const elapsedMs = finiteNumberOrNull(error?.elapsedMs);
+
         return json({
           ok: false,
           error: {
             code: "MCL_TICKETING_ERROR",
-            message: error instanceof Error ? error.message : String(error)
+            category: error?.category || "upstream_error",
+            causeCode: error?.causeCode || "MCL_UPSTREAM_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+            upstreamStatus,
+            elapsedMs
           }
-        }, 502);
+        }, httpStatus, { "cache-control": "no-store" });
       }
     }
 
