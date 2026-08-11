@@ -25,10 +25,11 @@ test('Phase 10R2A keeps the production worker entrypoint on the full three-provi
   assert.match(seatWorker, /import emperorWorker from "\.\/index-emperor\.js"/);
   assert.match(emperorWorker, /import baseWorker from "\.\/index\.js"/);
 
-  assert.match(baseWorker, /\/api\/broadway\/movies/);
-  assert.match(baseWorker, /\/api\/mcl\/ticketing/);
-  assert.match(emperorWorker, /\/api\/emperor\/movies/);
-  assert.match(seatWorker, /\/api\/emperor\/shows/);
+  assert.ok(baseWorker.includes('/api/broadway/movies'));
+  assert.ok(baseWorker.includes('/api/mcl/ticketing'));
+  assert.ok(emperorWorker.includes('/api/emperor/movies'));
+  assert.match(seatWorker, /getEmperorSeatMap/);
+  assert.match(seatWorker, /EMPEROR_SEATMAP_ERROR/);
 });
 
 test('Phase 10R2A preserves live-data cache boundaries by data type', () => {
@@ -37,7 +38,7 @@ test('Phase 10R2A preserves live-data cache boundaries by data type', () => {
   const broadwayShows = section(baseWorker, 'const showMatch', 'const seatMatch');
   const broadwaySeats = section(baseWorker, 'const seatMatch', 'const mclSeatMatch');
   const mclSeats = section(baseWorker, 'const mclSeatMatch', 'if (url.pathname === "/api/mcl/ticketing")');
-  const mclTicketing = section(baseWorker, 'if (url.pathname === "/api/mcl/ticketing")', 'return json({\n      ok: false');
+  const mclTicketing = section(baseWorker, 'if (url.pathname === "/api/mcl/ticketing")', 'code: "NOT_FOUND"');
   const emperorShows = section(emperorWorker, 'const showMatch', 'return baseWorker.fetch');
   const emperorSeats = section(seatWorker, 'const seatMatch', 'return emperorWorker.fetch');
 
