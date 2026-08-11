@@ -27,6 +27,7 @@
       firstSection.insertAdjacentElement("beforebegin", panel);
     }
     panel.dataset.phase10r3bComparisonHealth = "below-hero";
+    content.dataset.phase10r3bComparisonHealth = "true";
     return true;
   }
 
