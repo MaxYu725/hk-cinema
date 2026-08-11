@@ -120,6 +120,44 @@ test('Phase 10R2B keeps lastSuccessAt as best-effort per-runner state', async ()
   assert.equal(failure.lastSuccessAt, success.lastSuccessAt);
 });
 
+test('Phase 10R2D classifies an aborted probe as timeout even when fetch rejects TypeError', async () => {
+  const fetchImpl = async (url, options = {}) => {
+    const target = String(url);
+    if (!target.includes('GetCinemaDetails.aspx')) {
+      throw new TypeError(`unexpected fetch ${target}`);
+    }
+
+    return await new Promise((resolve, reject) => {
+      const signal = options.signal;
+      if (signal?.aborted) {
+        reject(new TypeError('invalid_argument'));
+        return;
+      }
+      signal?.addEventListener(
+        'abort',
+        () => reject(new TypeError('invalid_argument')),
+        { once: true }
+      );
+    });
+  };
+
+  const runner = createProviderProbeRunner({
+    fetchImpl,
+    emperorProbe: async () => ({ ok: true, count: 1 }),
+    clock: deterministicClock(),
+    timeoutMs: 500
+  });
+
+  const result = await runner.probeProvider('mcl');
+
+  assert.equal(result.healthy, false);
+  assert.deepEqual(result.failure, {
+    category: 'timeout',
+    code: 'PROBE_TIMEOUT',
+    status: 504
+  });
+});
+
 test('Phase 10R2B routes are no-store, bounded, and separate from normal app loading', async () => {
   const [probeSource, workerSource] = await Promise.all([
     read('worker/src/provider-probe.js'),
@@ -128,6 +166,7 @@ test('Phase 10R2B routes are no-store, bounded, and separate from normal app loa
 
   assert.match(probeSource, /DEFAULT_TIMEOUT_MS = 4500/);
   assert.match(probeSource, /AbortController/);
+  assert.match(probeSource, /controller\.signal\.aborted/);
   assert.match(probeSource, /Promise\.race/);
   assert.match(workerSource, /\/api\/providers\/probe/);
   assert.match(workerSource, /cache-control": "no-store"/);
