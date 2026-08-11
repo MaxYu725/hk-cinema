@@ -7,10 +7,12 @@ html[data-skin="classic"] .topbar {
   display: none !important;
 }
 
-/* Use the otherwise empty space to the right of the home library chips for the
-   compact three-provider data-health control. */
+/* Keep the outer tools grid on the same two-column track as the search/sort row.
+   This gives the compact data-health control a dedicated cell directly beneath
+   Sort instead of letting an auto-sized second column drift against the card edge. */
 html[data-skin="classic"] .home-library-tools {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 0.34fr);
+  column-gap: 10px;
 }
 
 html[data-skin="classic"] .home-library-primary,
@@ -28,13 +30,18 @@ html[data-skin="classic"] #dataHealth[data-phase10r3a-home-health="true"] {
   grid-column: 2;
   grid-row: 2;
   align-self: center;
-  justify-self: end;
+  justify-self: center;
   width: fit-content;
   max-width: 100%;
   margin: 0;
 }
 
 @media (max-width: 640px) {
+  html[data-skin="classic"] .home-library-tools {
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.82fr);
+    column-gap: 8px;
+  }
+
   html[data-skin="classic"] .home-library-tools.is-stuck > #dataHealth[data-phase10r3a-home-health="true"] {
     display: none !important;
   }
