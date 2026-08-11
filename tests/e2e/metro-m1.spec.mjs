@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("Metro M1 preview builds the new home shell without changing the Classic default", async ({ page }) => {
+test("Metro preview builds the home shell and keeps homepage controls stable", async ({ page }) => {
   await page.goto("/?skin=metro", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
@@ -18,8 +18,13 @@ test("Metro M1 preview builds the new home shell without changing the Classic de
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
 
   const tools = page.locator("#homeLibraryTools");
+  const search = page.locator(".home-movie-search");
+  const sort = page.locator(".home-movie-sort");
+  const sortSelect = page.locator("[data-home-movie-sort]");
   await expect(tools).toBeVisible();
   await expect(page.locator("#dataHealth")).toBeVisible({ timeout: 15_000 });
+  await expect(sort.locator(":scope > span")).toBeHidden();
+  await expect(sortSelect.locator("option")).toHaveText(["預設", "最新上映", "片名"]);
 
   const shell = await page.evaluate(() => {
     const html = getComputedStyle(document.documentElement);
@@ -30,7 +35,11 @@ test("Metro M1 preview builds the new home shell without changing the Classic de
     const controls = document.querySelector(".home-library-filter-options");
     const toolsNode = document.querySelector("#homeLibraryTools");
     const health = document.querySelector("#dataHealth");
+    const searchNode = document.querySelector(".home-movie-search");
+    const sortNode = document.querySelector(".home-movie-sort");
     const appRect = app?.getBoundingClientRect();
+    const searchRect = searchNode?.getBoundingClientRect();
+    const sortRect = sortNode?.getBoundingClientRect();
     return {
       background: html.backgroundColor,
       appWidth: appRect?.width || 0,
@@ -40,7 +49,11 @@ test("Metro M1 preview builds the new home shell without changing the Classic de
       controlColumns: getComputedStyle(controls).gridTemplateColumns.split(" ").filter(Boolean).length,
       toolsPosition: getComputedStyle(toolsNode).position,
       healthParentClass: health?.parentElement?.className || "",
-      themeColor: document.querySelector('meta[name="theme-color"]')?.getAttribute("content") || ""
+      themeColor: document.querySelector('meta[name="theme-color"]')?.getAttribute("content") || "",
+      searchTop: searchRect?.top || 0,
+      sortTop: sortRect?.top || 0,
+      searchHeight: searchRect?.height || 0,
+      sortHeight: sortRect?.height || 0
     };
   });
 
@@ -53,11 +66,32 @@ test("Metro M1 preview builds the new home shell without changing the Classic de
   expect(shell.toolsPosition).toBe("static");
   expect(shell.healthParentClass).toContain("home-library-filter-options");
   expect(shell.themeColor).toBe("#000000");
+  expect(Math.abs(shell.searchTop - shell.sortTop)).toBeLessThan(2);
+  expect(shell.searchHeight).toBeGreaterThanOrEqual(44);
+  expect(shell.searchHeight).toBeLessThanOrEqual(52);
+  expect(shell.sortHeight).toBeGreaterThanOrEqual(44);
+  expect(shell.sortHeight).toBeLessThanOrEqual(52);
 
   const metadata = firstMovie.locator(".movie-meta");
   if (await metadata.count()) {
     await expect(metadata).toHaveAttribute("data-metro-decorated", "true");
   }
+
+  await page.evaluate(() => {
+    const button = document.querySelector("#refreshButton");
+    if (!button) return;
+    button.disabled = false;
+    window.__metroRefreshClicks = 0;
+    button.addEventListener("click", event => {
+      window.__metroRefreshClicks += 1;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  });
+  await page.locator("#dataHealth > summary").click();
+  await expect(page.locator("#dataHealth")).toHaveJSProperty("open", true);
+  await page.waitForTimeout(120);
+  expect(await page.evaluate(() => window.__metroRefreshClicks || 0)).toBe(0);
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(150);

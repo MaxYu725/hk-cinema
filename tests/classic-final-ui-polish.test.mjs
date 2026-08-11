@@ -12,11 +12,12 @@ test("final Classic homepage removes redundant branding and exposes tab counts",
   ]);
 
   assert.match(index, /classic-final-ui-polish\.css\?v=classic-final-1/);
-  assert.match(index, /classic-final-ui-polish\.js\?v=classic-final-1/);
+  assert.match(index, /classic-final-ui-polish\.js\?v=classic-final-m2-1/);
   assert.match(css, /\.topbar-brand\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /#refreshButton\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.section-heading\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(js, /dataset\.classicFinalTabCount\s*=\s*tab/);
+  assert.match(js, /document\.documentElement\.dataset\.skin === "metro"/);
   assert.match(js, /document\.querySelector\("#refreshButton"\)\?\.click\(\)/);
 });
 

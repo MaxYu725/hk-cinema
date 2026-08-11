@@ -33,7 +33,19 @@
 
   function syncSortLabel() {
     const label = document.querySelector(".home-movie-sort > span");
-    if (label && label.textContent !== "排序：") label.textContent = "排序：";
+    if (label && label.textContent) label.textContent = "";
+
+    const select = document.querySelector("[data-home-movie-sort]");
+    if (!select) return;
+    const labels = {
+      default: "預設",
+      release: "最新上映",
+      title: "片名"
+    };
+    Array.from(select.options || []).forEach(option => {
+      const next = labels[option.value];
+      if (next && option.textContent !== next) option.textContent = next;
+    });
   }
 
   function syncLegacyStickyState() {
@@ -136,7 +148,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m1-2",
+    version: "m2-1",
     refresh: scheduleSync
   });
 

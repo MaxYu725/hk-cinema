@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "hk-cinema-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}m1-1`;
+const CACHE_NAME = `${CACHE_PREFIX}m2-1`;
 const SCOPE_URL = new URL(self.registration.scope);
 const INDEX_URL = new URL("./index.html", self.registration.scope).href;
 const ROOT_URL = new URL("./", self.registration.scope).href;

@@ -1,0 +1,52 @@
+/* Phase M2: real-device homepage polish for the Metro preview. */
+
+html[data-skin="metro"] .home-library-primary {
+  grid-template-columns: minmax(0, 1fr) minmax(118px, 132px);
+  gap: 10px;
+}
+
+html[data-skin="metro"] .home-movie-search,
+html[data-skin="metro"] .home-movie-sort {
+  min-height: 48px;
+  border-width: 1px;
+}
+
+html[data-skin="metro"] .home-movie-search {
+  padding: 0 12px;
+}
+
+html[data-skin="metro"] .home-movie-search input {
+  min-height: 44px;
+  font-size: .9rem;
+}
+
+html[data-skin="metro"] .home-movie-sort {
+  display: block;
+  padding: 0 10px;
+}
+
+html[data-skin="metro"] .home-movie-sort > span {
+  display: none !important;
+}
+
+html[data-skin="metro"] .home-movie-sort select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 22px 0 0;
+  font-size: .82rem;
+}
+
+@media (max-width: 380px) {
+  html[data-skin="metro"] .home-library-primary {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    gap: 8px;
+  }
+
+  html[data-skin="metro"] .home-movie-sort {
+    padding-inline: 8px;
+  }
+
+  html[data-skin="metro"] .home-movie-sort select {
+    font-size: .78rem;
+  }
+}
