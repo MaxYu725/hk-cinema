@@ -98,7 +98,7 @@ test("Metro filter Pivot opens rich controls as full-width dark command groups",
   expect(cinemaStyle.radius).toBe("0px");
 });
 
-test("Metro Smart Pick tiles cannot inherit the Classic light card surface", async ({ page }) => {
+test("Metro Smart Pick grid keeps every recommendation card readable", async ({ page }) => {
   await page.goto("/?skin=metro", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
@@ -114,23 +114,42 @@ test("Metro Smart Pick tiles cannot inherit the Classic light card surface", asy
   const root = overlay.locator("#providerCompareContent");
   await expect(root).toHaveAttribute("data-metro-comparison-active-pivot", "picks");
 
-  const realPick = overlay.locator(".phase8d-smart-pick").first();
-  if (await realPick.count()) {
-    await expect(realPick).toBeVisible();
-    const style = await realPick.evaluate(element => {
+  const grid = overlay.locator(".phase8d-smart-grid");
+  if (await grid.count()) {
+    await expect(grid).toBeVisible();
+    const gridStyle = await grid.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        autoFlow: style.gridAutoFlow,
+        overflowX: style.overflowX,
+        width: element.getBoundingClientRect().width
+      };
+    });
+    expect(gridStyle.autoFlow).toBe("row");
+    expect(gridStyle.overflowX).toBe("visible");
+    expect(gridStyle.width).toBeGreaterThan(280);
+
+    const picks = overlay.locator(".phase8d-smart-pick");
+    const cards = await picks.evaluateAll(elements => elements.map(element => {
       const box = element.getBoundingClientRect();
       const computed = getComputedStyle(element);
       const strong = element.querySelector("strong");
       return {
+        width: box.width,
+        height: box.height,
         background: computed.backgroundColor,
         radius: computed.borderRadius,
-        height: box.height,
         strongColor: strong ? getComputedStyle(strong).color : ""
       };
-    });
-    expect(style.background).not.toBe("rgb(255, 255, 255)");
-    expect(style.radius).toBe("0px");
-    expect(style.height).toBeLessThan(260);
-    expect(style.strongColor).toBe("rgb(255, 255, 255)");
+    }));
+
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.width).toBeGreaterThan(140);
+      expect(card.height).toBeLessThan(300);
+      expect(card.background).not.toBe("rgb(255, 255, 255)");
+      expect(card.radius).toBe("0px");
+      expect(card.strongColor).toBe("rgb(255, 255, 255)");
+    }
   }
 });
