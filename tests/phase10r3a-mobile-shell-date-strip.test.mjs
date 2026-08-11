@@ -25,8 +25,8 @@ test("Phase 10R3A promotes the installed shell to fullscreen and rotates the con
 });
 
 test("Phase 10R3A makes movie tabs first and places data health beneath the sort column", () => {
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.css\?v=10r3a-1/);
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3a-1/);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.css\?v=10r3b-1/);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-1/);
   assert.match(css, /\.topbar\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+150px/s);
   assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*\.home-library-tools,\s*[\s\S]*\.home-library-primary\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+126px/s);
