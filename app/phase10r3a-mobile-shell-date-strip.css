@@ -36,12 +36,14 @@ html[data-skin="classic"] #dataHealth[data-phase10r3a-home-health="true"] {
   margin: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   html[data-skin="classic"] .home-library-tools {
     grid-template-columns: minmax(0, 1fr) minmax(130px, 0.82fr);
     column-gap: 8px;
   }
+}
 
+@media (max-width: 640px) {
   html[data-skin="classic"] .home-library-tools.is-stuck > #dataHealth[data-phase10r3a-home-health="true"] {
     display: none !important;
   }
