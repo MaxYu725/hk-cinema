@@ -38,17 +38,21 @@ test("Metro filter Pivot opens rich controls as full-width dark command groups",
     const style = getComputedStyle(element);
     const box = element.getBoundingClientRect();
     const parentBox = element.parentElement.getBoundingClientRect();
+    const label = element.querySelector(".phase9b3-filter-group-label");
+    const value = element.querySelector(".phase9b3-filter-group-value");
     return {
       background: style.backgroundColor,
-      color: style.color,
       radius: style.borderRadius,
-      widthDelta: Math.abs(box.width - parentBox.width)
+      widthDelta: Math.abs(box.width - parentBox.width),
+      labelColor: label ? getComputedStyle(label).color : "",
+      valueColor: value ? getComputedStyle(value).color : ""
     };
   });
   expect(summaryStyle.background).toBe("rgb(13, 13, 13)");
-  expect(summaryStyle.color).toBe("rgb(255, 255, 255)");
   expect(summaryStyle.radius).toBe("0px");
   expect(summaryStyle.widthDelta).toBeLessThanOrEqual(1);
+  expect(summaryStyle.labelColor).not.toBe("rgb(255, 255, 255)");
+  expect(summaryStyle.valueColor).toBe("rgb(255, 255, 255)");
 
   await providerSummary.click();
   await expect(providerSummary).toHaveAttribute("aria-expanded", "true");
@@ -71,11 +75,16 @@ test("Metro filter Pivot opens rich controls as full-width dark command groups",
   await expect(cinemaSummary).toBeVisible();
   const cinemaSummaryStyle = await cinemaSummary.evaluate(element => {
     const style = getComputedStyle(element);
-    return { background: style.backgroundColor, color: style.color, radius: style.borderRadius };
+    const value = element.querySelector(".phase9b3-filter-group-value");
+    return {
+      background: style.backgroundColor,
+      radius: style.borderRadius,
+      valueColor: value ? getComputedStyle(value).color : ""
+    };
   });
   expect(cinemaSummaryStyle.background).toBe("rgb(13, 13, 13)");
-  expect(cinemaSummaryStyle.color).toBe("rgb(255, 255, 255)");
   expect(cinemaSummaryStyle.radius).toBe("0px");
+  expect(cinemaSummaryStyle.valueColor).toBe("rgb(255, 255, 255)");
 
   await cinemaSummary.click();
   const cinema = cinemaGroup.locator("[data-insight-cinema]");
