@@ -4,9 +4,10 @@ import vm from "node:vm";
 import { readFile } from "node:fs/promises";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [css, runtime, recommendations] = await Promise.all([
+const [css, runtime, resilience, recommendations] = await Promise.all([
   read("app/phase10r3a-mobile-shell-date-strip.css"),
   read("app/phase10r3a-mobile-shell-date-strip.js"),
+  read("app/provider-compare-resilience-v3.js"),
   read("app/provider-compare-recommendations-v4.js")
 ]);
 
@@ -16,7 +17,16 @@ test("Phase 10R3B places comparison health after movie identity instead of above
   assert.match(runtime, /const firstSection = content\?\.querySelector\("\.provider-compare-section"\)/);
   assert.match(runtime, /firstSection\.insertAdjacentElement\("beforebegin", panel\)/);
   assert.match(runtime, /panel\.dataset\.phase10r3bComparisonHealth = "below-hero"/);
+  assert.match(runtime, /content\.dataset\.phase10r3bComparisonHealth = "true"/);
+  assert.match(css, /#providerCompareContent\[data-phase10r3b-comparison-health="true"\] > \.provider-compare-warning[\s\S]*display:\s*none\s*!important/s);
   assert.doesNotThrow(() => new vm.Script(runtime));
+});
+
+test("Phase 10R3B prevents relocated health updates from recursively scheduling themselves", () => {
+  assert.match(resilience, /content\.dataset\.resilienceObservedV3 === "true"\) return/);
+  assert.match(resilience, /new MutationObserver\(records =>/);
+  assert.match(resilience, /!target\?\.closest\?\.\("\[data-provider-resilience\]"\)/);
+  assert.doesNotThrow(() => new vm.Script(resilience));
 });
 
 test("Phase 10R3B removes grey backing layers without removing sticky date controls", () => {
