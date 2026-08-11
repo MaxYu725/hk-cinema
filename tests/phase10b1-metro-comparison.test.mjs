@@ -28,6 +28,10 @@ test("Metro comparison exposes three Pivot destinations with keyboard navigation
   for (const label of ["場次", "推薦", "篩選"]) {
     assert.match(js, new RegExp(`label: \\"${label}\\"`));
   }
+  assert.match(js, /nav\.dataset\.metroComparisonPivot\s*=\s*"true"/);
+  assert.match(js, /root\.dataset\.metroComparisonActivePivot\s*=\s*activePivot/);
+  assert.match(js, /section\.dataset\.metroComparisonActivePivot\s*=\s*activePivot/);
+  assert.doesNotMatch(js, /root\.dataset\.metroComparisonPivot\s*=\s*activePivot/);
   assert.match(js, /role="tablist"/);
   assert.match(js, /role="tab"/);
   assert.match(js, /aria-selected/);
