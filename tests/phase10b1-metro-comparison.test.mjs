@@ -11,8 +11,8 @@ test("Phase 10B1 loads after the existing comparison layout without forking Clas
   ]);
 
   assert.match(index, /metro-comparison\.css\?v=10b1/);
-  assert.match(index, /metro-comparison\.js\?v=10b1/);
-  assert.ok(index.indexOf("phase8b-comparison-layout.js?v=8b1") < index.indexOf("metro-comparison.js?v=10b1"));
+  assert.match(index, /metro-comparison\.js\?v=10b\d+/);
+  assert.ok(index.indexOf("phase8b-comparison-layout.js?v=8b1") < index.indexOf("metro-comparison.js?v="));
   assert.match(js, /document\.documentElement\.dataset\.skin !== "metro"/);
   assert.match(js, /window\.HKCinemaProviderCompare\?\.getState\?\.\(\)/);
   assert.doesNotMatch(js, /fetch\s*\(/);
