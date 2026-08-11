@@ -10,7 +10,7 @@ test("Phase M3 loads the Metro comparison presentation after the existing Metro 
   const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
   assert.ok(m2 >= 0 && m3 > m2);
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m3-1/);
-  assert.match(index, /metro-runtime\.js\?v=m3-1/);
+  assert.match(index, /metro-runtime\.js\?v=m4-1/);
 });
 
 test("Phase M3 comparison shell follows the supplied Metro structure without forking provider logic", async () => {
@@ -36,9 +36,9 @@ test("Phase M3 comparison shell follows the supplied Metro structure without for
   assert.doesNotMatch(runtime, /fetch\(|API_BASE|providerSourceIds/);
 });
 
-test("Phase M3 rotates the controlled shell cache while preserving explicit activation", async () => {
+test("Phase M3 comparison remains compatible with the current controlled shell cache", async () => {
   const worker = await read("app/sw.js");
-  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m3-3`/);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m4-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
