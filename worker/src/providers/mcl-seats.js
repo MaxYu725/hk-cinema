@@ -389,6 +389,55 @@ function parseAreas(html) {
   return { areas, seats };
 }
 
+export function summarizeMCLSeats(seats = []) {
+  return seats.reduce(
+    (result, seat) => {
+      result.total += 1;
+
+      switch (seat?.status) {
+        case "available":
+          result.available += 1;
+          break;
+        case "wheelchair":
+          result.wheelchair += 1;
+          result.available += 1;
+          break;
+        case "sofa-available":
+          result["sofa-available"] += 1;
+          result.available += 1;
+          break;
+        case "sold":
+          result.sold += 1;
+          break;
+        case "sofa-sold":
+          result["sofa-sold"] += 1;
+          result.sold += 1;
+          break;
+        case "broken":
+          result.broken += 1;
+          result.blocked += 1;
+          break;
+        default:
+          result.unknown += 1;
+          break;
+      }
+
+      return result;
+    },
+    {
+      total: 0,
+      available: 0,
+      sold: 0,
+      blocked: 0,
+      wheelchair: 0,
+      "sofa-available": 0,
+      "sofa-sold": 0,
+      broken: 0,
+      unknown: 0
+    }
+  );
+}
+
 function parseSeatPlan(html, cinemaCode, sessionId) {
   const declaredColumns = toNumber(
     html.match(/totalNumberOfColumns\s*=\s*(\d+)/i)?.[1]
@@ -411,39 +460,7 @@ function parseSeatPlan(html, cinemaCode, sessionId) {
     1
   );
 
-  const counts = seats.reduce(
-    (result, seat) => {
-      result.total += 1;
-      result[seat.status] = (result[seat.status] || 0) + 1;
-
-      if (
-        seat.status === "available" ||
-        seat.status === "wheelchair" ||
-        seat.status === "sofa-available"
-      ) {
-        result.available += 1;
-      } else if (
-        seat.status === "sold" ||
-        seat.status === "sofa-sold"
-      ) {
-        result.sold += 1;
-      } else if (seat.status === "broken") {
-        result.blocked += 1;
-      }
-
-      return result;
-    },
-    {
-      total: 0,
-      available: 0,
-      sold: 0,
-      blocked: 0,
-      wheelchair: 0,
-      "sofa-available": 0,
-      "sofa-sold": 0,
-      unknown: 0
-    }
-  );
+  const counts = summarizeMCLSeats(seats);
 
   return {
     provider: "mcl",
