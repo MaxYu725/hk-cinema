@@ -12,8 +12,8 @@
     "standalone",
     "minimal-ui"
   ],
-  "background_color": "#f4f5f7",
-  "theme_color": "#17191d",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "categories": [
     "entertainment",
     "lifestyle"
