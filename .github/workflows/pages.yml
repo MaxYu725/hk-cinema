@@ -65,7 +65,7 @@ jobs:
           retention-days: 3
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: always() && github.event_name != 'pull_request'
     needs: test
     permissions:
       contents: read
