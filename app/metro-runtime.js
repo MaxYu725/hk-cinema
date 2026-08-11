@@ -37,7 +37,15 @@
   }
 
   function syncLegacyStickyState() {
-    document.querySelector("#homeLibraryTools")?.classList.remove("is-stuck");
+    const tools = document.querySelector("#homeLibraryTools");
+    const filters = tools?.querySelector(".home-library-filter-options");
+    tools?.classList.remove("is-stuck");
+
+    // Classic sticky code can add `is-stuck` later in the same scroll event.
+    // Its mobile rule hides this row, while Metro intentionally keeps all four
+    // controls visible. Keep that Metro-only presentation isolated here rather
+    // than changing the shared Classic sticky behavior.
+    if (filters && filters.style.display !== "grid") filters.style.display = "grid";
   }
 
   function moveDataHealthIntoControls() {
