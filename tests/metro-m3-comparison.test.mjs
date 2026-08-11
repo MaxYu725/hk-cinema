@@ -1,0 +1,42 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("Phase M3 loads the Metro comparison presentation after the existing Metro layers", async () => {
+  const index = await read("app/index.html");
+  const m2 = index.indexOf("metro-m2-home-polish.css?v=m2-1");
+  const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
+  assert.ok(m2 >= 0 && m3 > m2);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m3-1/);
+  assert.match(index, /metro-runtime\.js\?v=m3-1/);
+});
+
+test("Phase M3 comparison shell follows the supplied Metro structure without forking provider logic", async () => {
+  const [css, runtime, phase10] = await Promise.all([
+    read("app/metro-m3-comparison.css"),
+    read("app/metro-runtime.js"),
+    read("app/phase10r3a-mobile-shell-date-strip.js")
+  ]);
+
+  assert.match(css, /html\[data-skin="metro"\] \.provider-compare-sheet[\s\S]*width:\s*min\(100%,\s*500px\)/);
+  assert.match(css, /\.metro-compare-nav[\s\S]*justify-content:\s*space-between/);
+  assert.match(css, /\.provider-compare-hero[\s\S]*grid-template-columns:\s*80px minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.provider-compare-date\.active[\s\S]*background:\s*var\(--metro-accent\)/);
+  assert.match(runtime, /MOVIEMETRO \/ 場次比較/);
+  assert.match(runtime, /actions\.appendChild\(health\)/);
+  assert.match(runtime, /actions\.appendChild\(close\)/);
+  assert.match(runtime, /syncComparisonShell/);
+  assert.match(phase10, /dataset\.skin === "metro"\) return false/);
+  assert.doesNotMatch(runtime, /fetch\(|API_BASE|providerSourceIds/);
+});
+
+test("Phase M3 rotates the controlled shell cache while preserving explicit activation", async () => {
+  const worker = await read("app/sw.js");
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m3-1`/);
+  assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
+  const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
+  assert.ok(installBlock);
+  assert.doesNotMatch(installBlock, /skipWaiting\(\)/);
+});
