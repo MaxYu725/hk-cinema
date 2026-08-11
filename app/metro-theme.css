@@ -1,0 +1,578 @@
+/* Phase M1: Metro presentation layer. Enabled only with html[data-skin="metro"]. */
+
+html[data-skin="metro"] {
+  color-scheme: dark;
+
+  --metro-bg: #000000;
+  --metro-fg: #ffffff;
+  --metro-accent: #0078d7;
+  --metro-accent-pressed: #005a9e;
+  --metro-subtext: #888888;
+  --metro-tile: #141414;
+  --metro-tile-strong: #1a1a1a;
+  --metro-border: #2a2a2a;
+  --metro-success: #107c41;
+  --metro-warning: #d89a26;
+  --metro-error: #8f3b42;
+
+  /* Map Metro into the existing shared token layer. */
+  --skin-background: var(--metro-bg);
+  --skin-surface: var(--metro-tile);
+  --skin-surface-subtle: #0d0d0d;
+  --skin-surface-strong: #202020;
+  --skin-text: var(--metro-fg);
+  --skin-text-muted: var(--metro-subtext);
+  --skin-border: var(--metro-border);
+  --skin-accent: var(--metro-accent);
+  --skin-accent-contrast: #ffffff;
+  --skin-success: var(--metro-success);
+  --skin-success-soft: #0b2418;
+  --skin-radius-panel: 0px;
+  --skin-radius-card: 0px;
+  --skin-radius-control: 0px;
+  --skin-radius-pill: 0px;
+  --skin-shadow-surface: none;
+  --skin-shadow-floating: none;
+
+  --bg: var(--metro-bg);
+  --surface: var(--metro-tile);
+  --surface-soft: #0d0d0d;
+  --text: var(--metro-fg);
+  --text-secondary: var(--metro-subtext);
+  --border: var(--metro-border);
+  --accent: var(--metro-accent);
+  --radius-large: 0px;
+  --radius-medium: 0px;
+  --radius-small: 0px;
+  --shadow: none;
+
+  background: var(--metro-bg);
+}
+
+html[data-skin="metro"],
+html[data-skin="metro"] body {
+  min-height: 100%;
+  background: var(--metro-bg);
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] body {
+  margin: 0;
+  font-family: "Segoe UI West European", "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang HK", "Noto Sans TC", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-skin="metro"] *,
+html[data-skin="metro"] *::before,
+html[data-skin="metro"] *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-skin="metro"] .app-shell {
+  width: min(100%, 500px);
+  margin: 0 auto;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(40px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+/* App label: reuse the existing topbar DOM, but keep Metro intentionally minimal. */
+html[data-skin="metro"] .topbar {
+  min-height: 0;
+  margin: 0 0 12px;
+  display: block;
+}
+
+html[data-skin="metro"] .topbar-brand {
+  display: block;
+}
+
+html[data-skin="metro"] .topbar-brand h1,
+html[data-skin="metro"] .topbar-actions,
+html[data-skin="metro"] #systemStatus,
+html[data-skin="metro"] .section-heading,
+html[data-skin="metro"] footer {
+  display: none !important;
+}
+
+html[data-skin="metro"] .topbar .eyebrow {
+  margin: 0;
+  color: var(--metro-subtext);
+  font-size: .85rem;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+/* Pivot navigation. */
+html[data-skin="metro"] .tabs {
+  display: flex;
+  gap: 20px;
+  margin: 0 0 24px;
+  padding: 0;
+  overflow-x: auto;
+  border: 0;
+  background: transparent;
+  scrollbar-width: none;
+}
+
+html[data-skin="metro"] .tabs::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-skin="metro"] .tab {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--metro-subtext);
+  font-size: clamp(2rem, 9vw, 2.2rem);
+  font-weight: 300;
+  line-height: 1.12;
+  white-space: nowrap;
+  transition: color 150ms ease, transform 100ms ease;
+}
+
+html[data-skin="metro"] .tab.active {
+  background: transparent;
+  color: var(--metro-fg);
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .tab:active {
+  transform: scale(.97);
+}
+
+html[data-skin="metro"] .classic-final-tab-count {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  margin-left: 3px;
+  padding: 0;
+  vertical-align: super;
+  background: transparent;
+  color: var(--metro-accent);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+html[data-skin="metro"] .tab.active .classic-final-tab-count {
+  background: transparent;
+  color: var(--metro-accent);
+}
+
+/* Search, sorting, library filters and Data Health become a flat Metro control stack. */
+html[data-skin="metro"] .home-library-tools {
+  position: static;
+  z-index: auto;
+  display: grid;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html[data-skin="metro"] .home-library-tools.is-stuck {
+  border: 0;
+}
+
+html[data-skin="metro"] .home-library-primary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+html[data-skin="metro"] .home-movie-search,
+html[data-skin="metro"] .home-movie-sort {
+  min-height: 64px;
+  padding: 0 16px;
+  border: 2px solid var(--metro-border);
+  background: #0d0d0d;
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] .home-movie-search:focus-within,
+html[data-skin="metro"] .home-movie-sort:focus-within {
+  border-color: var(--metro-accent);
+  background: #0d0d0d;
+}
+
+html[data-skin="metro"] .home-movie-search > span {
+  display: none;
+}
+
+html[data-skin="metro"] .home-movie-search input {
+  min-height: 60px;
+  padding: 0;
+  color: var(--metro-fg);
+  font-size: .95rem;
+}
+
+html[data-skin="metro"] .home-movie-search input::placeholder {
+  color: #666666;
+}
+
+html[data-skin="metro"] .home-movie-search button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--metro-subtext);
+  font-size: 1.2rem;
+}
+
+html[data-skin="metro"] .home-movie-sort {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px;
+  min-height: 54px;
+  border-width: 1px;
+  font-size: .85rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .home-movie-sort > span {
+  color: var(--metro-fg);
+  font-size: .85rem;
+  font-weight: 400;
+}
+
+html[data-skin="metro"] .home-movie-sort select {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 28px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--metro-fg);
+  font-size: .85rem;
+}
+
+html[data-skin="metro"] .home-library-filter-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+  overflow: visible;
+}
+
+html[data-skin="metro"] .home-library-filter-options > button,
+html[data-skin="metro"] .home-library-filter-options > .data-health {
+  min-width: 0;
+  min-height: 52px;
+}
+
+html[data-skin="metro"] .home-library-filter-options > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile-strong);
+  color: var(--metro-fg);
+  font-size: .78rem;
+  font-weight: 400;
+  white-space: nowrap;
+  transition: background 100ms ease, border-color 100ms ease, transform 100ms ease;
+}
+
+html[data-skin="metro"] .home-library-filter-options > button.active {
+  border-color: var(--metro-accent);
+  background: var(--metro-accent);
+  color: #ffffff;
+}
+
+html[data-skin="metro"] .home-library-filter-options > button:active {
+  transform: scale(.96);
+}
+
+html[data-skin="metro"] .home-library-filter-options > button span {
+  margin: 0;
+  color: inherit;
+  font-size: .72rem;
+  opacity: .72;
+}
+
+html[data-skin="metro"] .home-library-footer {
+  display: none;
+}
+
+/* Data Health is moved into the home control row by metro-runtime.js. */
+html[data-skin="metro"] .home-library-filter-options .data-health {
+  position: relative;
+  margin: 0;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-heading {
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 6px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile-strong);
+  color: var(--metro-fg);
+  font-size: .75rem;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-lights {
+  gap: 3px;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-light {
+  width: 7px;
+  height: 7px;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-compact {
+  display: block;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-compact strong {
+  font-size: .72rem;
+  font-weight: 500;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-compact small {
+  display: none;
+}
+
+html[data-skin="metro"] .home-library-filter-options .data-health-chevron {
+  width: 6px;
+  height: 6px;
+  border-color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] .data-health-body {
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] .data-health-source {
+  background: #0d0d0d;
+}
+
+/* Live-tile movie grid. */
+html[data-skin="metro"] .movie-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+html[data-skin="metro"] .movie-card {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile-strong);
+  transform: none;
+  transition: transform 100ms ease, border-color 150ms ease;
+}
+
+html[data-skin="metro"] .movie-card:hover {
+  transform: none;
+  border-color: #3a3a3a;
+}
+
+html[data-skin="metro"] .movie-card:active {
+  transform: scale(.96);
+  border-color: var(--metro-accent);
+}
+
+html[data-skin="metro"] .movie-card:focus-visible {
+  outline: 2px solid var(--metro-accent);
+  outline-offset: 2px;
+}
+
+html[data-skin="metro"] .movie-poster {
+  aspect-ratio: 2 / 3;
+  background: #111111;
+}
+
+html[data-skin="metro"] .movie-poster img {
+  filter: grayscale(15%);
+  transition: filter 200ms ease;
+}
+
+html[data-skin="metro"] .movie-card:hover .movie-poster img {
+  filter: grayscale(0%);
+}
+
+html[data-skin="metro"] .poster-placeholder {
+  color: #555555;
+  background: #0b0b0b;
+  font-size: .7rem;
+  letter-spacing: .12em;
+}
+
+html[data-skin="metro"] .movie-favorite-button {
+  top: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: rgba(0, 0, 0, .8);
+  color: #ffffff;
+  backdrop-filter: none;
+}
+
+html[data-skin="metro"] .movie-favorite-button.active {
+  background: var(--metro-accent);
+  color: #ffffff;
+}
+
+html[data-skin="metro"] .movie-favorite-button::before,
+html[data-skin="metro"] .movie-favorite-button.active::before {
+  font-size: 1.2rem;
+}
+
+html[data-skin="metro"] .movie-info {
+  min-height: 154px;
+  padding: 12px 10px;
+  background: var(--metro-tile-strong);
+}
+
+html[data-skin="metro"] .movie-info h3 {
+  min-height: 0;
+  margin: 0 0 5px;
+  color: var(--metro-fg);
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  -webkit-line-clamp: 3;
+}
+
+html[data-skin="metro"] .movie-title-en {
+  min-height: 0;
+  margin: 0 0 10px !important;
+  color: var(--metro-subtext) !important;
+  font-size: .75rem !important;
+  line-height: 1.25;
+}
+
+html[data-skin="metro"] .movie-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  margin-top: auto !important;
+  color: var(--metro-subtext) !important;
+  font-size: .7rem !important;
+}
+
+html[data-skin="metro"] .metro-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 5px;
+  background: var(--metro-accent);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+html[data-skin="metro"] .metro-duration,
+html[data-skin="metro"] .metro-release {
+  color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] .movie-badges {
+  top: 0;
+  left: 0;
+}
+
+html[data-skin="metro"] .movie-badge {
+  min-height: 24px;
+  padding: 4px 7px;
+  background: rgba(0, 0, 0, .82);
+  color: #ffffff;
+  font-size: .66rem;
+}
+
+html[data-skin="metro"] .movie-badge.presale {
+  background: var(--metro-success);
+}
+
+html[data-skin="metro"] .empty-state {
+  padding: 44px 18px;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] .empty-state strong {
+  color: var(--metro-fg);
+}
+
+/* Keep PWA notices compatible with the Metro shell without changing the SW flow. */
+html[data-skin="metro"] .pwa-notice {
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile);
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] .pwa-notice button {
+  border: 1px solid var(--metro-accent);
+  background: var(--metro-accent);
+  color: #ffffff;
+}
+
+@media (max-width: 430px) {
+  html[data-skin="metro"] .app-shell {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  html[data-skin="metro"] .tab {
+    font-size: clamp(1.85rem, 8.8vw, 2.08rem);
+  }
+
+  html[data-skin="metro"] .home-library-filter-options {
+    gap: 6px;
+  }
+
+  html[data-skin="metro"] .home-library-filter-options > button,
+  html[data-skin="metro"] .home-library-filter-options .data-health-heading {
+    padding-left: 4px;
+    padding-right: 4px;
+    font-size: .7rem;
+  }
+
+  html[data-skin="metro"] .home-library-filter-options .data-health-lights {
+    display: none;
+  }
+
+  html[data-skin="metro"] .movie-grid {
+    gap: 12px;
+  }
+
+  html[data-skin="metro"] .movie-info {
+    min-height: 146px;
+    padding: 11px 9px;
+  }
+}
+
+@media (display-mode: fullscreen) {
+  html[data-skin="metro"] .app-shell {
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] *,
+  html[data-skin="metro"] *::before,
+  html[data-skin="metro"] *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
