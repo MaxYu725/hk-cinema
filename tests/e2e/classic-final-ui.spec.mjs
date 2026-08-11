@@ -19,8 +19,8 @@ test("final Classic homepage puts movie tabs first and relocates data health ben
     const tabs = document.querySelector(".tabs")?.getBoundingClientRect();
     const tools = document.querySelector("#homeLibraryTools")?.getBoundingClientRect();
     const filters = document.querySelector(".home-library-filter-options")?.getBoundingClientRect();
-    const sort = document.querySelector(".home-library-sort")?.getBoundingClientRect();
-    const summary = document.querySelector("#homeLibrarySummary")?.getBoundingClientRect();
+    const sort = document.querySelector(".home-movie-sort")?.getBoundingClientRect();
+    const summary = document.querySelector(".home-library-footer")?.getBoundingClientRect();
     const panel = document.querySelector("#dataHealth")?.getBoundingClientRect();
     const heading = document.querySelector("#dataHealth .data-health-heading");
     const style = heading ? getComputedStyle(heading) : null;
@@ -43,6 +43,7 @@ test("final Classic homepage puts movie tabs first and relocates data health ben
       healthTop: panel?.top ?? null,
       healthBottom: panel?.bottom ?? null,
       healthCenter: panel ? (panel.left + panel.right) / 2 : null,
+      sortCenter: sort ? (sort.left + sort.right) / 2 : null,
       summaryTop: summary?.top ?? null,
       boxShadow: style?.boxShadow || "",
       borderRadius: parseFloat(style?.borderRadius || "0")
@@ -58,6 +59,7 @@ test("final Classic homepage puts movie tabs first and relocates data health ben
   expect(geometry.healthRight).toBeLessThanOrEqual(geometry.sortRight + 4);
   expect(geometry.healthCenter).toBeGreaterThan(geometry.sortLeft);
   expect(geometry.healthCenter).toBeLessThan(geometry.sortRight);
+  expect(Math.abs(geometry.healthCenter - geometry.sortCenter)).toBeLessThanOrEqual(4);
   expect(geometry.healthBottom).toBeLessThanOrEqual(geometry.summaryTop);
   expect(geometry.boxShadow).toBe("none");
   expect(geometry.borderRadius).toBeLessThanOrEqual(10);
