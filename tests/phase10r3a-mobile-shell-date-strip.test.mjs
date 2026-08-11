@@ -1,0 +1,46 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import { readFile } from "node:fs/promises";
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const [index, manifestText, css, runtime, worker] = await Promise.all([
+  read("app/index.html"),
+  read("app/manifest.json"),
+  read("app/phase10r3a-mobile-shell-date-strip.css"),
+  read("app/phase10r3a-mobile-shell-date-strip.js"),
+  read("app/sw.js")
+]);
+const manifest = JSON.parse(manifestText);
+
+test("Phase 10R3A promotes the installed shell to fullscreen and rotates the controlled PWA cache", () => {
+  assert.equal(manifest.display, "fullscreen");
+  assert.deepEqual(manifest.display_override.slice(0, 2), ["fullscreen", "standalone"]);
+  assert.match(index, /manifest\.json\?v=10r3a-1/);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}10r3a-1`/);
+  assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
+  assert.doesNotMatch(worker, /addEventListener\("install"[\s\S]{0,240}skipWaiting\(\)/);
+});
+
+test("Phase 10R3A makes movie tabs the first visible home row and relocates data health into the library tools", () => {
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.css\?v=10r3a-1/);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3a-1/);
+  assert.match(css, /\.topbar\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(css, /\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/s);
+  assert.match(css, /#dataHealth\[data-phase10r3a-home-health="true"\][\s\S]*grid-column:\s*2/);
+  assert.match(runtime, /panel\.dataset\.phase10r3aHomeHealth = "true"/);
+  assert.match(runtime, /filters\.insertAdjacentElement\("afterend", panel\)/);
+});
+
+test("Phase 10R3A removes obsolete date-rail gutters and recenters the active selected date after DOM replacement", () => {
+  assert.match(css, /provider-compare-date-rail\.phase8b-date-section[\s\S]*padding:\s*8px 10px\s*!important/);
+  assert.match(css, /provider-compare-date-label\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(css, /provider-compare-dates[\s\S]*margin-right:\s*0\s*!important/);
+  assert.doesNotMatch(css, /padding-right:\s*(?:4[4-9]|5\d|6\d)px\s*!important/);
+  assert.match(runtime, /provider-compare-date\.active\[data-provider-compare-date\]/);
+  assert.match(runtime, /selected\.offsetLeft/);
+  assert.match(runtime, /scroller\.clientWidth/);
+  assert.match(runtime, /scroller\.scrollLeft\s*=/);
+  assert.doesNotMatch(runtime, /today|今日/i);
+  assert.doesNotThrow(() => new vm.Script(runtime));
+});
