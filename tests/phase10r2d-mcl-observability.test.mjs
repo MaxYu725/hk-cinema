@@ -71,8 +71,8 @@ test('Phase 10R2D keeps the public MCL error code stable while exposing diagnost
   assert.match(workerSource, /code: "MCL_TICKETING_ERROR"/);
   assert.match(workerSource, /category: error\?\.category \|\| "upstream_error"/);
   assert.match(workerSource, /causeCode: error\?\.causeCode \|\| "MCL_UPSTREAM_ERROR"/);
-  assert.match(workerSource, /upstreamStatus/);
-  assert.match(workerSource, /elapsedMs/);
+  assert.match(workerSource, /finiteNumberOrNull\(error\?\.upstreamStatus\)/);
+  assert.match(workerSource, /finiteNumberOrNull\(error\?\.elapsedMs\)/);
   assert.match(workerSource, /Number\(error\?\.httpStatus\) === 504 \? 504 : 502/);
   assert.match(workerSource, /httpStatus, \{ "cache-control": "no-store" \}/);
 });
