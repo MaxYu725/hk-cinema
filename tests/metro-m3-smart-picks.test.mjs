@@ -13,7 +13,7 @@ const [index, css, sw] = await Promise.all([
 test("Metro loads the Smart Picks layer after comparison and filter presentation", () => {
   const comparison = index.indexOf("metro-m3-comparison.css?v=m3-1");
   const filters = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-2");
-  const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-1");
+  const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
   assert.ok(comparison >= 0 && filters > comparison && picks > filters);
 });
 
@@ -30,6 +30,19 @@ test("Metro recommendation cards remain compact and use the Metro accent for dec
   assert.match(css, /phase8d-smart-pick strong[\s\S]*color:\s*var\(--metro-accent\)/);
   assert.match(css, /phase8d-smart-pick small[\s\S]*flex:\s*0\s+0\s+auto/);
   assert.match(css, /phase8d-smart-pick em[\s\S]*margin-top:\s*auto/);
+});
+
+test("Metro all-showtimes heading stays horizontal instead of collapsing to one glyph per line", () => {
+  assert.match(css, /phase8b-showtime-heading\s*\{[\s\S]*display:\s*grid\s*!important/);
+  assert.match(css, /phase8b-showtime-heading > div[\s\S]*grid-template-columns:\s*max-content\s+minmax\(0,\s*1fr\)\s+auto\s*!important/);
+  assert.match(css, /phase8b-showtime-heading h2[\s\S]*white-space:\s*nowrap/);
+  assert.match(css, /phase8b-showtime-heading > small[\s\S]*max-width:\s*none/);
+});
+
+test("Metro Smart Pick jump highlights the target showtime card border", () => {
+  assert.match(css, /provider-compare-show\.is-recommendation-jump[\s\S]*border-color:\s*var\(--metro-accent\)\s*!important/);
+  assert.match(css, /provider-compare-show\.is-recommendation-jump[\s\S]*box-shadow:\s*0\s+0\s+0\s+2px\s+var\(--metro-accent\)\s*!important/);
+  assert.match(css, /provider-compare-show\.is-recommendation-jump[\s\S]*transform:\s*none\s*!important/);
 });
 
 test("Metro Smart Picks shell cache rotates without automatic activation", () => {
