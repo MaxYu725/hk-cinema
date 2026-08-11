@@ -25,14 +25,16 @@ html[data-skin="metro"] .shared-seatmap-sheet {
 }
 
 html[data-skin="metro"] .shared-seatmap-close {
-  position: absolute;
+  position: fixed;
+  z-index: 40;
   top: max(16px, env(safe-area-inset-top));
-  right: max(16px, env(safe-area-inset-right));
+  left: calc(50% + min(250px, 50vw) - 54px);
+  right: auto;
   width: 38px;
   height: 38px;
   border: 1px solid var(--metro-border);
   border-radius: 0;
-  background: transparent;
+  background: #000;
   color: var(--metro-fg);
   box-shadow: none;
   font-size: 1.45rem;
@@ -192,6 +194,9 @@ html[data-skin="metro"] .shared-seatmap-section {
 }
 
 html[data-skin="metro"] .shared-seatmap-scroll {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
   scrollbar-color: #3b3b3b #060606;
 }
 
@@ -262,7 +267,12 @@ html[data-skin="metro"] .shared-seatmap-legend i.status-unknown {
   color: #b0a6bf;
 }
 
-html[data-skin="metro"] .shared-seat.type-wheelchair,
+/* Wheelchair is a seat type, not an inventory state. Keep held/sold/blocked fills visible. */
+html[data-skin="metro"] .shared-seat.type-wheelchair {
+  border-color: var(--metro-accent);
+  box-shadow: inset 0 0 0 1px var(--metro-accent);
+}
+
 html[data-skin="metro"] .shared-seatmap-legend i.type-wheelchair {
   border-color: var(--metro-accent);
   background: var(--metro-accent);
