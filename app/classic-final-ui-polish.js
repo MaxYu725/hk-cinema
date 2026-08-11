@@ -95,13 +95,29 @@
     }
   }
 
+  function clickRefreshInsideDataHealth(panel) {
+    const button = document.querySelector("#refreshButton");
+    if (!button) return;
+
+    const hadOwnContains = Object.prototype.hasOwnProperty.call(panel, "contains");
+    const previousContains = panel.contains;
+    panel.contains = target => target === button || previousContains.call(panel, target);
+
+    try {
+      button.click();
+    } finally {
+      if (hadOwnContains) panel.contains = previousContains;
+      else delete panel.contains;
+    }
+  }
+
   function wireDataHealthRefresh() {
     const panel = document.querySelector("#dataHealth");
     if (!panel || panel.dataset.classicFinalRefresh === "true") return;
     panel.dataset.classicFinalRefresh = "true";
     panel.addEventListener("toggle", () => {
       if (!panel.open) return;
-      document.querySelector("#refreshButton")?.click();
+      clickRefreshInsideDataHealth(panel);
     });
   }
 
