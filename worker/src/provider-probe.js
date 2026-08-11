@@ -44,7 +44,7 @@ async function fetchTextWithTimeout(fetchImpl, url, options, timeoutMs) {
 
     return { response, text };
   } catch (error) {
-    if (error?.name === "AbortError") {
+    if (controller.signal.aborted || error?.name === "AbortError") {
       throw probeError("PROBE_TIMEOUT", "Provider probe timed out", 504);
     }
     throw error;
