@@ -12,13 +12,12 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6B: **complete**
 - M6C: **complete**
 - Current stage: **M6D — expansion readiness review**
-- Latest completed application checkpoint: **M6C Checkpoint 3 / PR #78**
-- Authoritative application checkpoint: `8fb23347e158d3413852c523dfc8bf90a043a6df`
-- PR #78 branch Run #462: regression tests + Chromium mobile smoke passed
-- PR #78 Cloudflare branch preview: successful on final head `f4499c8a080709f373cdbeff255985e1a1be9cdc`
-- Main Actions Run #463: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- PR #78 automated review findings were addressed and both review threads are resolved
-- Next planned work: **M6D — expansion readiness review: failure isolation, partial/stale/empty states, request fan-out, cancellation and duplicate-request behavior before adding a real provider**
+- Latest completed application checkpoint: **M6D Checkpoint 1 / PR #79**
+- Authoritative application checkpoint: `2aac1f171f20a822307e15889cc3892701e8de8e`
+- PR #79 branch Run #469: regression tests + Chromium mobile smoke passed
+- PR #79 automated review findings were addressed and all three review threads are resolved
+- Main Actions Run #470: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- Next planned work: **M6D Checkpoint 2 — network/concurrency review: initial home request fan-out, comparison/showtime fan-out, cancellation/ignore-stale-response behavior, MCL lazy price/seat concurrency and duplicate-request behavior**
 
 ## Fixed M6 boundaries
 
@@ -185,18 +184,32 @@ M6C exit condition: **met**. A hypothetical fourth cinema chain can be described
 
 ## M6D — expansion readiness review
 
-Status: **next**
+Status: **in progress — Checkpoint 1 complete**
 
-### Failure isolation
+### Checkpoint 1 — failure isolation + partial / stale / empty-state audit
 
-- [ ] Verify one provider failure cannot block usable data from other providers.
-- [ ] Verify partial provider catalogue failure states.
-- [ ] Verify partial showtime failure states.
-- [ ] Verify stale-data indication and last-success timestamps.
-- [ ] Verify empty-data vs provider-error states are distinguishable.
-- [ ] Verify seat/price capability failures do not invalidate the showtime card.
+- [x] Verify one provider failure cannot block usable data from other providers.
+- [x] Verify partial provider catalogue failure states.
+- [x] Verify partial showtime failure states.
+- [x] Verify stale-data indication and last-success timestamps.
+- [x] Verify empty-data vs provider-error states are distinguishable.
+- [x] Verify seat/price capability failures do not invalidate the showtime card.
 
-### Network/concurrency
+Checkpoint result:
+
+- [x] Broadway home catalogue now exposes explicit `loading` / `error` / `empty` / `ready` state instead of using the movie count as a global loading/error gate.
+- [x] Usable MCL / Emperor catalogue data can populate the home screen when Broadway fails or returns an empty active tab.
+- [x] Emperor active-section `meta.errors` / `fallbackSections` are respected, so a failed active section without cache is unavailable rather than misreported as a successful empty catalogue.
+- [x] Aggregate empty-state copy distinguishes a clean empty result from partial provider failure.
+- [x] Existing comparison provider/source `Promise.allSettled` behavior preserves successful provider/session data when another provider or source fails.
+- [x] Existing stale/last-success age handling and optional price/seat enrichment degradation were audited and protected by regression tests.
+- [x] All three PR #79 automated review threads were addressed and resolved.
+- PR #79 — authoritative M6D Checkpoint 1 application commit `2aac1f171f20a822307e15889cc3892701e8de8e`
+- PR #79 branch Run #469 passed regression + Chromium mobile smoke.
+- Main Run #470 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/checkpoints/m6d-failure-isolation-audit.md`
+
+### Checkpoint 2 — network/concurrency
 
 - [ ] Inventory provider request fan-out on initial home load.
 - [ ] Inventory comparison/showtime request fan-out.
