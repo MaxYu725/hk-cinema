@@ -29,6 +29,11 @@
       String(value || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "").trim();
   }
 
+  function normalizeSourceId(provider, value) {
+    return sharedCore?.normalizeSourceId?.(provider, value) ||
+      String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -59,6 +64,66 @@
     }
   }
 
+  function cardSourceId(card, provider) {
+    const explicit = providerSources(card);
+    const datasetKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
+    const directProvider = String(card?.dataset?.provider || "").trim().toLowerCase();
+    const directSourceId = String(card?.dataset?.sourceId || "").trim();
+    let value = explicit?.[provider] || (datasetKey ? card?.dataset?.[datasetKey] : "") || "";
+
+    if (!value && directSourceId && directProvider === provider) value = directSourceId;
+    if (!value && provider === "mcl" && card?.classList?.contains("mcl-only-card")) value = directSourceId;
+    if (!value && provider === "emperor" && card?.classList?.contains("emperor-only-card")) value = directSourceId;
+    if (
+      !value &&
+      provider === "broadway" &&
+      !directProvider &&
+      !card?.classList?.contains("mcl-only-card") &&
+      !card?.classList?.contains("emperor-only-card")
+    ) value = directSourceId;
+
+    return normalizeSourceId(provider, value);
+  }
+
+  function variantSourceId(variant, provider) {
+    const dynamicKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
+    let value = variant?.sourceIds?.[provider] || (dynamicKey ? variant?.[dynamicKey] : "") || "";
+    if (!value && provider === "mcl") value = variant?.comparisonMclSourceId || "";
+    return normalizeSourceId(provider, value);
+  }
+
+  function groupedVariantForCard(card, group) {
+    if (!group?.variants?.length) return null;
+    return group.variants.find(variant => Array.from(LEGACY_HOME_PROVIDERS).some(provider => {
+      const cardSource = cardSourceId(card, provider);
+      const variantSource = variantSourceId(variant, provider);
+      return Boolean(cardSource && variantSource && cardSource === variantSource);
+    })) || null;
+  }
+
+  function syncGroupedProviderSources(card, clean) {
+    const groupId = String(card?.dataset?.movieGroupId || card?.dataset?.groupMemberOf || "").trim();
+    if (!groupId) return;
+    const group = window.HKCinemaMovieGroups?.get?.(groupId);
+    const variant = groupedVariantForCard(card, group);
+    if (!variant) return;
+
+    const sourceIds = { ...(variant.sourceIds || {}) };
+    for (const provider of providers()) {
+      if (LEGACY_HOME_PROVIDERS.has(provider.key)) continue;
+      const value = normalizeSourceId(provider.key, clean?.[provider.key]);
+      if (value) sourceIds[provider.key] = value;
+      else delete sourceIds[provider.key];
+    }
+    variant.sourceIds = sourceIds;
+
+    // The visible group card owns the Phase 8A aggregate cache even when the
+    // provider source was matched on a hidden group member. Invalidate both.
+    delete card.dataset.phase8aAggregateId;
+    const groupCard = document.querySelector(`[data-movie-group-id='${CSS.escape(groupId)}']`);
+    if (groupCard) delete groupCard.dataset.phase8aAggregateId;
+  }
+
   function writeProviderSources(card, sources) {
     const clean = Object.fromEntries(Object.entries(sources || {})
       .map(([provider, sourceId]) => [provider, String(sourceId || "").trim()])
@@ -71,7 +136,10 @@
     // Phase 8A aggregates are synchronous snapshots of the source IDs currently
     // attached to a card. When a newly eligible registry provider changes that
     // set, force the next aggregate read to rebuild from the latest sources.
-    if (before !== after) delete card.dataset.phase8aAggregateId;
+    if (before !== after) {
+      syncGroupedProviderSources(card, clean);
+      delete card.dataset.phase8aAggregateId;
+    }
   }
 
   function mergeMetadata(card, movie) {
