@@ -4,8 +4,8 @@ This checkpoint removes two remaining presentation/runtime ownership overlaps wi
 
 ## Sticky ownership
 
-- `phase9d0-home-sticky-scroll.js` is now explicitly Classic-only.
-- The Classic sticky runtime owns both `is-stuck` and `is-stuck-latched` state.
+- `home-library.js` remains the neutral owner of the transient `is-stuck` marker.
+- `phase9d0-home-sticky-scroll.js` is now explicitly Classic-only and owns only the buffered `is-stuck-latched` state.
 - Sticky collapse selectors in `home-library.css` and `phase9d0-home-sticky-scroll.css` are scoped to `html[data-skin="classic"]`.
 - Metro no longer removes Classic sticky classes or forces `display: grid` from JavaScript.
 - Metro no longer needs a scroll listener purely to counter the Classic sticky implementation.
