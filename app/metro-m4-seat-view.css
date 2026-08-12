@@ -28,10 +28,10 @@ html[data-skin="metro"] .shared-seatmap-close {
   position: fixed;
   z-index: 40;
   top: max(16px, env(safe-area-inset-top));
-  left: calc(50% + min(250px, 50vw) - 54px);
+  left: calc(50% + min(250px, 50vw) - 60px);
   right: auto;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--metro-border);
   border-radius: 0;
   background: #000;
