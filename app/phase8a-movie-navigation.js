@@ -82,8 +82,12 @@
     if (provider === "mcl") return window.HKCinemaMCLCatalogue || null;
     if (provider === "emperor") return window.HKCinemaEmperorCatalogue || null;
 
-    const generic = adapter?.getCatalogue?.();
-    return generic && typeof generic.then !== "function" ? generic : null;
+    // Aggregate decoration is synchronous and may run once per card. Never invoke a
+    // generic getCatalogue() here: future adapters may implement it asynchronously,
+    // which would start hidden duplicate network requests whose Promise is discarded.
+    // Generic providers should publish a synchronous snapshot through `catalogue` or
+    // `getCachedCatalogue()` before asking the shared home layer to consume movie facts.
+    return null;
   }
 
   function catalogueMovie(provider, sourceId) {
