@@ -10,15 +10,15 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6 tracking issue: #66
 - M6A: **complete**
 - M6B: **complete**
-- M6C: **in progress**
-- Current stage: **M6C — provider onboarding contract**
-- Latest completed application checkpoint: **M6C Checkpoint 2 review-corrected / PR #77**
-- Authoritative application checkpoint: `6e5728a5061d0d9d6e5f21cd117086e6a4dca572`
-- PR #77 branch Run #451: regression tests + Chromium mobile smoke passed
-- PR #77 Cloudflare branch preview: successful on final head `c896680f32d34216ad1e3d958d6534b089247083`
-- Main Actions Run #452: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- PR #76 automated review findings were addressed in PR #77 and both original review threads are resolved
-- Next planned work: **M6C Checkpoint 3 — adopt the registry/capability contract in remaining shared home/comparison presentation paths, remove provider-name capability assumptions, and prove a fourth-provider-shaped source degrades cleanly without price/seat branches**
+- M6C: **complete**
+- Current stage: **M6D — expansion readiness review**
+- Latest completed application checkpoint: **M6C Checkpoint 3 / PR #78**
+- Authoritative application checkpoint: `8fb23347e158d3413852c523dfc8bf90a043a6df`
+- PR #78 branch Run #462: regression tests + Chromium mobile smoke passed
+- PR #78 Cloudflare branch preview: successful on final head `f4499c8a080709f373cdbeff255985e1a1be9cdc`
+- Main Actions Run #463: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- PR #78 automated review findings were addressed and both review threads are resolved
+- Next planned work: **M6D — expansion readiness review: failure isolation, partial/stale/empty states, request fan-out, cancellation and duplicate-request behavior before adding a real provider**
 
 ## Fixed M6 boundaries
 
@@ -100,7 +100,7 @@ Status: **complete**
 
 ## M6C — provider onboarding contract
 
-Status: **in progress**
+Status: **complete**
 
 ### Checkpoint 1 — provider identity / registry
 
@@ -150,34 +150,42 @@ Post-merge review correction:
 - Main Run #452 passed regression + Chromium mobile smoke + Pages deploy.
 - Notes: `docs/m6c-normalized-capability-contract.md`
 
-Checkpoint 2 intentionally does **not** load `provider-contract.js` in the production page yet. Its semantics are now frozen against the actual runtime shape; Checkpoint 3 will adopt them in shared presentation/comparison paths in a controlled batch.
+Checkpoint 2 intentionally did **not** load `provider-contract.js` in the production page. Checkpoint 3 completed the controlled adoption after the semantics were frozen against the actual runtime shape.
 
 ### Checkpoint 3 — shared presentation/comparison adoption
 
-Status: **next**
+Status: **complete**
 
-- [ ] Audit shared home/comparison modules for capability decisions still expressed through provider-name checks or assumptions that price/seat data always exists.
-- [ ] Load/use the normalized provider contract only where shared presentation needs capability decisions.
-- [ ] Keep provider-specific network/request/seat-layout adapters provider-specific; do not erase legitimate upstream differences.
-- [ ] Remove fixed provider enumeration from shared home/movie aggregate paths where registry enumeration is appropriate.
-- [ ] Prove a fourth-provider-shaped source can participate in shared home/comparison paths without provider-name branches.
-- [ ] Prove unsupported price/seat capabilities degrade without breaking or invalidating an otherwise valid showtime.
-- [ ] Preserve current Broadway/MCL/Emperor UI and data behavior.
+- [x] Audit shared home/comparison modules for capability decisions still expressed through provider-name checks or assumptions that price/seat data always exists.
+- [x] Load/use the normalized provider contract only where shared presentation needs capability decisions.
+- [x] Keep provider-specific network/request/seat-layout adapters provider-specific; do not erase legitimate upstream differences.
+- [x] Remove fixed provider enumeration from shared home/movie aggregate paths where registry enumeration is appropriate.
+- [x] Prove a fourth-provider-shaped source can participate in shared home/comparison paths without provider-name branches.
+- [x] Prove unsupported price/seat capabilities degrade without breaking or invalidating an otherwise valid showtime.
+- [x] Preserve current Broadway/MCL/Emperor UI and data behavior.
+- [x] Correct all stale cache-busting test assertions identified by CI/review.
+- [x] Ensure synchronous Phase 8A catalogue lookup does not start/return async `getCatalogue()` Promises.
+- [x] Reply to and resolve both PR #78 automated review threads.
+- PR #78 — authoritative M6C application commit `8fb23347e158d3413852c523dfc8bf90a043a6df`
+- PR #78 branch Run #462 passed regression + Chromium mobile smoke.
+- PR #78 Cloudflare branch preview succeeded on `f4499c8a080709f373cdbeff255985e1a1be9cdc`.
+- Main Run #463 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/m6c-shared-provider-adoption.md`
 
 ### Remaining M6C expansion proof
 
 - [x] Data Health/status can enumerate more than three providers.
 - [x] Contract-level unsupported-vs-missing price/seat semantics are covered.
 - [x] Provider identity/capability evaluation is registry/descriptor-driven at the contract boundary.
-- [ ] Home/movie aggregation can enumerate more than three providers.
-- [ ] Comparison presentation can consume a fourth-provider-shaped source without provider-name UI branches.
-- [ ] Shared UI cleanly degrades a provider with no price/seat capability.
+- [x] Home/movie aggregation can enumerate more than three providers.
+- [x] Comparison presentation can consume a fourth-provider-shaped source without provider-name UI branches.
+- [x] Shared UI cleanly degrades a provider with no price/seat capability.
 
-M6C exit condition: a hypothetical fourth cinema chain can be described and consumed by the normalized shared contract without adding provider-name branches to home/comparison/health UI.
+M6C exit condition: **met**. A hypothetical fourth cinema chain can be described and consumed by the normalized shared contract without adding provider-name branches to home/comparison/health UI.
 
 ## M6D — expansion readiness review
 
-Status: **not started**
+Status: **next**
 
 ### Failure isolation
 
