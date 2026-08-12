@@ -1,22 +1,26 @@
 (() => {
   const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const TIMEOUTS = { broadway: 12000, mcl: 15000, emperor: 12000 };
-  const PROVIDERS = [
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
+  const PROVIDERS = sharedCore?.providers?.() || [
     { key: "broadway", label: "Broadway" },
     { key: "mcl", label: "MCL" },
     { key: "emperor", label: "Emperor" }
   ];
+  const providerMap = factory => sharedCore?.providerMap?.(factory) || Object.fromEntries(
+    PROVIDERS.map(provider => [provider.key, factory(provider.key, provider.descriptor || null)])
+  );
 
   const state = {
     match: null,
     loadingInitial: false,
     loadingDate: false,
     selectedDate: null,
-    availableDates: { broadway: [], mcl: [], emperor: [] },
-    criteriaDateDecisions: { broadway: new Map(), mcl: new Map(), emperor: new Map() },
-    data: { broadway: null, mcl: null, emperor: null },
-    errors: { broadway: null, mcl: null, emperor: null },
-    freshness: { broadway: null, mcl: null, emperor: null }
+    availableDates: providerMap(() => []),
+    criteriaDateDecisions: providerMap(() => new Map()),
+    data: providerMap(() => null),
+    errors: providerMap(() => null),
+    freshness: providerMap(() => null)
   };
 
   let requestToken = 0;
@@ -36,7 +40,8 @@
   }
 
   function normalizeSourceId(provider, value) {
-    return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+    return sharedCore?.normalizeSourceId?.(provider, value) ||
+      String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
   }
 
   function getMatch(matchId) {
@@ -52,7 +57,8 @@
   function providerSourceIds(provider, match = state.match) {
     const aggregate = aggregateForMatch(match);
     if (aggregate) {
-      return unique((aggregate.sources?.[provider] || []).map(value => normalizeSourceId(provider, value)));
+      return sharedCore?.aggregateSourceIds?.(aggregate, provider) ||
+        unique((aggregate.sources?.[provider] || []).map(value => normalizeSourceId(provider, value)));
     }
     const sourceId = normalizeSourceId(provider, match?.[provider]?.sourceId);
     return sourceId ? [sourceId] : [];
@@ -130,7 +136,7 @@
     if (!usesSessionCriteria(provider, match)) return;
     const decision = metadataCore()?.selectedDateDecisionForCriteria?.(result, match.sessionCriteria);
     if (!decision?.date || !["match", "mismatch"].includes(decision.status)) return;
-    state.criteriaDateDecisions[provider].set(decision.date, decision.status);
+    state.criteriaDateDecisions[provider]?.set(decision.date, decision.status);
   }
 
   function ensureOverlay() {
@@ -210,8 +216,9 @@
     const available = activeProviders().filter(provider => state.availableDates[provider.key].includes(date));
     const activeCount = activeProviders().length;
     let label = available.map(provider => provider.label).join(" + ");
-    if (available.length === activeCount && activeCount === 3) label = "三院線";
-    if (available.length === activeCount && activeCount === 2) label = "兩院線";
+    if (available.length === activeCount && activeCount > 1) {
+      label = sharedCore?.allProviderLabel?.(activeCount) || `${activeCount} 院線`;
+    }
     if (!label) label = "暫無院線";
     return { label, className: available.length >= 2 ? "both" : available[0]?.key || "none" };
   }
@@ -240,7 +247,7 @@
 
   async function fetchWorkerShows(provider, sourceId, date, parentSignal) {
     const query = date ? `?date=${encodeURIComponent(date)}` : "";
-    const lifecycle = childController(parentSignal, TIMEOUTS[provider]);
+    const lifecycle = childController(parentSignal, TIMEOUTS[provider] || 12000);
     try {
       const response = await fetch(
         `${API_BASE}/api/${provider}/movies/${encodeURIComponent(sourceId)}/shows${query}`,
@@ -263,8 +270,7 @@
       };
     } catch (error) {
       if (lifecycle.timedOut()) {
-        const label = provider === "emperor" ? "Emperor" : "Broadway";
-        throw new Error(`${label} 場次讀取逾時，請稍後重試。`);
+        throw new Error(`${sharedCore?.label?.(provider) || provider} 場次讀取逾時，請稍後重試。`);
       }
       throw error;
     } finally {
@@ -374,18 +380,27 @@
 
   function normalizedBase(provider, session, seatAvailable, seatTotal, price, bookingUrl, seatText, klass) {
     const metadata = sessionMetadata(session);
-    const providerLabel = provider === "mcl" ? "MCL" : provider === "emperor" ? "Emperor" : "Broadway";
-    const fallbackCinema = provider === "mcl" ? "MCL 戲院" : provider === "emperor" ? "Emperor Cinemas" : "Broadway 戲院";
+    const providerLabel = sharedCore?.label?.(provider) ||
+      (provider === "mcl" ? "MCL" : provider === "emperor" ? "Emperor" : provider === "broadway" ? "Broadway" : provider);
+    const fallbackCinema = provider === "mcl"
+      ? "MCL 戲院"
+      : provider === "emperor"
+        ? "Emperor Cinemas"
+        : provider === "broadway"
+          ? "Broadway 戲院"
+          : `${providerLabel} 戲院`;
     return {
       id: `${provider}:${session?.sourceId || session?.id || Math.random()}`,
       provider,
       providerLabel,
       movieSourceId: session?._phase8cMovieSourceId || null,
       time: String(session?.time || "--:--"),
-      cinemaName: session?.cinema?.name?.zh || session?.cinema?.name?.en || fallbackCinema,
+      cinemaName: session?.cinema?.name?.zh || session?.cinema?.name?.en || session?.cinema?.name || fallbackCinema,
       secondary: metadataSecondary(session, metadata),
       metadata,
       price,
+      pricePayload: session?.price || (Number.isFinite(price) ? { display: price } : null),
+      seatSummary: session?.seatSummary || null,
       seatText,
       seatClass: klass,
       seatAvailable,
@@ -438,10 +453,33 @@
     );
   }
 
+  function normalizeGenericSession(provider, session) {
+    const summary = session?.seatSummary || {};
+    const available = Number.isFinite(summary.available) ? summary.available : null;
+    const total = Number.isFinite(summary.total) ? summary.total : null;
+    const price = Number.isFinite(session?.price?.adult)
+      ? session.price.adult
+      : Number.isFinite(session?.price?.display) ? session.price.display : null;
+    const seatText = Number.isFinite(available)
+      ? Number.isFinite(total) ? `${available}/${total} 可選` : `${available} 個可選`
+      : "座位資料暫缺";
+    return normalizedBase(
+      provider,
+      session,
+      available,
+      total,
+      price,
+      session?.bookingUrl || null,
+      seatText,
+      seatClass(available, total)
+    );
+  }
+
   function normalizeSession(provider, session) {
     if (provider === "mcl") return normalizeMCLSession(session);
     if (provider === "emperor") return normalizeEmperorSession(session);
-    return normalizeBroadwaySession(session);
+    if (provider === "broadway") return normalizeBroadwaySession(session);
+    return normalizeGenericSession(provider, session);
   }
 
   function timeValue(time) {
@@ -496,16 +534,31 @@
 
   function renderTimelineItem(item) {
     const metadata = item.metadata || sessionMetadata({});
+    const capabilities = sharedCore?.showtimeCapabilities?.(item.provider, item) || {
+      price: { availability: "unknown" },
+      seatSummary: { availability: "unknown" },
+      booking: { availability: item.bookingUrl ? "available" : "unknown" }
+    };
+    const seatText = capabilities.seatSummary.availability === "unsupported"
+      ? "座位資料不提供"
+      : item.seatText;
+    const priceText = capabilities.price.availability === "unsupported"
+      ? "不提供"
+      : Number.isFinite(item.price) ? `$${escapeHtml(item.price)}` : "—";
     const cardAttrs = [
       Number.isFinite(item.seatAvailable) ? `data-seat-available="${item.seatAvailable}"` : "",
       Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : "",
       item.movieSourceId ? `data-movie-source-id="${escapeHtml(item.movieSourceId)}"` : "",
+      `data-provider="${escapeHtml(item.provider)}"`,
+      `data-price-capability="${escapeHtml(capabilities.price.availability)}"`,
+      `data-seat-capability="${escapeHtml(capabilities.seatSummary.availability)}"`,
+      `data-booking-capability="${escapeHtml(capabilities.booking.availability)}"`,
       `data-show-language="${escapeHtml(metadata.languages.join(","))}"`,
       `data-show-subtitle="${escapeHtml(metadata.subtitles.join(","))}"`,
       `data-show-format="${escapeHtml(metadata.formats.join(","))}"`,
       item.bookingUrl ? `data-booking-url="${escapeHtml(item.bookingUrl)}"` : ""
     ].filter(Boolean).join(" ");
-    const bookingAction = item.bookingUrl
+    const bookingAction = capabilities.booking.availability === "available" && item.bookingUrl
       ? `<a class="provider-compare-booking" href="${escapeHtml(item.bookingUrl)}" target="_blank" rel="noopener noreferrer" aria-label="前往 ${escapeHtml(item.providerLabel)} 官方購票：${escapeHtml(item.cinemaName)} ${escapeHtml(item.time)}">購票</a>`
       : "";
     return `
@@ -517,10 +570,10 @@
             <strong>${escapeHtml(item.cinemaName)}</strong>
           </div>
           ${item.secondary ? `<p>${escapeHtml(item.secondary)}</p>` : ""}
-          <span class="provider-compare-seat ${escapeHtml(item.seatClass)}">${escapeHtml(item.seatText)}</span>
+          <span class="provider-compare-seat ${escapeHtml(capabilities.seatSummary.availability === "unsupported" ? "unknown" : item.seatClass)}">${escapeHtml(seatText)}</span>
         </div>
         <div class="provider-compare-show-actions">
-          <div class="provider-compare-show-price">${Number.isFinite(item.price) ? `$${escapeHtml(item.price)}` : "—"}</div>
+          <div class="provider-compare-show-price">${priceText}</div>
           ${bookingAction}
         </div>
       </article>
@@ -646,6 +699,7 @@
     state.selectedDate = null;
     for (const provider of PROVIDERS) {
       state.availableDates[provider.key] = [];
+      state.criteriaDateDecisions[provider.key] ??= new Map();
       state.criteriaDateDecisions[provider.key].clear();
       state.data[provider.key] = null;
       state.errors[provider.key] = null;
@@ -676,7 +730,7 @@
   }
 
   window.HKCinemaProviderCompare = {
-    version: "8c1",
+    version: "m6c-3",
     open,
     close,
     getState() {
@@ -684,11 +738,10 @@
         match: state.match,
         aggregate: aggregateForMatch(state.match),
         selectedDate: state.selectedDate,
-        availableDates: {
-          broadway: [...state.availableDates.broadway],
-          mcl: [...state.availableDates.mcl],
-          emperor: [...state.availableDates.emperor]
-        },
+        availableDates: Object.fromEntries(PROVIDERS.map(provider => [
+          provider.key,
+          [...(state.availableDates[provider.key] || [])]
+        ])),
         sourceIds: Object.fromEntries(PROVIDERS.map(provider => [provider.key, providerSourceIds(provider.key)])),
         errors: { ...state.errors },
         freshness: Object.fromEntries(Object.entries(state.freshness).map(([key, value]) => [key, value ? { ...value } : null])),
