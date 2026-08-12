@@ -9,7 +9,7 @@ const [index, css] = await Promise.all([
 ]);
 
 test("M4B Broadway guard is folded into the single Metro seat-map layer", () => {
-  assert.match(index, /metro-m4-seat-view\.css\?v=m6b-4/);
+  assert.match(index, /metro-m4-seat-view\.css\?v=m6gate-1/);
   assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
 });
 
