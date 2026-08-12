@@ -33,12 +33,16 @@ A provider must supply a stable provider-scoped source identity and a truthful t
 
 Capability: `catalogue`
 
-Required:
-- aggregate `key`
-- display `title`
-- contributing `providers`
+The contract follows the aggregate that the active `phase8a-movie-navigation.js` runtime actually produces.
 
-Optional movie facts may include poster, release date, duration, classification, languages, subtitles and formats. The aggregation layer must not manufacture these values merely to fill the UI.
+Required:
+- aggregate `id`
+- structured `title`
+- provider-keyed `sources`
+
+The current aggregate also carries fields such as `kind`, `schemaVersion`, `posterUrl`, `facts`, `providerCount`, `variants` and `primaryMatchId`. They remain optional at the minimum provider-onboarding contract boundary.
+
+Movie facts such as release date, duration and classification are carried inside the aggregate `facts` object by the active runtime. The contract must not invent alternative `key` / `providers` fields that the production aggregate does not expose, and the aggregation layer must not manufacture missing facts merely to fill the UI.
 
 ### Showtime
 
@@ -106,17 +110,28 @@ These states prevent three unsafe assumptions:
 
 `optionalCapability()` returns both support state and availability state and forces the value to `null` for explicitly unsupported capabilities.
 
+A normalized object is only usable when it contains a meaningful nested value. Empty objects such as `price: {}` or `seatSummary: { available: null }` remain `unknown`; they do not become `available`. The same meaningful-value rule applies to required structured containers, so empty `title: {}` and `cinema: {}` values fail required-field validation.
+
 ## Fourth-provider-shaped fixture
 
 `tests/fixtures/provider-contract-minimal.json` describes a hypothetical provider that supports catalogue, showtimes and booking, while explicitly not supporting prices, seat summary or a full seat map.
 
-Its catalogue and showtime records satisfy the minimum shared requirements. The fixture is not a real cinema integration and has no network endpoint or parser.
+Its movie aggregate now mirrors the active Phase 8A shape (`id`, structured `title`, provider-keyed `sources`) rather than introducing a parallel aggregate schema. Its catalogue and showtime records satisfy the minimum shared requirements. The fixture is not a real cinema integration and has no network endpoint or parser.
 
 ## Provider-name branching rule
 
 Shared home/comparison/status presentation must use provider descriptors and capability metadata. It must not decide support with logic such as `provider === "mcl"` or `provider === "emperor"`.
 
 Provider-specific branches remain valid where they are genuinely adapters for provider-specific network/request/seat-layout formats. M6C is separating provider adapter knowledge from shared UI capability decisions, not pretending every upstream API has the same shape.
+
+## Post-merge review correction
+
+Automated review of PR #76 identified two contract-level inconsistencies after the initial squash merge:
+
+1. the first contract revision required `key` and `providers`, while the active Phase 8A movie aggregate uses `id` and `sources`;
+2. the first meaningful-value helper treated empty objects as usable data.
+
+The follow-up hotfix aligns the movie aggregate contract and fixture with the active runtime and makes structured-value validation recursive. These corrections remain contract/test/documentation-only and do not alter the production provider or UI paths.
 
 ## Non-goals
 
