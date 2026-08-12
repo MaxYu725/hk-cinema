@@ -15,7 +15,7 @@ test("MCL bulk enrichment installs after hybrid and before the outer comparison 
   const webApi = index.indexOf("mcl-ticketing-worker.js?v=7a1");
   const hybrid = index.indexOf("mcl-ticketing-hybrid.js?v=7a2");
   const bulk = index.indexOf("mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c");
-  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2b");
+  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2d");
 
   assert.ok(provider >= 0);
   assert.ok(webApi > provider);

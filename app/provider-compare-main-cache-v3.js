@@ -55,6 +55,11 @@
     prune(cache);
   }
 
+  function deleteIfCurrent(cache, key, value) {
+    const current = cache.get(key);
+    if (current?.value === value) cache.delete(key);
+  }
+
   function clear() {
     Object.values(caches).forEach(cache => cache.clear());
   }
@@ -97,15 +102,24 @@
     });
   }
 
+  function workerSnapshotPayload(snapshot) {
+    try {
+      return JSON.parse(snapshot.body);
+    } catch {
+      return null;
+    }
+  }
+
+  function isCacheableWorkerSnapshot(snapshot) {
+    const payload = workerSnapshotPayload(snapshot);
+    return Boolean(payload?.ok === true && payload?.data && typeof payload.data === "object");
+  }
+
   function aliasWorkerSelectedDate(provider, details, snapshotPromise) {
     if (details.url.searchParams.has("date")) return;
     snapshotPromise.then(snapshot => {
-      let payload = null;
-      try {
-        payload = JSON.parse(snapshot.body);
-      } catch {
-        return;
-      }
+      if (!isCacheableWorkerSnapshot(snapshot)) return;
+      const payload = workerSnapshotPayload(snapshot);
       const selectedDate = normalizedDate(payload?.data?.selectedDate);
       if (!selectedDate) return;
       const aliasUrl = new URL(details.url.toString());
@@ -139,9 +153,12 @@
       }));
       write(cache, key, snapshotPromise, TTL[provider]);
       aliasWorkerSelectedDate(provider, details, snapshotPromise);
-      snapshotPromise.catch(() => {
-        const current = cache.get(key);
-        if (current?.value === snapshotPromise) cache.delete(key);
+      snapshotPromise.then(snapshot => {
+        if (!isCacheableWorkerSnapshot(snapshot)) {
+          deleteIfCurrent(cache, key, snapshotPromise);
+        }
+      }).catch(() => {
+        deleteIfCurrent(cache, key, snapshotPromise);
       });
     }
     return response;
