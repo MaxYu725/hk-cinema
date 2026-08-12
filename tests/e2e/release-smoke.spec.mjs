@@ -97,8 +97,76 @@ test("Metro filter dropdown stays anchored without moving neighboring matrix til
   await expect(body).toBeHidden();
 });
 
+test("deterministic Metro seat-map smoke keeps the full-screen lifecycle usable", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
+
+  const opened = await page.evaluate(async () => {
+    const model = {
+      kind: "seat-map",
+      provider: { id: "broadway" },
+      layoutMode: "grid",
+      screenLabel: "銀幕",
+      showtime: {
+        date: "2026-08-12",
+        time: "19:30",
+        cinema: { name: { display: "M6 Gate Test Cinema" } },
+        house: { name: "House 1" },
+        metadata: { formats: ["2D"], languages: ["粵語"], subtitles: ["中文字幕"] }
+      },
+      summary: { available: 3, total: 4 },
+      sections: [{
+        name: "House 1",
+        rows: [{
+          label: "A",
+          cells: [
+            { kind: "seat", seat: { id: "A1", label: "A1", row: "A", column: 1, status: "available", type: "standard" } },
+            { kind: "seat", seat: { id: "A2", label: "A2", row: "A", column: 2, status: "available", type: "standard" } },
+            { kind: "seat", seat: { id: "A3", label: "A3", row: "A", column: 3, status: "available", type: "standard" } },
+            { kind: "seat", seat: { id: "A4", label: "A4", row: "A", column: 4, status: "sold", type: "standard" } }
+          ]
+        }]
+      }],
+      notices: []
+    };
+
+    return window.HKCinemaSeatMapShared.open({
+      provider: "broadway",
+      key: "m6-expansion-gate",
+      showtime: model.showtime,
+      load: async () => ({}),
+      adapt: () => model
+    });
+  });
+
+  expect(opened).toBe(true);
+  const overlay = page.locator("#sharedSeatMapOverlay");
+  await expect(overlay).toBeVisible();
+  await expect(page.locator("body")).toHaveClass(/seatmap-open/);
+  await expect(overlay.locator('.shared-seatmap-content[data-seatmap-provider="broadway"]')).toBeVisible();
+  await expect(overlay.locator(".shared-seatmap-grid")).toBeVisible();
+  await expect(overlay.locator(".shared-seat.status-available")).toHaveCount(3);
+  await expect(overlay.locator(".shared-seat.status-sold")).toHaveCount(1);
+
+  const sheetGeometry = await overlay.locator(".shared-seatmap-sheet").evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth
+  }));
+  expect(sheetGeometry.scrollWidth).toBeLessThanOrEqual(sheetGeometry.clientWidth + 1);
+
+  const close = overlay.locator(".shared-seatmap-close");
+  const closeBox = await close.boundingBox();
+  expect(closeBox?.width || 0).toBeGreaterThanOrEqual(40);
+  expect(closeBox?.height || 0).toBeGreaterThanOrEqual(40);
+
+  await close.click();
+  await expect(overlay).toBeHidden();
+  await expect(page.locator("body")).not.toHaveClass(/seatmap-open/);
+});
+
 test("Classic mobile polish stays inside the viewport and keeps key touch targets usable", async ({ page }) => {
   await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-skin", "classic");
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
@@ -130,6 +198,7 @@ test("Classic mobile polish stays inside the viewport and keeps key touch target
 
 test("selected date stays legible, date rail pins, and filters use one-open compact groups", async ({ page }) => {
   await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-skin", "classic");
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
