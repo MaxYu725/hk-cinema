@@ -86,15 +86,19 @@ The production bulk path now:
 - never adds sessions that the primary WebAPI2 path did not return;
 - never overwrites a primary price that is already present.
 
-The previously captured provider getter remains only as a restricted/test fallback when `window.fetch` is unavailable; normal browser production uses the directly cancellable path.
+A restricted test fallback can supply `window.__HKCinemaMCLLegacyBulkGetter` when browser fetch is unavailable; normal production uses the directly cancellable MovieSet path.
 
-## Bulk duplicate suppression
+## Cache and wrapper ownership
 
-The bulk layer has its own 90-second in-memory cache because it remains an outer enrichment wrapper around the main MCL result.
+Production load order is now:
 
-It stores successful MovieSet snapshots by movie/date and aliases an initial request to the payload's resolved selected date. Therefore the common initial-discovery → automatic selected-date transition does not start a second MovieSet request for the same resolved day.
+`WebAPI2 → hybrid fallback → bulk merge → main comparison cache`.
 
-The cache is intentionally local to the comparison runtime. Live MCL data is not placed in the Service Worker shell cache.
+This makes the 90-second MCL main cache the outermost owner. A main-cache hit therefore returns the already-merged MCL result without entering the bulk sidecar again.
+
+The bulk layer also keeps a small 90-second in-memory cache for calls that do reach it. Successful MovieSet snapshots are stored by movie/date and an initial request is aliased to the payload's resolved selected date. Therefore the common initial-discovery → automatic selected-date transition does not start a second MovieSet request for the same resolved day.
+
+Both caches remain local application/runtime caches. Live MCL data is not placed in the Service Worker shell cache.
 
 ## Resulting concurrency boundary
 
@@ -102,7 +106,7 @@ For one active MCL movie/date:
 
 - base WebAPI2 discovery remains bounded by its existing fixed request set;
 - session metadata: maximum 8 concurrent;
-- bulk MovieSet: maximum one sidecar per uncached comparison call, with 90-second successful-result reuse and true lifecycle/timeout cancellation;
+- bulk MovieSet: maximum one sidecar per uncached comparison call, with outer main-cache reuse, 90-second successful bulk reuse and true lifecycle/timeout cancellation;
 - eager per-session price network fan-out: retired;
 - lazy price: maximum 4 concurrent;
 - lazy seat summary: maximum 2 concurrent.
@@ -111,10 +115,11 @@ This is a materially safer provider-expansion boundary than allowing metadata + 
 
 ## Regression coverage
 
-`tests/m6d-mcl-concurrency.test.mjs` locks:
+`tests/m6d-mcl-concurrency.test.mjs` and the updated bulk regression lock:
 
 - the legacy eager WebAPI2 `GetPrice` signature does not reach native fetch;
 - the lazy-price request signature is not blocked;
+- WebAPI2/hybrid/bulk/main-cache production ownership order;
 - initial MovieSet bulk data aliases to the resolved date and avoids a second sidecar request;
 - bulk uses AbortController/parent signal and no longer uses `Promise.race()` timeout semantics;
 - metadata remains bounded at eight;
@@ -122,7 +127,7 @@ This is a materially safer provider-expansion boundary than allowing metadata + 
 - lazy seat summary remains capped at two;
 - the changed bulk runtime is cache-busted in production HTML.
 
-Existing `mcl-bulk-enrichment` and `mcl-lazy-prices` regressions remain applicable.
+Existing `mcl-lazy-prices` regressions remain applicable.
 
 ## Remaining network/concurrency work
 
