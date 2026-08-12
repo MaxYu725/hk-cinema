@@ -153,7 +153,7 @@ test("production shared home/comparison paths load and consume registry capabili
     source("app/provider-compare-v4.js")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=m7c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m7d-1");
   const contractIndex = index.indexOf("provider-contract.js?v=m6c-2.1");
   const coreIndex = index.indexOf("provider-shared-core.js?v=m6c-3");
   const multiProviderIndex = index.indexOf("multi-provider.js?v=");
