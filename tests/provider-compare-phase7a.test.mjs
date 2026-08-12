@@ -343,7 +343,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   ]);
 
   assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=8e2"));
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=8c1"));
+  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=m6c-3"));
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
   assert.match(index, /mcl-ticketing-worker\.js\?v=7a1/);

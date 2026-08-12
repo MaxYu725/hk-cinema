@@ -1,5 +1,6 @@
 (() => {
-  const PROVIDERS = ["broadway", "mcl", "emperor"];
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
+  const PROVIDERS = sharedCore?.providerIds?.() || ["broadway", "mcl", "emperor"];
 
   const baseRegistry = window.HKCinemaProviderMatches || {
     get() { return null; },
@@ -10,7 +11,8 @@
   let scheduled = false;
 
   function normalizeSourceId(provider, value) {
-    return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+    return sharedCore?.normalizeSourceId?.(provider, value) ||
+      String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
   }
 
   function unique(values) {
@@ -31,15 +33,33 @@
     return card?.querySelector(".movie-poster img")?.src || null;
   }
 
+  function providerSourcesAttribute(card) {
+    try {
+      const parsed = JSON.parse(card?.dataset?.providerSources || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
   function providerSourceIdsFromCard(card) {
     const isMCLOnly = card?.classList?.contains("mcl-only-card");
     const isEmperorOnly = card?.classList?.contains("emperor-only-card");
     const directSourceId = String(card?.dataset?.sourceId || "").trim();
-    return {
-      broadway: normalizeSourceId("broadway", card?.dataset?.broadwaySourceId || (!isMCLOnly && !isEmperorOnly ? directSourceId : "")),
-      mcl: normalizeSourceId("mcl", card?.dataset?.mclSourceId || (isMCLOnly ? directSourceId : "")),
-      emperor: normalizeSourceId("emperor", card?.dataset?.emperorSourceId || (isEmperorOnly ? directSourceId : ""))
-    };
+    const directProvider = String(card?.dataset?.provider || "").trim().toLowerCase();
+    const explicit = providerSourcesAttribute(card);
+
+    return Object.fromEntries(PROVIDERS.map(provider => {
+      const datasetKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
+      let value = explicit?.[provider] || (datasetKey ? card?.dataset?.[datasetKey] : "") || "";
+
+      if (!value && directSourceId && directProvider === provider) value = directSourceId;
+      if (!value && provider === "mcl" && isMCLOnly) value = directSourceId;
+      if (!value && provider === "emperor" && isEmperorOnly) value = directSourceId;
+      if (!value && provider === "broadway" && !directProvider && !isMCLOnly && !isEmperorOnly) value = directSourceId;
+
+      return [provider, normalizeSourceId(provider, value)];
+    }));
   }
 
   function findExistingEntry(provider, sourceId) {
@@ -53,12 +73,17 @@
   }
 
   function providerCatalogue(provider) {
+    const adapter = window.HKCinemaProviders?.[provider];
+    const cached = adapter?.catalogue || adapter?.getCachedCatalogue?.() || null;
+    if (cached) return cached;
     if (provider === "broadway") {
       return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
     }
     if (provider === "mcl") return window.HKCinemaMCLCatalogue || null;
     if (provider === "emperor") return window.HKCinemaEmperorCatalogue || null;
-    return null;
+
+    const generic = adapter?.getCatalogue?.();
+    return generic && typeof generic.then !== "function" ? generic : null;
   }
 
   function catalogueMovie(provider, sourceId) {
@@ -147,6 +172,16 @@
     const id = `phase8a:movie:${components.join("|")}`;
     const title = titleFor(card);
     const poster = posterFor(card);
+    const providerEntries = Object.fromEntries(PROVIDERS.map(provider => {
+      if (!sourceIds[provider]) return [provider, null];
+      const extras = provider === "broadway"
+        ? {
+            movieId: card.dataset.movieId || baseMatch?.broadway?.movieId || null,
+            poster: poster || baseMatch?.broadway?.poster || null
+          }
+        : {};
+      return [provider, providerEntry(provider, sourceIds[provider], extras)];
+    }));
     const record = {
       id,
       title,
@@ -155,14 +190,7 @@
       confidence: baseMatch?.confidence ?? 1,
       sessionCriteria: baseMatch?.sessionCriteria || null,
       comparisonOnlyProviders: [...(baseMatch?.comparisonOnlyProviders || [])],
-      broadway: sourceIds.broadway
-        ? providerEntry("broadway", sourceIds.broadway, {
-            movieId: card.dataset.movieId || baseMatch?.broadway?.movieId || null,
-            poster: poster || baseMatch?.broadway?.poster || null
-          })
-        : null,
-      mcl: sourceIds.mcl ? providerEntry("mcl", sourceIds.mcl) : null,
-      emperor: sourceIds.emperor ? providerEntry("emperor", sourceIds.emperor) : null
+      ...providerEntries
     };
 
     registerMatch(record);
@@ -193,11 +221,12 @@
   }
 
   function variantSourceIds(variant) {
-    return {
-      broadway: normalizeSourceId("broadway", variant?.broadwaySourceId),
-      mcl: normalizeSourceId("mcl", variant?.mclSourceId || variant?.comparisonMclSourceId),
-      emperor: normalizeSourceId("emperor", variant?.emperorSourceId)
-    };
+    return Object.fromEntries(PROVIDERS.map(provider => {
+      const dynamicKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
+      let value = variant?.sourceIds?.[provider] || (dynamicKey ? variant?.[dynamicKey] : "") || "";
+      if (!value && provider === "mcl") value = variant?.comparisonMclSourceId || "";
+      return [provider, normalizeSourceId(provider, value)];
+    }));
   }
 
   function variantLabel(variant) {
@@ -216,6 +245,16 @@
       const providerCount = PROVIDERS.filter(provider => sourceIds[provider]).length;
       if (!providerCount) return;
       const matchId = `${aggregateId}:variant:${index + 1}`;
+      const providerEntries = Object.fromEntries(PROVIDERS.map(provider => {
+        if (!sourceIds[provider]) return [provider, null];
+        const extras = provider === "broadway"
+          ? {
+              movieId: variant.broadwayMovieId || null,
+              poster: variant.poster || poster
+            }
+          : {};
+        return [provider, providerEntry(provider, sourceIds[provider], extras)];
+      }));
       const record = {
         id: matchId,
         title: group.title,
@@ -224,14 +263,7 @@
         confidence: 1,
         sessionCriteria: variant.sessionCriteria || null,
         comparisonOnlyProviders: variant.comparisonMclSourceId ? ["mcl"] : [],
-        broadway: sourceIds.broadway
-          ? providerEntry("broadway", sourceIds.broadway, {
-              movieId: variant.broadwayMovieId || null,
-              poster: variant.poster || poster
-            })
-          : null,
-        mcl: sourceIds.mcl ? providerEntry("mcl", sourceIds.mcl) : null,
-        emperor: sourceIds.emperor ? providerEntry("emperor", sourceIds.emperor) : null
+        ...providerEntries
       };
       registerMatch(record);
       variantModels.push({
@@ -345,7 +377,7 @@
   };
 
   window.HKCinemaMovieAggregates = Object.freeze({
-    version: "8e1",
+    version: "m6c-3",
     get(id) {
       return aggregates.get(String(id)) || null;
     },

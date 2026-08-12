@@ -27,7 +27,7 @@ test("production and syntax checks point at the current comparison stack", async
   ]);
 
   for (const current of [
-    "provider-compare-v4.js?v=8c1",
+    "provider-compare-v4.js?v=m6c-3",
     "provider-compare-insights-v4.js?v=8c1",
     "provider-compare-preferences-v2.js?v=8c1",
     "provider-compare-recommendations-v4.js?v=10r3b-1"
