@@ -12,13 +12,13 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6B: **complete**
 - M6C: **complete**
 - Current stage: **M6D — expansion readiness review**
-- Latest completed application checkpoint: **M6D Checkpoint 2C / PR #82**
-- Authoritative application checkpoint: `61ebe11222cc0bad03c0433625bb0f6e44cf4002`
-- PR #82 final branch Run #488: regression tests + Chromium mobile smoke passed
-- PR #82 Cloudflare branch preview succeeded on final head `04c60ebd034ef5c96de4903e1ba54f06a4be0e83`
-- PR #82 automated review detail-price fallback finding was addressed, replied to and resolved
-- Main Actions Run #489: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- Next planned work: **M6D Checkpoint 2D — final duplicate-request/coalescing audit + expansion gate preparation**
+- Latest completed application checkpoint: **M6D Checkpoint 2D / PR #83**
+- Authoritative application checkpoint: `e15d5cc27df0ea5e3babdca1612aa3f5162be525`
+- PR #83 final branch Run #490: regression tests + Chromium mobile smoke passed
+- PR #83 Cloudflare branch preview succeeded on final head `43ab13812c299130280b015c1ef50e6a31f7a59f`
+- PR #83 had no automated review findings or unresolved review threads at merge time
+- Main Actions Run #491: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- Next planned work: **M6 expansion gate — real-device Metro check + Classic fallback confirmation + final handoff**
 
 ## Fixed M6 boundaries
 
@@ -185,7 +185,7 @@ M6C exit condition: **met**. A hypothetical fourth cinema chain can be described
 
 ## M6D — expansion readiness review
 
-Status: **in progress — Checkpoint 1 + Checkpoint 2A + Checkpoint 2B + Checkpoint 2C complete**
+Status: **complete — Checkpoint 1 + Checkpoint 2A + Checkpoint 2B + Checkpoint 2C + Checkpoint 2D complete**
 
 ### Checkpoint 1 — failure isolation + partial / stale / empty-state audit
 
@@ -216,7 +216,7 @@ Checkpoint result:
 - [x] Inventory comparison/showtime request fan-out.
 - [x] Review cancellation/ignore-stale-response behavior when changing movie/date/filter quickly.
 - [x] Review MCL lazy price/seat request concurrency before provider count grows.
-- [ ] Verify duplicate requests are deduplicated/cached where appropriate without caching live data in the Service Worker shell.
+- [x] Verify duplicate requests are deduplicated/cached where appropriate without caching live data in the Service Worker shell.
 
 #### Checkpoint 2A — home request fan-out + duplicate-request audit
 
@@ -269,11 +269,28 @@ Checkpoint result:
 - Main Run #489 passed regression + Chromium mobile smoke + Pages deploy.
 - Notes: `docs/checkpoints/m6d-mcl-request-concurrency.md`
 
-Next M6D batch: **Checkpoint 2D — final duplicate-request/coalescing audit + expansion gate preparation**. Do not add generic global coalescing unless a concrete duplicate path is demonstrated, and do not start a real fourth provider in this checkpoint.
+#### Checkpoint 2D — final duplicate-request / coalescing audit
+
+- [x] Phase 8A capture-phase home-card ownership prevents one interaction from starting provider detail and comparison in parallel.
+- [x] MCL / Emperor catalogue refresh owners retain `refreshInFlight` guards and Data Health disables the shared refresh control while an active loading cycle is in progress.
+- [x] Adjacent-date prefetch is lifecycle-abortable before a new foreground owner proceeds.
+- [x] Sequential Broadway / Emperor showtime duplicates remain covered by the 60-second main cache; MCL remains covered by its 90-second main cache and resolved-date aliases.
+- [x] HTTP 200 Worker showtime responses with application payload `ok:false`, invalid JSON or missing object `data` are evicted instead of being retained for the showtime TTL.
+- [x] A retry after an application-level Worker error reaches the Worker again; a recovered `ok:true` payload remains cacheable.
+- [x] A generic global in-flight coalescer was deliberately not added because no normal same-key concurrent-demand path was demonstrated and foreground/detail/prefetch callers own independent AbortSignals.
+- [x] Live cinema/API traffic remains outside the Service Worker static shell cache.
+- [x] PR #83 had no automated review findings or unresolved review threads at merge time.
+- PR #83 — authoritative M6D Checkpoint 2D application commit `e15d5cc27df0ea5e3babdca1612aa3f5162be525`
+- PR #83 final branch Run #490 passed regression + Chromium mobile smoke.
+- PR #83 Cloudflare branch preview succeeded on final head `43ab13812c299130280b015c1ef50e6a31f7a59f`.
+- Main Run #491 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/checkpoints/m6d-final-network-audit.md`
+
+M6D network/concurrency review is complete. The next bounded step is the **M6 expansion gate**; do not add a real fourth provider before that gate is recorded as complete.
 
 ### Expansion gate
 
-- [ ] Run production regression suite and mobile smoke after M6C/D changes.
+- [x] Run production regression suite and mobile smoke after M6C/D changes.
 - [ ] Perform real-device check on Metro home, comparison, filters and seat-map.
 - [ ] Confirm Classic fallback still works.
 - [ ] Write final M6 handoff with current `main`, known limitations and provider-integration contract.
