@@ -60,13 +60,13 @@ When the provider's initial response had already resolved to the same preferred 
 
 `provider-compare-main-cache-v3.js` now aliases a successful initial Broadway/Emperor response to the response's validated `data.selectedDate` URL. The subsequent preferred-date request can therefore reuse the exact response snapshot without another native Worker fetch.
 
-The MCL main cache now likewise stores an initial result under its validated `selectedDate` key. This prevents the inner primary hybrid/WebAPI2 path from being fetched again when the automatic preferred date is the same date already resolved by the initial request.
+The MCL main cache now aliases an initial result to its validated `selectedDate` key **only when `metadataComplete === true`**. This prevents the inner primary hybrid/WebAPI2 path from being fetched again when the automatic preferred date is the same date and the initial metadata is already complete, while preserving the comparison engine's explicit-date retry when the initial MCL enrichment is incomplete.
 
-A refetch remains intentional when a provider/source resolves a different default date from the selected preferred date.
+A refetch remains intentional when a provider/source resolves a different default date from the selected preferred date, or when initial MCL metadata is incomplete.
 
 ### MCL boundary
 
-The current MCL bulk-enrichment wrapper sits outside the main comparison cache and starts its own bulk sidecar request. That sidecar is not removed or redesigned in 2B. The main MCL transport cache is now deduplicated, but the outer bulk enrichment path remains part of the next dedicated MCL concurrency/duplicate-request checkpoint.
+The current MCL bulk-enrichment wrapper sits outside the main comparison cache and starts its own bulk sidecar request. That sidecar is not removed or redesigned in 2B. The complete-result MCL main transport path is now deduplicated, but the outer bulk enrichment path remains part of the next dedicated MCL concurrency/duplicate-request checkpoint.
 
 ## Cancellation and stale-response behavior
 
@@ -108,7 +108,8 @@ Changing provider/cinema/language/format/price/seat/sort filters therefore does 
 - MCL comparison call passes a child AbortSignal
 - initial Broadway response is reusable through its resolved-date cache alias without a second native fetch
 - MCL main cache forwards the caller AbortSignal
-- MCL initial result aliases to its resolved selected-date key
+- complete MCL initial results alias to their resolved selected-date key
+- incomplete MCL initial metadata remains eligible for the explicit-date retry
 - already-aborted MCL requests do not reach the wrapped transport
 - adjacent-date prefetch owns an AbortController and forwards its signal to Broadway/MCL/Emperor helpers
 - comparison compact filter decoration contains no network fetch
@@ -118,7 +119,7 @@ Changing provider/cinema/language/format/price/seat/sort filters therefore does 
 
 Comparison foreground fan-out is now explicit and source-shaped rather than assumed to be one request per provider.
 
-The initial discovery → preferred-date transition no longer needs a second native Broadway/Emperor Worker request when the initial selected date already matches. The MCL main transport cache gains the same resolved-date alias, although its separate bulk-enrichment sidecar remains deliberately deferred.
+The initial discovery → preferred-date transition no longer needs a second native Broadway/Emperor Worker request when the initial selected date already matches. Complete MCL initial data gains the same resolved-date alias, while incomplete MCL metadata deliberately refetches on the explicit preferred-date transition. The separate bulk-enrichment sidecar remains deferred.
 
 Foreground stale responses were already guarded correctly; this checkpoint fixes the production MCL signal-forwarding gap and makes already-started adjacent-date prefetch cancellable.
 
