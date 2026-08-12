@@ -16,7 +16,7 @@ test('Phase 8E keeps a single movie entry and retires the temporary top-level ve
     read('phase8c-rich-filters.css')
   ]);
 
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6b-2/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3/);
   assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
   assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
   assert.doesNotMatch(navigation, /data-phase8a-variant-open/);
@@ -41,7 +41,7 @@ test('merged variant data remains available to the Phase 8C comparison engine', 
 test('production index loads only the current comparison, filter and recommendation runtimes', async () => {
   const index = await read('index.html');
 
-  assert.match(index, /provider-compare-v4\.js\?v=8c1/);
+  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
   assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-1/);
