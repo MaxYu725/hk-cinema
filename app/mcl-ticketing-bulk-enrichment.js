@@ -8,6 +8,7 @@
   const BULK_CACHE_MAX_AGE_MS = 90 * 1000;
 
   const bulkCache = new Map();
+  let comparisonPricePolicyDepth = 0;
   let suppressedLegacyPriceRequests = 0;
 
   function finite(value) {
@@ -379,6 +380,7 @@
       }
 
       const isLegacyEagerPrice =
+        comparisonPricePolicyDepth > 0 &&
         url.origin === "https://www.mclcinema.com" &&
         url.pathname.endsWith("/MCLWebAPI2/GetPrice.aspx") &&
         /text\/html/i.test(accept);
@@ -404,8 +406,19 @@
 
     const primaryGetTicketing = provider.getTicketing.bind(provider);
     provider.getTicketing = async (movieSetId, selectedDate = null, options = {}) => {
+      const comparisonCycle = Boolean(options?.signal);
+      if (!comparisonCycle) {
+        return primaryGetTicketing(movieSetId, selectedDate, options);
+      }
+
       const bulkPromise = fetchBulk(movieSetId, selectedDate, options);
-      const primaryData = await primaryGetTicketing(movieSetId, selectedDate, options);
+      comparisonPricePolicyDepth += 1;
+      let primaryData;
+      try {
+        primaryData = await primaryGetTicketing(movieSetId, selectedDate, options);
+      } finally {
+        comparisonPricePolicyDepth = Math.max(0, comparisonPricePolicyDepth - 1);
+      }
       const bulkData = await bulkPromise;
       return mergeResult(primaryData, bulkData);
     };
@@ -427,6 +440,7 @@
     getStats() {
       return {
         bulkCacheEntries: bulkCache.size,
+        comparisonPricePolicyDepth,
         suppressedLegacyPriceRequests
       };
     }
