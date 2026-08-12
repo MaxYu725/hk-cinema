@@ -16,7 +16,7 @@ test("M6B loads one neutral shared owner before skin-specific final runtimes", (
   const sharedIndex = index.indexOf("shared-final-controls.js?v=m6b-1");
   const classicIndex = index.indexOf("classic-final-ui-polish.js?v=classic-final-m6b-1");
   const phase10Index = index.indexOf("phase10r3a-mobile-shell-date-strip.js?v=10r3b-m6b-1");
-  const metroIndex = index.indexOf("metro-runtime.js?v=m4-1");
+  const metroIndex = index.indexOf("metro-runtime.js?v=m6b-2");
   assert.ok(sharedIndex >= 0);
   assert.ok(classicIndex > sharedIndex);
   assert.ok(phase10Index > classicIndex);

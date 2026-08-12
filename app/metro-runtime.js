@@ -130,14 +130,6 @@
 
       const fragment = document.createDocumentFragment();
       parts.forEach((part, index) => {
-        if (index > 0) {
-          const separator = document.createElement("span");
-          separator.className = "metro-meta-separator";
-          separator.setAttribute("aria-hidden", "true");
-          separator.textContent = " · ";
-          fragment.appendChild(separator);
-        }
-
         const span = document.createElement("span");
         const isDuration = /分鐘/.test(part);
         const isDate = /^\d{4}-\d{2}-\d{2}$/.test(part);
@@ -211,7 +203,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m4-1",
+    version: "m6b-2",
     refresh: scheduleSync,
     syncComparisonShell,
     syncSeatMapShell
