@@ -8,6 +8,8 @@ on:
       - "worker/src/provider-probe.js"
       - "worker/src/index-emperor-seat.js"
       - "worker/src/providers/cineart-probe.js"
+      - "worker/src/providers/cineart-flight.js"
+      - "worker/src/providers/cineart-source.js"
       - "scripts/m7-cineart-preview-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
@@ -49,5 +51,5 @@ jobs:
           echo "HK_CINEMA_CANDIDATE_WORKER_URL=$worker_url" >> "$GITHUB_ENV"
           echo "Validating $worker_url"
 
-      - name: Validate CineArt candidate probe through Worker preview
+      - name: Validate CineArt candidate sources through Worker preview
         run: node scripts/m7-cineart-preview-validation.mjs

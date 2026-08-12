@@ -1,69 +1,155 @@
 const BASE_URL = String(process.env.HK_CINEMA_CANDIDATE_WORKER_URL || "")
   .trim()
   .replace(/\/+$/, "");
-const MAX_ATTEMPTS = 12;
+const PROBE_MAX_ATTEMPTS = 12;
+const DISCOVERY_MAX_ATTEMPTS = 3;
 const RETRY_MS = 5000;
 
 if (!BASE_URL) {
   throw new Error("HK_CINEMA_CANDIDATE_WORKER_URL is required");
 }
 
-const endpoint = `${BASE_URL}/api/providers/probe/cineart`;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-let lastFailure = "no attempt completed";
 
-for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+async function fetchJson(endpoint, timeoutMs = 20000) {
+  const response = await fetch(endpoint, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+  const text = await response.text();
+  let payload = null;
+
   try {
-    const response = await fetch(endpoint, {
-      cache: "no-store",
-      headers: { Accept: "application/json" }
-    });
-    const text = await response.text();
-    let payload = null;
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      throw new Error(`non-JSON response (HTTP ${response.status})`);
-    }
-
-    if (!response.ok || payload?.ok !== true) {
-      throw new Error(
-        payload?.error?.message || `HTTP ${response.status}`
-      );
-    }
-
-    const result = payload?.data;
-    if (
-      result?.provider !== "cineart" ||
-      result?.healthy !== true ||
-      result?.evidence?.source !== "cinearthouse-hk" ||
-      result?.evidence?.evidence !== "site-shell-cinema-directory" ||
-      Number(result?.evidence?.cinemaCount) < 3
-    ) {
-      throw new Error(`unhealthy/invalid CineArt probe: ${JSON.stringify(result)}`);
-    }
-
-    console.log(JSON.stringify({
-      ok: true,
-      endpoint,
-      attempt,
-      provider: result.provider,
-      latencyMs: result.latencyMs,
-      cinemaCount: result.evidence.cinemaCount,
-      cinemas: result.evidence.cinemas,
-      nextJsDetected: result.evidence.nextJsDetected,
-      checkedAt: result.checkedAt
-    }, null, 2));
-    process.exit(0);
-  } catch (error) {
-    lastFailure = error instanceof Error ? error.message : String(error);
-    if (attempt < MAX_ATTEMPTS) {
-      console.log(`CineArt preview attempt ${attempt}/${MAX_ATTEMPTS} not ready: ${lastFailure}`);
-      await sleep(RETRY_MS);
-    }
+    payload = JSON.parse(text);
+  } catch {
+    throw new Error(`non-JSON response (HTTP ${response.status})`);
   }
+
+  if (!response.ok || payload?.ok !== true) {
+    throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+  }
+
+  return payload;
 }
 
-throw new Error(
-  `CineArt branch-preview validation failed after ${MAX_ATTEMPTS} attempts: ${lastFailure}`
-);
+async function validateProbe() {
+  const endpoint = `${BASE_URL}/api/providers/probe/cineart`;
+  let lastFailure = "no attempt completed";
+
+  for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const payload = await fetchJson(endpoint, 10000);
+      const result = payload?.data;
+
+      if (
+        result?.provider !== "cineart" ||
+        result?.healthy !== true ||
+        result?.evidence?.source !== "cinearthouse-hk" ||
+        result?.evidence?.evidence !== "site-shell-cinema-directory" ||
+        Number(result?.evidence?.cinemaCount) < 3
+      ) {
+        throw new Error(`unhealthy/invalid CineArt probe: ${JSON.stringify(result)}`);
+      }
+
+      return {
+        ok: true,
+        endpoint,
+        attempt,
+        provider: result.provider,
+        latencyMs: result.latencyMs,
+        cinemaCount: result.evidence.cinemaCount,
+        cinemas: result.evidence.cinemas,
+        nextJsDetected: result.evidence.nextJsDetected,
+        checkedAt: result.checkedAt
+      };
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error);
+      if (attempt < PROBE_MAX_ATTEMPTS) {
+        console.log(
+          `CineArt probe attempt ${attempt}/${PROBE_MAX_ATTEMPTS} not ready: ${lastFailure}`
+        );
+        await sleep(RETRY_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `CineArt branch-preview probe failed after ${PROBE_MAX_ATTEMPTS} attempts: ${lastFailure}`
+  );
+}
+
+async function validateDiscovery() {
+  const endpoint = `${BASE_URL}/api/providers/cineart/discovery`;
+  let lastFailure = "no attempt completed";
+
+  for (let attempt = 1; attempt <= DISCOVERY_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const payload = await fetchJson(endpoint, 25000);
+      const result = payload?.data;
+      const capabilities = result?.capabilities || {};
+      const home = result?.home || {};
+      const detail = result?.detail || {};
+
+      if (
+        result?.provider !== "cineart" ||
+        result?.mode !== "m7b-data-source-discovery" ||
+        home?.source !== "cineart-next-flight-home" ||
+        Number(home?.movieCount) < 1 ||
+        Number(home?.showCount) < 1 ||
+        Number(home?.siteCount) < 5 ||
+        Number(home?.showtimePriceCount) < 1 ||
+        Number(home?.seatSummaryCount) < 1 ||
+        detail?.source !== "cineart-next-flight-show" ||
+        Number(detail?.ticketTypeCount) < 1 ||
+        Number(detail?.seatStatusCount) < 1 ||
+        detail?.seatPlan?.resolved !== true ||
+        capabilities?.catalogue !== true ||
+        capabilities?.showtimes !== true ||
+        capabilities?.showtimePrice !== true ||
+        capabilities?.seatSummary !== true ||
+        capabilities?.ticketTypes !== true ||
+        capabilities?.seatMapReadOnly !== true
+      ) {
+        throw new Error(`invalid CineArt M7B discovery: ${JSON.stringify(result)}`);
+      }
+
+      return {
+        ok: true,
+        endpoint,
+        attempt,
+        provider: result.provider,
+        movieCount: home.movieCount,
+        showCount: home.showCount,
+        siteCount: home.siteCount,
+        houseCount: home.houseCount,
+        dateRange: home.dateRange,
+        sampleShow: home.sampleShow,
+        ticketTypeCount: detail.ticketTypeCount,
+        seatStatusCount: detail.seatStatusCount,
+        seatStatusCounts: detail.seatStatusCounts,
+        seatPlan: detail.seatPlan,
+        correlation: result.correlation,
+        capabilities
+      };
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error);
+      if (attempt < DISCOVERY_MAX_ATTEMPTS) {
+        console.log(
+          `CineArt discovery attempt ${attempt}/${DISCOVERY_MAX_ATTEMPTS} failed: ${lastFailure}`
+        );
+        await sleep(RETRY_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `CineArt branch-preview discovery failed after ${DISCOVERY_MAX_ATTEMPTS} attempts: ${lastFailure}`
+  );
+}
+
+const probe = await validateProbe();
+console.log(JSON.stringify({ gate: "M7A", ...probe }, null, 2));
+
+const discovery = await validateDiscovery();
+console.log(JSON.stringify({ gate: "M7B", ...discovery }, null, 2));
