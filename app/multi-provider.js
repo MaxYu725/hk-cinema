@@ -124,6 +124,38 @@
       : emperorCatalogue.now || [];
   }
 
+  function providerHealthRecord(provider) {
+    return window.HKCinemaDataHealth?.getState?.().records?.[provider] || null;
+  }
+
+  function mclActiveSectionState() {
+    if (mclCatalogue) {
+      return { usable: true, failed: false };
+    }
+    return {
+      usable: false,
+      failed: providerHealthRecord("mcl")?.status === "error"
+    };
+  }
+
+  function emperorActiveSectionState() {
+    if (!emperorCatalogue) {
+      return {
+        usable: false,
+        failed: providerHealthRecord("emperor")?.status === "error"
+      };
+    }
+
+    const section = getActiveTab() === "coming" ? "coming" : "now";
+    const error = emperorCatalogue.meta?.errors?.[section];
+    const fallback = Boolean(emperorCatalogue.meta?.fallbackSections?.[section]);
+
+    return {
+      usable: !error || fallback,
+      failed: Boolean(error) && !fallback
+    };
+  }
+
   function findMCLMovie(sourceId) {
     if (!mclCatalogue) return null;
     return [
@@ -568,8 +600,56 @@
     window.HKCinemaHomeLibrary?.apply?.();
   }
 
+  function renderCombinedEmptyState(broadwayState, alternateFailure = false) {
+    const tab = getActiveTab();
+    const partialFailure = broadwayState === "error" || alternateFailure;
+    const marker = `${tab}:${broadwayState}:${partialFailure ? "partial" : "clean"}`;
+    if (grid.dataset.multiProviderEmpty === marker) return;
+
+    const coming = tab === "coming";
+    const title = coming ? "暫時沒有即將上映電影" : "暫時沒有上映場次";
+    const movieType = coming ? "即將上映電影" : "上映電影";
+    const text = partialFailure
+      ? `部分院線資料暫時不可用；已連接院線目前沒有找到${movieType}。`
+      : `已連接院線目前沒有找到${movieType}。`;
+
+    grid.dataset.multiProviderEmpty = marker;
+    grid.innerHTML = `
+      <div class="empty-state" data-multi-provider-empty-state>
+        <strong>${title}</strong>
+        <span>${text}</span>
+      </div>
+    `;
+    count.textContent = "0 部";
+    count.title = partialFailure
+      ? "部分院線資料暫時不可用 · 已連接院線 0 部"
+      : "已連接院線 0 部";
+    window.HKCinemaHomeLibrary?.apply?.();
+  }
+
   function applyCatalogue() {
-    if (count.textContent.trim() === "—") return;
+    const broadwayState = grid.dataset.broadwayState || (
+      count.textContent.trim() === "—" ? "loading" : "ready"
+    );
+    if (broadwayState === "loading") return;
+
+    const mclSection = mclActiveSectionState();
+    const emperorSection = emperorActiveSectionState();
+    const mclMovies = mclSection.usable ? getMCLMovies() : [];
+    const emperorMovies = emperorSection.usable ? getEmperorMovies() : [];
+    const hasAlternateCatalogue = mclSection.usable || emperorSection.usable;
+    const hasAlternateFailure = mclSection.failed || emperorSection.failed;
+    const hasAlternateMovies = mclMovies.length > 0 || emperorMovies.length > 0;
+
+    if (["error", "empty"].includes(broadwayState)) {
+      if (!hasAlternateCatalogue && !hasAlternateFailure) return;
+      if (!hasAlternateMovies) {
+        renderCombinedEmptyState(broadwayState, hasAlternateFailure);
+        return;
+      }
+      grid.querySelector(".empty-state")?.remove();
+      delete grid.dataset.multiProviderEmpty;
+    }
 
     observer.disconnect();
 
@@ -592,7 +672,7 @@
         if (key && !byTitle.has(key)) byTitle.set(key, card);
       }
 
-      for (const movie of getMCLMovies()) {
+      for (const movie of mclMovies) {
         const key = normalizeTitle(movieTitle(movie));
         if (!key) continue;
 
@@ -608,7 +688,7 @@
         if (card) byTitle.set(key, card);
       }
 
-      for (const movie of getEmperorMovies()) {
+      for (const movie of emperorMovies) {
         const key = normalizeTitle(movieTitle(movie));
         if (!key) continue;
 
@@ -676,6 +756,11 @@
     applyCatalogue();
   });
 
+  window.addEventListener("hkcinema:data-health", event => {
+    if (!["mcl", "emperor"].includes(event.detail?.provider)) return;
+    applyCatalogue();
+  });
+
   window.addEventListener("hkcinema:movie-metadata", event => {
     const detail = event.detail || {};
     const sourceId = String(detail.sourceId || "");
@@ -714,7 +799,7 @@
   });
 
   window.HKCinemaMultiProvider = Object.freeze({
-    version: "8e2",
+    version: "m6d-1",
     refresh: applyCatalogue
   });
 

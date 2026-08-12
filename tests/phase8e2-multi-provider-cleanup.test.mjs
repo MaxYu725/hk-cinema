@@ -27,7 +27,8 @@ test('multi-provider keeps the registries and variant metadata needed by movie a
   assert.match(source, /isGenericBridgeSource/);
   assert.match(source, /criteriaFromVariant/);
   assert.match(source, /movieGroups: Array\.from\(groupRecords\.values\(\)\)/);
-  assert.match(source, /version: "8e2"/);
+  assert.match(source, /window\.HKCinemaMultiProvider = Object\.freeze\(\{/);
+  assert.match(source, /version: "[^"]+"/);
 });
 
 test('provider-only catalogue cards remain movie-first and do not expose provider navigation', async () => {
