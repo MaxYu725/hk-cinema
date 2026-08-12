@@ -568,8 +568,52 @@
     window.HKCinemaHomeLibrary?.apply?.();
   }
 
+  function renderCombinedEmptyState(broadwayState) {
+    const tab = getActiveTab();
+    const marker = `${tab}:${broadwayState}`;
+    if (grid.dataset.multiProviderEmpty === marker) return;
+
+    const coming = tab === "coming";
+    const title = coming ? "暫時沒有即將上映電影" : "暫時沒有上映場次";
+    const movieType = coming ? "即將上映電影" : "上映電影";
+    const text = broadwayState === "error"
+      ? `部分院線資料暫時不可用；已連接院線目前沒有找到${movieType}。`
+      : `已連接院線目前沒有找到${movieType}。`;
+
+    grid.dataset.multiProviderEmpty = marker;
+    grid.innerHTML = `
+      <div class="empty-state" data-multi-provider-empty-state>
+        <strong>${title}</strong>
+        <span>${text}</span>
+      </div>
+    `;
+    count.textContent = "0 部";
+    count.title = broadwayState === "error"
+      ? "部分院線資料暫時不可用 · 已連接院線 0 部"
+      : "已連接院線 0 部";
+    window.HKCinemaHomeLibrary?.apply?.();
+  }
+
   function applyCatalogue() {
-    if (count.textContent.trim() === "—") return;
+    const broadwayState = grid.dataset.broadwayState || (
+      count.textContent.trim() === "—" ? "loading" : "ready"
+    );
+    if (broadwayState === "loading") return;
+
+    const mclMovies = getMCLMovies();
+    const emperorMovies = getEmperorMovies();
+    const hasAlternateCatalogue = Boolean(mclCatalogue || emperorCatalogue);
+    const hasAlternateMovies = mclMovies.length > 0 || emperorMovies.length > 0;
+
+    if (["error", "empty"].includes(broadwayState)) {
+      if (!hasAlternateCatalogue) return;
+      if (!hasAlternateMovies) {
+        renderCombinedEmptyState(broadwayState);
+        return;
+      }
+      grid.querySelector(".empty-state")?.remove();
+      delete grid.dataset.multiProviderEmpty;
+    }
 
     observer.disconnect();
 
@@ -592,7 +636,7 @@
         if (key && !byTitle.has(key)) byTitle.set(key, card);
       }
 
-      for (const movie of getMCLMovies()) {
+      for (const movie of mclMovies) {
         const key = normalizeTitle(movieTitle(movie));
         if (!key) continue;
 
@@ -608,7 +652,7 @@
         if (card) byTitle.set(key, card);
       }
 
-      for (const movie of getEmperorMovies()) {
+      for (const movie of emperorMovies) {
         const key = normalizeTitle(movieTitle(movie));
         if (!key) continue;
 
@@ -714,7 +758,7 @@
   });
 
   window.HKCinemaMultiProvider = Object.freeze({
-    version: "8e2",
+    version: "m6d-1",
     refresh: applyCatalogue
   });
 
