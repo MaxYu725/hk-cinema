@@ -155,9 +155,14 @@ test("M7D generic catalogue extension gates home cards on catalogue + showtimes 
   assert.doesNotMatch(extension, /providerId !== ["']cineart["']/);
 });
 
-test("M7D registry extension invalidates cached movie aggregates when provider sources change", async () => {
+test("M7D registry extension invalidates and propagates provider sources through version groups", async () => {
   const extension = await read("app/multi-provider-registry-extension.js");
   assert.match(extension, /before !== after/);
+  assert.match(extension, /syncGroupedProviderSources\(card, clean\)/);
+  assert.match(extension, /variant\.sourceIds = sourceIds/);
+  assert.match(extension, /dataset\?\.movieGroupId \|\| card\?\.dataset\?\.groupMemberOf/);
+  assert.match(extension, /data-movie-group-id/);
+  assert.match(extension, /delete groupCard\.dataset\.phase8aAggregateId/);
   assert.match(extension, /delete card\.dataset\.phase8aAggregateId/);
   assert.match(extension, /gridObserver\?\.disconnect\?\.\(\)/);
   assert.match(extension, /finally \{\s*observeGrid\(grid\);\s*\}/s);
