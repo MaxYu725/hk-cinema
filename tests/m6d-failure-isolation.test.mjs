@@ -21,10 +21,16 @@ test("home aggregation waits only for Broadway loading and preserves alternate p
   assert.match(app, /setBroadwayGridState\("ready"\)/);
 
   assert.match(multi, /if \(broadwayState === "loading"\) return;/);
-  assert.match(multi, /const hasAlternateCatalogue = Boolean\(mclCatalogue \|\| emperorCatalogue\);/);
+  assert.match(multi, /function emperorActiveSectionState\(\)/);
+  assert.match(multi, /emperorCatalogue\.meta\?\.errors\?\.\[section\]/);
+  assert.match(multi, /emperorCatalogue\.meta\?\.fallbackSections\?\.\[section\]/);
+  assert.match(multi, /failed: Boolean\(error\) && !fallback/);
+  assert.match(multi, /const hasAlternateCatalogue = mclSection\.usable \|\| emperorSection\.usable;/);
+  assert.match(multi, /const hasAlternateFailure = mclSection\.failed \|\| emperorSection\.failed;/);
   assert.match(multi, /const hasAlternateMovies = mclMovies\.length > 0 \|\| emperorMovies\.length > 0;/);
   assert.match(multi, /grid\.querySelector\("\.empty-state"\)\?\.remove\(\);/);
-  assert.match(multi, /renderCombinedEmptyState\(broadwayState\);/);
+  assert.match(multi, /renderCombinedEmptyState\(broadwayState, hasAlternateFailure\);/);
+  assert.match(multi, /hkcinema:data-health/);
   assert.doesNotMatch(multi, /if \(count\.textContent\.trim\(\) === "—"\) return;/);
 
   assert.match(index, /app\.js\?v=7b2-m6d1/);
