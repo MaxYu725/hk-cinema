@@ -9,12 +9,14 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
 - Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
-- Latest completed application checkpoint: **M6B Checkpoint 5 / PR #73 — fold Metro homepage polish layer**
-- Latest application checkpoint commit: `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`
-- Main Actions Run #442: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
-- Cloudflare PR branch preview for Checkpoint 5: successful
-- Current M6 stage: **M6B completion audit**
-- Next planned work: **review the remaining presentation/runtime ownership boundaries and write the final M6B architecture map; only consolidate another layer if a concrete overlap is proven**
+- Latest completed application checkpoint: **M6B completion / PR #74 — finalize presentation ownership map**
+- Latest application checkpoint commit: `554cab11c0f307b116abd7f2c135fdc26248b34f`
+- Main Actions Run #444: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
+- Cloudflare PR branch preview for PR #74: successful
+- M6A: **complete**
+- M6B: **complete**
+- Current M6 stage: **M6C — provider onboarding contract**
+- Next planned work: **M6C Checkpoint 1 — define a registry-driven provider descriptor/capability contract and remove fixed three-provider assumptions from status presentation without adding a real fourth provider**
 
 ## Fixed M6 boundaries
 
@@ -46,7 +48,7 @@ Checkpoint:
 
 ## M6B — presentation/runtime consolidation
 
-Status: **completion audit in progress**
+Status: **complete**
 
 ### Checkpoint 1 — shared UI ownership
 
@@ -117,18 +119,26 @@ Status: **complete**
 - [x] PR #73 squash merged; main Pages deployment passed in Run #442.
 - [x] Authoritative application checkpoint: `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`.
 
-### Remaining M6B completion criteria
+### M6B completion audit
 
-- [ ] Review remaining late Metro CSS files for proven ownership overlap only; do not bulk-merge merely to reduce file count.
-- [ ] Review any remaining Classic/Phase 10 runtime cross-skin dependency.
-- [ ] Confirm no Metro runtime contains compensating behavior for a Classic-only presentation state.
-- [ ] Confirm no shared renderer depends on presentation text/DOM formatting as a data contract.
-- [ ] Stop consolidation when remaining layers have distinct responsibilities; M6B does not require a single monolithic stylesheet/runtime.
-- [ ] Record final M6B architecture map before entering M6C.
+Status: **complete**
+
+- [x] Review remaining late Metro CSS files for proven ownership overlap only; no additional redundant patch layer remains.
+- [x] Review Classic/Phase 10 runtime cross-skin dependencies; Metro Data Health ownership is guarded and shared date-centering remains intentionally shared.
+- [x] Confirm Metro runtime contains no compensating behavior for Classic sticky state.
+- [x] Confirm shared comparison facts no longer depend on presentation text/DOM formatting as a data contract.
+- [x] Stop consolidation because the remaining Metro layers have distinct feature responsibilities rather than duplicate ownership.
+- [x] Record final architecture map in `docs/m6b-architecture-map.md`.
+- [x] Add M6B completion regression contracts.
+- [x] PR #74 branch regression/mobile smoke passed and Cloudflare preview succeeded.
+- [x] PR #74 squash merged; main regression/mobile smoke/Pages deploy passed in Run #444.
+- [x] Authoritative M6B completion commit: `554cab11c0f307b116abd7f2c135fdc26248b34f`.
+
+M6B exit decision: do not fold additional presentation files unless a future regression proves a duplicate owner. Proceed to M6C.
 
 ## M6C — provider onboarding contract
 
-Status: **not started**
+Status: **next / not started**
 
 ### Provider identity / registry
 
