@@ -132,10 +132,10 @@ test("M6D 2C keeps bounded lazy price and seat owners", async () => {
 
   assert.match(worker, /mapLimit\(\s*sessions,\s*8,\s*session => enrichSessionMetadata/);
   assert.match(worker, /GetPrice\.aspx\?l=1&si=/);
-  assert.match(worker, /text\/html, \/\*; q=0\.01/);
+  assert.match(worker, /text\/html, \*\/\*; q=0\.01/);
   assert.match(bulk, /isLegacyEagerPrice/);
   assert.match(prices, /const MAX_CONCURRENT = 4/);
-  assert.match(prices, /application\/json, text\/javascript, \/\*; q=0\.01/);
+  assert.match(prices, /application\/json, text\/javascript, \*\/\*; q=0\.01/);
   assert.match(seats, /const MAX_CONCURRENT = 2/);
   assert.match(index, /mcl-ticketing-bulk-enrichment\.js\?v=8d2-m6d2c/);
 });
