@@ -12,7 +12,7 @@ const [index, phase8a, phase8b, metro] = await Promise.all([
 ]);
 
 test("M6B aggregate contract carries structured movie facts from provider catalogues", () => {
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6b-2/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3/);
   assert.match(phase8a, /function factsFromSourceSets\(/);
   assert.match(phase8a, /HKCinemaBroadwayApp\?\.getCatalogue\?\.\(\)/);
   assert.match(phase8a, /HKCinemaMCLCatalogue/);
