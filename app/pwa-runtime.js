@@ -226,20 +226,10 @@
       registration.addEventListener("updatefound", () => watchInstalling(registration));
       navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-      // register() can resolve after updatefound has already fired. Always inspect the
-      // current installing/waiting slots immediately so an in-flight update cannot miss
-      // the user-facing reload prompt.
-      watchInstalling(registration);
-      if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
-
-      // Force a lightweight script revalidation on launch. updateViaCache:none keeps the
-      // service-worker script itself fresh without touching cinema/provider data.
-      try {
-        await registration.update();
-      } catch {
-        // Registration remains usable even when an explicit update check is offline.
-      }
-
+      // register() can resolve after updatefound has already fired. Inspect the current
+      // installing/waiting slots immediately so an in-flight update cannot miss the
+      // user-facing reload prompt. register() itself owns the normal update check; do
+      // not add a second eager registration.update() request here.
       watchInstalling(registration);
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
@@ -259,7 +249,7 @@
   });
 
   window.HKCinemaPWA = Object.freeze({
-    version: "m7g-1",
+    version: "9c3-2",
     register,
     applyUpdate,
     requestImmersiveMode,
