@@ -9,12 +9,12 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
 - Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
-- Tracker last refreshed from production base: `0bc4b7a5e0182c6bf7799d750d98dacc27ecc5b3`
-- Latest completed production application checkpoint before current PR: **M6B Checkpoint 4 / PR #71 / `8bc54af1d631129d2937a22c4b7915f22e0b751a`**
-- Current work: **M6B Checkpoint 5 / PR #73 — fold Metro homepage polish layer**
-- Current PR head at tracker update: `808a6af9e5250182ca1bc4b494493feae51b44c1` (subsequent tracker commit may move this head)
-- Checkpoint 5 implementation: complete on branch; CI/mobile smoke/merge validation pending
-- Next after Checkpoint 5: **M6B completion audit + architecture map; only consolidate another layer if a concrete remaining ownership overlap is proven**
+- Latest completed application checkpoint: **M6B Checkpoint 5 / PR #73 — fold Metro homepage polish layer**
+- Latest application checkpoint commit: `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`
+- Main Actions Run #442: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
+- Cloudflare PR branch preview for Checkpoint 5: successful
+- Current M6 stage: **M6B completion audit**
+- Next planned work: **review the remaining presentation/runtime ownership boundaries and write the final M6B architecture map; only consolidate another layer if a concrete overlap is proven**
 
 ## Fixed M6 boundaries
 
@@ -46,7 +46,7 @@ Checkpoint:
 
 ## M6B — presentation/runtime consolidation
 
-Status: **in progress**
+Status: **completion audit in progress**
 
 ### Checkpoint 1 — shared UI ownership
 
@@ -104,7 +104,7 @@ Checkpoint:
 
 ### Checkpoint 5 — Metro homepage CSS layer fold
 
-Status: **implementation complete; validation pending**
+Status: **complete**
 
 - [x] Audit `metro-m2-home-polish.css` against `metro-theme.css`.
 - [x] Confirm M2 contains presentation overrides owned entirely by the Metro homepage layer and has no independent runtime/data contract.
@@ -112,10 +112,10 @@ Status: **implementation complete; validation pending**
 - [x] Retire the redundant `metro-m2-home-polish.css` production stylesheet and `<link>`.
 - [x] Version the consolidated Metro theme as `metro-theme.css?v=m6b-5`.
 - [x] Add regression coverage for the accepted homepage dimensions and M3 load order.
-- [ ] PR #73 regression tests pass.
-- [ ] PR #73 Chromium mobile smoke passes.
-- [ ] PR #73 squash merge succeeds and main Pages deploy passes.
-- [ ] Record PR #73 merged main SHA and main Run result in issue #66.
+- [x] PR #73 regression tests passed.
+- [x] PR #73 Chromium mobile smoke passed.
+- [x] PR #73 squash merged; main Pages deployment passed in Run #442.
+- [x] Authoritative application checkpoint: `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`.
 
 ### Remaining M6B completion criteria
 
@@ -191,18 +191,18 @@ Status: **not started**
 
 1. Open this file first: `docs/m6-checklist.md`.
 2. Read issue #66 for the current M6 objective and the latest merged-main/CI checkpoint.
-3. Verify current `main`. If it is newer than the production base/checkpoint recorded here, inspect merged PRs after the recorded checkpoint before doing new work.
+3. Verify current `main`. If it is newer than the application checkpoint recorded here, inspect the newer commit/PR before doing new work; a docs-only tracker commit does not invalidate the recorded application checkpoint.
 4. If an M6 PR is open, inspect that PR and its checks before starting another branch.
 5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B work.
-6. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then record the result in issue #66 and advance this checklist in the next M6 working branch.
+6. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then advance this checklist/issue record.
 7. If a Worker file changed, also verify the Cloudflare Workers build/check on the merged main commit.
 
 ## Update rule
 
 For every M6 application/runtime checkpoint:
 
-- advance this file on the active M6 branch with completed work, PR number and next action;
-- after squash merge, record the authoritative merged `main` SHA and main CI/deploy result in issue #66;
-- the next M6 branch refreshes this file from that verified production base.
+- advance this file with completed work, PR number, verified application commit and next action;
+- record the authoritative merged `main` SHA and main CI/deploy result in issue #66;
+- distinguish application checkpoint commits from docs-only tracker maintenance commits.
 
-A docs-only tracker merge does not require another self-referential tracker-only merge. The repository checklist plus issue #66 together are the durable recovery record, rather than chat history.
+The repository checklist plus issue #66 together are the durable recovery record, rather than chat history.
