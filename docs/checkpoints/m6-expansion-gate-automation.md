@@ -1,6 +1,6 @@
 # M6 Expansion Gate — automated mobile coverage
 
-Scope: close the automation gap before the final real-device M6 sign-off. This checkpoint does not change production runtime behavior and does not integrate a new cinema provider.
+Scope: close the automation gap before the final real-device M6 sign-off. Runtime changes are limited to a concrete accessibility issue exposed by the gate; this checkpoint does not integrate a new cinema provider or redesign the seat map.
 
 ## Existing release-gate coverage
 
@@ -43,6 +43,20 @@ The test:
 - closes the seat map and verifies scroll-lock/open state is restored.
 
 This intentionally validates the shared seat-map DOM/CSS/lifecycle rather than a live seat endpoint. Live provider data remains separately covered by provider/seat parsing tests and production-provider validation workflows; tying the release smoke to a specific current session would make the gate unnecessarily flaky.
+
+### Gate finding — Metro close touch target
+
+The first PR run rendered the deterministic seat map correctly, but the new mobile gate exposed one concrete accessibility issue: the Metro seat-map close button was explicitly sized at only `38px × 38px`.
+
+The runtime hardening is intentionally narrow:
+
+- increase the Metro seat-map close target to `44px × 44px`;
+- adjust its fixed-position offset so the existing 16px right-edge spacing is preserved;
+- keep the square Metro visual treatment and all seat-map data/layout behavior unchanged;
+- cache-bust the existing `metro-m4-seat-view.css` production link so installed PWAs do not remain on the old target size;
+- add Node regression coverage locking the 44 × 44 target in the consolidated Metro M4 seat-map layer.
+
+No provider, seat parser, seat geometry or shared seat-map request behavior changes in this checkpoint.
 
 ## What this checkpoint does not claim
 
