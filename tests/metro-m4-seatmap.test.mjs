@@ -10,10 +10,11 @@ const [index, css, runtime, sw] = await Promise.all([
   read("app/sw.js")
 ]);
 
-test("Metro loads the seat-map layer after comparison Smart Picks", () => {
+test("Metro loads the consolidated seat-map layer after comparison Smart Picks", () => {
   const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
-  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m4-seatmap-1");
+  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m6b-4");
   assert.ok(picks >= 0 && seatmap > picks);
+  assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
   assert.match(index, /metro-runtime\.js\?v=m6b-3/);
 });
 

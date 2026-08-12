@@ -1,4 +1,4 @@
-/* Phase M4A: Metro seat-map presentation. The shared seat-map data/rendering stays intact. */
+/* Phase M4A/M4B: Metro seat-map presentation. The shared seat-map data/rendering stays intact. */
 
 html[data-skin="metro"] .shared-seatmap-overlay {
   justify-content: center;
@@ -418,4 +418,21 @@ html[data-skin="metro"] .shared-seatmap-spinner {
   html[data-skin="metro"] .shared-seatmap-summary span {
     font-size: .58rem;
   }
+}
+
+/* Phase M4B: keep Broadway row labels readable while horizontally scrolling wide seat maps. */
+html[data-skin="metro"]
+.shared-seatmap-content[data-seatmap-provider="broadway"]
+.shared-seatmap-scroll.is-scrollable
+.shared-seatmap-row-label {
+  box-sizing: border-box;
+  z-index: 8;
+  flex: 0 0 34px;
+  width: 34px;
+  min-height: calc(var(--seat-size, 24px) - 2px);
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  background: #060606;
+  box-shadow: 8px 0 0 #060606;
 }
