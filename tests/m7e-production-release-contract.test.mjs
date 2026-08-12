@@ -14,6 +14,12 @@ test("M7E production Playwright config targets deployed Pages without a local we
   assert.doesNotMatch(liveConfig, /webServer\s*:/);
 });
 
+test("M7E live UI smoke preserves the GitHub Pages project path", () => {
+  assert.match(liveSpec, /page\.goto\("\.\/"/);
+  assert.match(liveSpec, /pathname\)\.toMatch\(\/\\\/hk-cinema/);
+  assert.doesNotMatch(liveSpec, /page\.goto\("\/"/);
+});
+
 test("M7E live UI smoke stays live instead of intercepting provider traffic", () => {
   assert.match(liveSpec, /data-provider=\\?"cineart\\?"/);
   assert.match(liveSpec, /data-cineart-enriched/);
