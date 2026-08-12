@@ -1,5 +1,6 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
+import { createCineArtCatalogueService } from "./providers/cineart-catalogue.js";
 import { discoverCineArtDataSources } from "./providers/cineart-source.js";
 import {
   providerProbeRunner,
@@ -30,6 +31,34 @@ function errorResponse(error, fallbackCode, extraHeaders = {}) {
 
 async function routeRequest(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/cineart/catalogue") {
+      try {
+        const catalogue = await createCineArtCatalogueService().get({ ctx });
+        return json({
+          ok: true,
+          data: catalogue,
+          meta: {
+            phase: "M7C",
+            provider: "cineart",
+            mode: "normalized-catalogue",
+            cache: catalogue.meta?.cache === true,
+            stale: catalogue.meta?.stale === true,
+            cacheState: catalogue.meta?.cacheState || "network",
+            updatedAt: catalogue.meta?.updatedAt || new Date().toISOString()
+          }
+        }, 200, {
+          "cache-control": "no-store",
+          "x-hkcinema-upstream-cache": catalogue.meta?.cacheState || "network"
+        });
+      } catch (error) {
+        return errorResponse(
+          error,
+          "CINEART_CATALOGUE_ERROR",
+          { "cache-control": "no-store" }
+        );
+      }
+    }
 
     if (url.pathname === "/api/providers/cineart/discovery") {
       try {
