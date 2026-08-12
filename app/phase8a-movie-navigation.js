@@ -52,6 +52,66 @@
     return null;
   }
 
+  function providerCatalogue(provider) {
+    if (provider === "broadway") {
+      return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
+    }
+    if (provider === "mcl") return window.HKCinemaMCLCatalogue || null;
+    if (provider === "emperor") return window.HKCinemaEmperorCatalogue || null;
+    return null;
+  }
+
+  function catalogueMovie(provider, sourceId) {
+    const normalized = normalizeSourceId(provider, sourceId);
+    if (!normalized) return null;
+
+    const existing = findExistingEntry(provider, normalized);
+    if (existing?.movie) return existing.movie;
+
+    const catalogue = providerCatalogue(provider);
+    const movies = [
+      ...(catalogue?.now || []),
+      ...(catalogue?.coming || []),
+      ...(catalogue?.festival || [])
+    ];
+    return movies.find(movie => normalizeSourceId(provider, movie?.sourceId || movie?.id) === normalized) || null;
+  }
+
+  function normalizedReleaseDate(value) {
+    const text = String(value || "").trim();
+    const match = text.match(/^\d{4}-\d{2}-\d{2}/);
+    return match ? match[0] : null;
+  }
+
+  function factsFromSourceSets(sourceSets, fallbackReleaseDate = null) {
+    const movies = [];
+    const seen = new Set();
+
+    for (const sourceIds of sourceSets || []) {
+      for (const provider of PROVIDERS) {
+        const sourceId = normalizeSourceId(provider, sourceIds?.[provider]);
+        if (!sourceId) continue;
+        const key = `${provider}:${sourceId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const movie = catalogueMovie(provider, sourceId);
+        if (movie) movies.push(movie);
+      }
+    }
+
+    const classification = movies
+      .map(movie => String(movie?.rating || movie?.classification || "").trim())
+      .find(Boolean) || null;
+    const durationMinutes = movies
+      .map(movie => Number(movie?.durationMinutes ?? movie?.duration))
+      .find(value => Number.isFinite(value) && value > 0) || null;
+    const releaseDate = normalizedReleaseDate(fallbackReleaseDate) ||
+      movies.map(movie => normalizedReleaseDate(movie?.releaseDate || movie?.openingDate)).find(Boolean) ||
+      null;
+
+    return { classification, durationMinutes, releaseDate };
+  }
+
   function providerEntry(provider, sourceId, extras = {}) {
     const normalized = normalizeSourceId(provider, sourceId);
     if (!normalized) return null;
@@ -115,6 +175,7 @@
         secondary: secondaryTitleFor(card)
       },
       posterUrl: poster,
+      facts: factsFromSourceSets([sourceIds], card.dataset.homeReleaseDate),
       providerCount: recordProviderCount(record),
       sources: Object.fromEntries(PROVIDERS.map(provider => [provider, sourceIds[provider] ? [sourceIds[provider]] : []])),
       variants: [{
@@ -201,6 +262,10 @@
     };
     registerMatch(aggregateMatch);
 
+    const sourcePriority = [
+      primary.sourceIds,
+      ...variantModels.filter(variant => variant !== primary).map(variant => variant.sourceIds)
+    ];
     const aggregate = {
       kind: "movie-aggregate",
       schemaVersion: 1,
@@ -210,6 +275,10 @@
         secondary: secondaryTitleFor(card)
       },
       posterUrl: poster,
+      facts: factsFromSourceSets(
+        sourcePriority,
+        card.dataset.homeReleaseDate || primary.releaseDate || variantModels.map(variant => variant.releaseDate).find(Boolean)
+      ),
       providerCount: PROVIDERS.filter(provider => variantModels.some(variant => variant.sourceIds[provider])).length,
       sources: Object.fromEntries(PROVIDERS.map(provider => [
         provider,
