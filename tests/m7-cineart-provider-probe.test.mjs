@@ -61,7 +61,8 @@ test("M7A recognizes the current CineArt site shell and cinema directory", async
     "mostown"
   ]);
   assert.equal(result.nextJsDetected, true);
-  assert.ok(result.bytes > 0);
+  assert.ok(result.bytesRead > 0);
+  assert.equal(result.stoppedEarly, true);
 });
 
 test("M7A rejects a reachable page that is not structurally identifiable as current CineArt", async () => {
@@ -76,13 +77,11 @@ test("M7A rejects a reachable page that is not structurally identifiable as curr
   );
 });
 
-test("M7A rejects an oversized CineArt response before unbounded buffering", async () => {
+test("M7A rejects an oversized CineArt stream before unbounded buffering", async () => {
   await assert.rejects(
     () => probeCineArt({
       maxBytes: 32 * 1024,
-      fetchImpl: async () => htmlResponse("small body", {
-        headers: { "content-length": String(64 * 1024) }
-      })
+      fetchImpl: async () => htmlResponse("x".repeat(64 * 1024))
     }),
     error => {
       assert.equal(error.code, "PROBE_PAYLOAD_TOO_LARGE");
