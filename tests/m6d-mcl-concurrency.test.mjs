@@ -31,29 +31,46 @@ function makeContext(nativeFetch, primaryGetter = async () => null) {
   return { window, provider, context };
 }
 
-test("M6D 2C retires legacy eager GetPrice network ownership without blocking lazy price", async () => {
+test("M6D 2C suppresses eager GetPrice only for comparison cycles and preserves detail/lazy fallback", async () => {
   const bulk = await source("app/mcl-ticketing-bulk-enrichment.js");
-  let nativeCalls = 0;
-  const nativeFetch = async () => {
-    nativeCalls += 1;
+  let priceNativeCalls = 0;
+  let movieSetCalls = 0;
+  let windowRef = null;
+  const eagerUrl = "https://www.mclcinema.com/MCLWebAPI2/GetPrice.aspx?l=1&si=101&ci=001";
+  const nativeFetch = async input => {
+    const url = String(input);
+    if (url.includes("services.mclcinema.com/Ticketing/MovieSet")) {
+      movieSetCalls += 1;
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.includes("MCLWebAPI2/GetPrice.aspx")) priceNativeCalls += 1;
     return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
   };
-  const { window, context } = makeContext(nativeFetch);
+  const primaryGetter = async () => {
+    const response = await windowRef.fetch(eagerUrl, {
+      headers: { Accept: "application/json, text/javascript, text/html, */*; q=0.01" }
+    });
+    await response.json();
+    return { sessions: [], allSessions: [], metadataComplete: true, selectedDate: "2026-08-12" };
+  };
+  const { window, provider, context } = makeContext(nativeFetch, primaryGetter);
+  windowRef = window;
   vm.runInContext(bulk, context, { filename: "mcl-ticketing-bulk-enrichment.js" });
 
-  const eager = await window.fetch(
-    "https://www.mclcinema.com/MCLWebAPI2/GetPrice.aspx?l=1&si=101&ci=001",
-    { headers: { Accept: "application/json, text/javascript, text/html, */*; q=0.01" } }
-  );
-  assert.equal(nativeCalls, 0, "legacy eager WebAPI2 price fetch must not hit the network");
-  assert.deepEqual(await eager.json(), []);
+  const comparison = new AbortController();
+  await provider.getTicketing("14449", "2026-08-12", { signal: comparison.signal });
+  assert.equal(priceNativeCalls, 0, "comparison eager WebAPI2 price fetch must not hit the network");
+  assert.equal(movieSetCalls, 1, "comparison cycle may use one best-effort MovieSet sidecar");
   assert.equal(window.HKCinemaMCLBulkEnrichment.getStats().suppressedLegacyPriceRequests, 1);
 
-  await window.fetch(
-    "https://www.mclcinema.com/MCLWebAPI2/GetPrice.aspx?l=1&si=101&ci=001",
-    { headers: { Accept: "application/json, text/javascript, */*; q=0.01" } }
-  );
-  assert.equal(nativeCalls, 1, "lazy-price request signature must remain network-active");
+  await provider.getTicketing("14449", "2026-08-12", {});
+  assert.equal(priceNativeCalls, 1, "detail/no-signal consumer must retain the WebAPI2 price fallback");
+  assert.equal(movieSetCalls, 1, "detail/no-signal consumer must not start the comparison bulk sidecar");
+
+  await window.fetch(eagerUrl, {
+    headers: { Accept: "application/json, text/javascript, */*; q=0.01" }
+  });
+  assert.equal(priceNativeCalls, 2, "lazy-price request signature must remain network-active");
 });
 
 test("M6D 2C bulk MovieSet cache aliases the resolved date and avoids duplicate sidecars", async () => {
@@ -94,11 +111,13 @@ test("M6D 2C bulk MovieSet cache aliases the resolved date and avoids duplicate 
   const { provider, context } = makeContext(nativeFetch, primaryGetter);
   vm.runInContext(bulk, context, { filename: "mcl-ticketing-bulk-enrichment.js" });
 
-  const initial = await provider.getTicketing("14449", null, {});
+  const firstController = new AbortController();
+  const initial = await provider.getTicketing("14449", null, { signal: firstController.signal });
   assert.equal(initial.sessions[0].price.adult, 92);
   assert.equal(movieSetCalls, 1);
 
-  const explicit = await provider.getTicketing("14449", "2026-08-12", {});
+  const secondController = new AbortController();
+  const explicit = await provider.getTicketing("14449", "2026-08-12", { signal: secondController.signal });
   assert.equal(explicit.sessions[0].price.adult, 92);
   assert.equal(movieSetCalls, 1, "resolved-date transition should reuse the initial bulk snapshot");
 });
@@ -108,6 +127,7 @@ test("M6D 2C bulk sidecar uses real abort plumbing instead of an uncancelled Pro
   assert.match(bulk, /const controller = new AbortController\(\)/);
   assert.match(bulk, /controller\.abort\("bulk-timeout"\)/);
   assert.match(bulk, /parentSignal\?\.addEventListener\?\.\("abort", onParentAbort/);
+  assert.match(bulk, /const comparisonCycle = Boolean\(options\?\.signal\)/);
   assert.match(bulk, /fetchBulk\(movieSetId, selectedDate, options\)/);
   assert.doesNotMatch(bulk, /Promise\.race\s*\(/);
   assert.doesNotMatch(bulk, /function timeoutAfter\(/);
@@ -125,7 +145,7 @@ test("M6D 2C keeps bounded lazy price and seat owners with the MCL cache outermo
   assert.match(worker, /mapLimit\(\s*sessions,\s*8,\s*session => enrichSessionMetadata/);
   assert.match(worker, /GetPrice\.aspx\?l=1&si=/);
   assert.match(worker, /text\/html, \*\/\*; q=0\.01/);
-  assert.match(bulk, /isLegacyEagerPrice/);
+  assert.match(bulk, /comparisonPricePolicyDepth > 0/);
   assert.match(prices, /const MAX_CONCURRENT = 4/);
   assert.match(prices, /application\/json, text\/javascript, \*\/\*; q=0\.01/);
   assert.match(seats, /const MAX_CONCURRENT = 2/);
