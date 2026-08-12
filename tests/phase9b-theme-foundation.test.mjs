@@ -5,8 +5,9 @@ import { readFileSync } from "node:fs";
 const index = readFileSync(new URL("../app/index.html", import.meta.url), "utf8");
 const theme = readFileSync(new URL("../app/theme-foundation.css", import.meta.url), "utf8");
 
-test("Phase 9B1 loads the Classic skin foundation last", () => {
-  assert.match(index, /<html lang="zh-HK" data-skin="classic">/);
+test("Phase 9B1 keeps the Classic skin foundation available after Metro becomes default", () => {
+  assert.match(index, /<html lang="zh-HK" data-skin="metro">/);
+  assert.match(index, /const resolved = skin === "classic" \? "classic" : "metro"/);
   const phase8d = index.indexOf("phase8d-smart-picks.css?v=8d1");
   const themeLink = index.indexOf("theme-foundation.css?v=9b1");
   assert.ok(phase8d >= 0, "Phase 8D stylesheet should remain loaded");

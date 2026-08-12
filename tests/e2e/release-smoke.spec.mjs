@@ -6,7 +6,8 @@ test("mobile release smoke keeps the movie-first comparison flow usable", async 
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator(".topbar")).toBeHidden();
+  await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
+  await expect(page.locator(".topbar")).toBeVisible();
   await expect(page.locator('[data-tab="now"]')).toBeVisible();
   await expect(page.locator('[data-tab="coming"]')).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
@@ -49,7 +50,7 @@ test("home tabs remain interactive on the mobile viewport", async ({ page }) => 
 });
 
 test("Classic mobile polish stays inside the viewport and keeps key touch targets usable", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
@@ -80,7 +81,7 @@ test("Classic mobile polish stays inside the viewport and keeps key touch target
 });
 
 test("selected date stays legible, date rail pins, and filters use one-open compact groups", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });

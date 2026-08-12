@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-HK" data-skin="classic">
+<html lang="zh-HK" data-skin="metro">
 <head>
   <meta charset="UTF-8">
   <meta
@@ -13,22 +13,28 @@
     name="description"
     content="香港戲院電影、場次、票價及座位資訊"
   >
-  <link rel="manifest" href="./manifest.json?v=10r3a-1">
+  <link rel="manifest" href="./manifest.json?v=m5-1">
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
-  <meta name="theme-color" content="#17191d">
+  <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HK Cinema">
   <script>
     (() => {
+      const applySkin = skin => {
+        const resolved = skin === "classic" ? "classic" : "metro";
+        document.documentElement.dataset.skin = resolved;
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.content = resolved === "classic" ? "#17191d" : "#000000";
+      };
+
       try {
-        const skin = new URLSearchParams(window.location.search).get("skin");
-        if (skin === "metro") document.documentElement.dataset.skin = "metro";
-        else if (skin === "classic") document.documentElement.dataset.skin = "classic";
+        applySkin(new URLSearchParams(window.location.search).get("skin"));
       } catch {
-        // Keep the release-safe Classic default if URL parsing is unavailable.
+        // Metro is now the production default; Classic remains available as an explicit fallback.
+        applySkin("metro");
       }
     })();
   </script>

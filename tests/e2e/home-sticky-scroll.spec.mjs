@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("home toolbar crosses sticky boundary without compact-layout oscillation", async ({ page }) => {
-  await page.goto("./");
+  await page.goto("./?skin=classic");
   const tools = page.locator("#homeLibraryTools");
   await expect(tools).toBeVisible();
 

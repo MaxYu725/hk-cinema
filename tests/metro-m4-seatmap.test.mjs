@@ -52,8 +52,8 @@ test("Metro runtime decorates the shared seat-map without changing provider data
   assert.doesNotMatch(runtime, /API_BASE|fetch\(/);
 });
 
-test("M4 rotates the controlled shell cache without automatic install activation", () => {
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m4-1`/);
+test("M4 seat-map remains compatible with the current controlled shell cache", () => {
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m5-1`/);
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
   assert.doesNotMatch(installBlock, /skipWaiting\(\)/);

@@ -38,7 +38,7 @@ async function openComparisonWithMultipleDates(page) {
 }
 
 test("final Classic homepage puts movie tabs first and relocates data health beneath sort", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
@@ -106,7 +106,7 @@ test("final Classic homepage puts movie tabs first and relocates data health ben
 });
 
 test("final Classic comparison uses full-width date rail and keeps the selected date visible after rerender", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 
   const overlay = await openComparisonWithMultipleDates(page);
 
