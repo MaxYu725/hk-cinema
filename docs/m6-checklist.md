@@ -12,12 +12,13 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6B: **complete**
 - M6C: **complete**
 - Current stage: **M6D — expansion readiness review**
-- Latest completed application checkpoint: **M6D Checkpoint 1 / PR #79**
-- Authoritative application checkpoint: `2aac1f171f20a822307e15889cc3892701e8de8e`
-- PR #79 branch Run #469: regression tests + Chromium mobile smoke passed
-- PR #79 automated review findings were addressed and all three review threads are resolved
-- Main Actions Run #470: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- Next planned work: **M6D Checkpoint 2 — network/concurrency review: initial home request fan-out, comparison/showtime fan-out, cancellation/ignore-stale-response behavior, MCL lazy price/seat concurrency and duplicate-request behavior**
+- Latest completed application checkpoint: **M6D Checkpoint 2A / PR #80**
+- Authoritative application checkpoint: `b06a33ef92d57aac38b0d23215a3c180057e11cf`
+- PR #80 branch Run #471: regression tests + Chromium mobile smoke passed
+- PR #80 Cloudflare branch preview succeeded on final head `629836cff0bd6c4bc18b09bb9ca0f94454c939bc`
+- PR #80 had no automated review findings or unresolved review threads at merge time
+- Main Actions Run #472: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- Next planned work: **M6D Checkpoint 2B — comparison/showtime request fan-out + cancellation/ignore-stale-response audit**
 
 ## Fixed M6 boundaries
 
@@ -184,7 +185,7 @@ M6C exit condition: **met**. A hypothetical fourth cinema chain can be described
 
 ## M6D — expansion readiness review
 
-Status: **in progress — Checkpoint 1 complete**
+Status: **in progress — Checkpoint 1 + Checkpoint 2A complete**
 
 ### Checkpoint 1 — failure isolation + partial / stale / empty-state audit
 
@@ -211,11 +212,29 @@ Checkpoint result:
 
 ### Checkpoint 2 — network/concurrency
 
-- [ ] Inventory provider request fan-out on initial home load.
+- [x] Inventory provider request fan-out on initial home load.
 - [ ] Inventory comparison/showtime request fan-out.
 - [ ] Review cancellation/ignore-stale-response behavior when changing movie/date/filter quickly.
 - [ ] Review MCL lazy price/seat request concurrency before provider count grows.
 - [ ] Verify duplicate requests are deduplicated/cached where appropriate without caching live data in the Service Worker shell.
+
+#### Checkpoint 2A — home request fan-out + duplicate-request audit
+
+- [x] Normal current-provider home success path is bounded at five catalogue requests: Broadway 2 + MCL 1 + Emperor 2.
+- [x] MCL failure-only retry is distinguished from normal success-path fan-out.
+- [x] MCL / Emperor status owners retain `refreshInFlight` re-entry guards.
+- [x] Live Worker/MCL/cinema data remains outside the Service Worker static shell cache.
+- [x] Phase 8A synchronous aggregate decoration no longer invokes generic async `getCatalogue()` and discards its Promise.
+- [x] Generic future providers can expose an already-published synchronous `catalogue` / cached snapshot for movie-fact enrichment without hidden per-card network fan-out.
+- [x] Regression coverage locks the current home fan-out boundary and network-silent aggregate behavior.
+- PR #80 — authoritative M6D Checkpoint 2A application commit `b06a33ef92d57aac38b0d23215a3c180057e11cf`
+- PR #80 branch Run #471 passed regression + Chromium mobile smoke.
+- PR #80 Cloudflare branch preview succeeded on `629836cff0bd6c4bc18b09bb9ca0f94454c939bc`.
+- PR #80 had no automated review findings or unresolved review threads at merge time.
+- Main Run #472 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/checkpoints/m6d-home-request-fanout.md`
+
+Next M6D batch: **Checkpoint 2B — comparison/showtime request fan-out + cancellation/ignore-stale-response audit**. Keep MCL lazy price/seat concurrency and broader request deduplication for subsequent bounded work unless they are directly coupled to a 2B finding.
 
 ### Expansion gate
 
