@@ -31,15 +31,15 @@
     }),
     movieAggregate: Object.freeze({
       capability: "catalogue",
-      required: Object.freeze(["key", "title", "providers"]),
+      required: Object.freeze(["id", "title", "sources"]),
       optional: Object.freeze([
+        "kind",
+        "schemaVersion",
         "posterUrl",
-        "releaseDate",
-        "durationMinutes",
-        "classification",
-        "languages",
-        "subtitles",
-        "formats"
+        "facts",
+        "providerCount",
+        "variants",
+        "primaryMatchId"
       ])
     }),
     showtime: Object.freeze({
@@ -119,7 +119,10 @@
   function hasValue(value) {
     if (value === null || value === undefined) return false;
     if (typeof value === "string") return value.trim().length > 0;
-    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "number") return Number.isFinite(value);
+    if (typeof value === "boolean") return true;
+    if (Array.isArray(value)) return value.some(item => hasValue(item));
+    if (typeof value === "object") return Object.values(value).some(item => hasValue(item));
     return true;
   }
 
@@ -155,7 +158,7 @@
   }
 
   window.HKCinemaProviderContract = Object.freeze({
-    version: "m6c-2",
+    version: "m6c-2.1",
     support: SUPPORT,
     availability: AVAILABILITY,
     contracts,
