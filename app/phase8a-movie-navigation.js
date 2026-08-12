@@ -74,14 +74,16 @@
 
   function providerCatalogue(provider) {
     const adapter = window.HKCinemaProviders?.[provider];
-    const generic = adapter?.getCatalogue?.() || adapter?.catalogue || null;
-    if (generic) return generic;
+    const cached = adapter?.catalogue || adapter?.getCachedCatalogue?.() || null;
+    if (cached) return cached;
     if (provider === "broadway") {
       return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
     }
     if (provider === "mcl") return window.HKCinemaMCLCatalogue || null;
     if (provider === "emperor") return window.HKCinemaEmperorCatalogue || null;
-    return null;
+
+    const generic = adapter?.getCatalogue?.();
+    return generic && typeof generic.then !== "function" ? generic : null;
   }
 
   function catalogueMovie(provider, sourceId) {
