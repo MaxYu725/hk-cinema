@@ -7,10 +7,14 @@
     updateReady: false,
     online: navigator.onLine,
     noticeKind: null,
-    reloading: false
+    reloading: false,
+    immersiveAttempted: false,
+    immersiveActive: false,
+    immersiveError: null
   };
 
   let networkNoticeTimer = null;
+  let immersiveArmed = false;
 
   function ensureNotice() {
     let notice = document.querySelector("#pwaNotice");
@@ -127,6 +131,79 @@
     }
   }
 
+  function matchesDisplayMode(mode) {
+    try {
+      return Boolean(window.matchMedia?.(`(display-mode: ${mode})`).matches);
+    } catch {
+      return false;
+    }
+  }
+
+  function currentDisplayMode() {
+    if (matchesDisplayMode("fullscreen")) return "fullscreen";
+    if (matchesDisplayMode("standalone") || navigator.standalone === true) return "standalone";
+    if (matchesDisplayMode("minimal-ui")) return "minimal-ui";
+    return "browser";
+  }
+
+  function canRequestImmersiveFallback() {
+    const mode = currentDisplayMode();
+    if (mode !== "standalone" && mode !== "minimal-ui") return false;
+    if (document.fullscreenElement) return false;
+    if (document.fullscreenEnabled === false) return false;
+    return typeof document.documentElement?.requestFullscreen === "function";
+  }
+
+  function disarmImmersiveFallback() {
+    if (!immersiveArmed) return;
+    immersiveArmed = false;
+    document.removeEventListener("click", handleImmersiveGesture, true);
+  }
+
+  async function requestImmersiveMode() {
+    if (state.immersiveAttempted || !canRequestImmersiveFallback()) return false;
+    state.immersiveAttempted = true;
+    state.immersiveError = null;
+    disarmImmersiveFallback();
+
+    const root = document.documentElement;
+    try {
+      await root.requestFullscreen({ navigationUI: "hide" });
+    } catch (primaryError) {
+      try {
+        await root.requestFullscreen();
+      } catch (fallbackError) {
+        state.immersiveError = fallbackError instanceof Error
+          ? fallbackError.message
+          : String(fallbackError || primaryError || "Fullscreen request failed");
+        state.immersiveActive = false;
+        return false;
+      }
+    }
+
+    state.immersiveActive = Boolean(document.fullscreenElement) || matchesDisplayMode("fullscreen");
+    window.dispatchEvent(new CustomEvent("hkcinema:pwa-immersive", {
+      detail: { active: state.immersiveActive }
+    }));
+    return state.immersiveActive;
+  }
+
+  function handleImmersiveGesture(event) {
+    if (!event.isTrusted || state.immersiveAttempted) return;
+    requestImmersiveMode();
+  }
+
+  function armImmersiveFallback() {
+    state.immersiveActive = Boolean(document.fullscreenElement) || matchesDisplayMode("fullscreen");
+    if (state.immersiveActive || state.immersiveAttempted || !canRequestImmersiveFallback()) return false;
+    if (immersiveArmed) return true;
+    immersiveArmed = true;
+    // Fullscreen API requires a user activation. Capture the first normal in-app click
+    // only when an installed PWA has fallen back to standalone/minimal-ui presentation.
+    document.addEventListener("click", handleImmersiveGesture, true);
+    return true;
+  }
+
   async function register() {
     if (!("serviceWorker" in navigator)) return null;
     if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return null;
@@ -145,19 +222,26 @@
 
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
+      armImmersiveFallback();
       window.dispatchEvent(new CustomEvent("hkcinema:pwa-ready", { detail: { scope: registration.scope } }));
       return registration;
     } catch (error) {
       state.error = error instanceof Error ? error.message : String(error || "Service Worker registration failed");
+      armImmersiveFallback();
       window.dispatchEvent(new CustomEvent("hkcinema:pwa-error", { detail: { message: state.error } }));
       return null;
     }
   }
 
+  document.addEventListener("fullscreenchange", () => {
+    state.immersiveActive = Boolean(document.fullscreenElement) || matchesDisplayMode("fullscreen");
+  });
+
   window.HKCinemaPWA = Object.freeze({
-    version: "9c3-1",
+    version: "9c3-2",
     register,
     applyUpdate,
+    requestImmersiveMode,
     getState() {
       return {
         ready: state.ready,
@@ -165,7 +249,11 @@
         scope: state.registration?.scope || null,
         updateReady: state.updateReady,
         online: state.online,
-        noticeKind: state.noticeKind
+        noticeKind: state.noticeKind,
+        displayMode: currentDisplayMode(),
+        immersiveAttempted: state.immersiveAttempted,
+        immersiveActive: state.immersiveActive,
+        immersiveError: state.immersiveError
       };
     }
   });
