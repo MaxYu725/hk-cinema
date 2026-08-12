@@ -40,7 +40,7 @@ test("M6B ends with five distinct Metro presentation owners and no retired patch
     "metro-m3-comparison.css?v=m3-1",
     "metro-m3-filter-matrix.css?v=m3-filter-3",
     "metro-m3-smart-picks.css?v=m3-picks-2",
-    "metro-m4-seat-view.css?v=m6b-4"
+    "metro-m4-seat-view.css?v=m6gate-1"
   ];
   let previous = -1;
   for (const link of links) {
