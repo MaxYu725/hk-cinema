@@ -1,12 +1,26 @@
 # Phase M7 — CineArt fourth-provider integration
 
-Status: **IN PROGRESS**
+Status: **IN PROGRESS — M7A complete**
 
 Phase M7 starts from the completed M6 provider-expansion contract. Do not reopen the Metro redesign while onboarding the fourth provider.
 
-## Baseline
+## Current checkpoint
 
 - Repository: `MaxYu725/hk-cinema`
+- Tracking issue: #86
+- Selected candidate: **CineArt / 影藝戲院**
+- M7A: **complete**
+- Authoritative M7 application/runtime SHA: `220ee09891cf2a14afdd5dcd13f230b2d61a6f4b`
+- M7A PR: #87 — `M7A: add CineArt live provider probe`
+- PR final head: `1a0ef741da720577948c9bfc551cb9ad8a6e2309`
+- PR Run #505: regression tests + Chromium mobile smoke passed.
+- CineArt Candidate Validation Run #3: passed against the Cloudflare branch preview.
+- Final-head Cloudflare preview deployment succeeded.
+- Main Run #506: regression tests + Chromium mobile smoke + GitHub Pages deploy passed.
+- Next bounded work: **M7B — active CineArt catalogue/showtime data-source discovery**.
+
+## Baseline
+
 - M6 final handoff: `docs/m6-handoff.md`
 - M6 authoritative application/runtime SHA: `26b8384466eb107322e1b714aedb093c94973c9f`
 - M6 final docs merge: `b72c9017e9f35de9d80f3528117c4d8648a801b0`
@@ -25,19 +39,36 @@ Why it is being tested first:
 - historical official ticketing pages expose movie, language/subtitle, showtime and price data;
 - existing site generations expose movie/detail and seat/ticketing route families, making a full contract path plausible.
 
-CineArt is **not yet registered in production**. The current site has moved from older `/zh|en/.../index/...` routes to newer `/hk/...` routes, so M7 must identify the active data source before production adoption.
+CineArt is **not yet registered in the production provider registry**. M7A only proves the current official origin is reachable and structurally identifiable from the Worker. The current site has moved from older `/zh|en/.../index/...` routes to newer `/hk/...` routes, so M7B must identify the active data source before catalogue/showtime adoption.
 
 ## M7A — live provider probe
 
-- [ ] Add CineArt to the Worker provider-probe allow-list only.
-- [ ] Probe the current official `/hk` site with a bounded body read and timeout.
-- [ ] Verify brand/site-shell evidence and current cinema-directory markers.
-- [ ] Keep probe `no-store` and outside Service Worker caching.
-- [ ] Add regression tests for healthy/invalid/oversized CineArt probe responses.
-- [ ] Deploy branch preview and run live `/api/providers/probe/cineart`.
-- [ ] Record whether Cloudflare Worker egress can reach the current CineArt origin.
+Status: **complete**
 
-Exit condition: a live Worker probe confirms the current CineArt origin is reachable and structurally identifiable. This does **not** yet mean catalogue/showtime integration is complete.
+- [x] Add CineArt to a candidate-only Worker provider-probe allow-list.
+- [x] Keep production `probeAll()` limited to Broadway/MCL/Emperor.
+- [x] Probe the current official `/hk` site with a 4.5-second timeout and bounded streaming body scan.
+- [x] Stop reading once brand + at least three current cinema markers are found; hard-cap the scan at 4 MiB.
+- [x] Verify current brand/site-shell evidence and cinema-directory markers.
+- [x] Keep probe `no-store` and outside Service Worker caching.
+- [x] Add regression tests for healthy/invalid/oversized CineArt probe responses.
+- [x] Add a persistent CineArt candidate-validation workflow for Cloudflare branch previews.
+- [x] Deploy final branch preview and run live `/api/providers/probe/cineart`.
+- [x] Confirm Cloudflare Worker egress can reach the current CineArt origin.
+
+Live final-head evidence:
+
+- endpoint: branch-preview `/api/providers/probe/cineart`;
+- result: `healthy: true` on the first validation attempt;
+- latency: approximately 1.32 seconds;
+- evidence source: `cinearthouse-hk` / `site-shell-cinema-directory`;
+- detected cinemas: `maritime-square`, `jp`, `megabox`, `hollywood`, `mostown`;
+- cinema count: 5;
+- current site generation also exposed Next.js evidence.
+
+Initial M7A live validation correctly failed before merge because the current homepage advertises a body larger than the first 1 MiB cap. The probe was corrected to bounded streaming evidence detection rather than removing the safety bound or buffering the entire page. The next live validation passed.
+
+M7A exit condition: **met**. A real Cloudflare Worker preview can reach and identify the current CineArt official origin. This does **not** mean CineArt catalogue/showtimes are integrated yet.
 
 ## M7B — active data-source discovery
 
@@ -70,8 +101,8 @@ Exit condition: catalogue + showtime inputs can be normalized without depending 
 
 ## M7E — release gate
 
-- [ ] Regression suite passes.
-- [ ] Chromium mobile smoke passes.
+- [ ] Regression suite passes after production CineArt integration.
+- [ ] Chromium mobile smoke passes after production CineArt integration.
 - [ ] Cloudflare Worker final-head deployment succeeds.
 - [ ] Main Pages deployment succeeds after merge.
 - [ ] Real-device check confirms CineArt catalogue/comparison and any enabled optional capability.
