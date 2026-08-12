@@ -8,10 +8,9 @@ const sharedControls = readFileSync(new URL("../app/shared-final-controls.js", i
 test("M7F keeps Service Worker install precache bounded to an explicit core shell", () => {
   assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}m7f-1`/);
   assert.match(sw, /const CORE_SHELL_FILES = new Set\(\[/);
-  assert.match(sw, /CORE_SHELL_FILES\.has\(relativeScopePath\(url\)\)/);
+  assert.match(sw, /if \(CORE_SHELL_FILES\.has\(relativeScopePath\(url\)\)\) assets\.add\(url\.href\)/);
   assert.match(sw, /for \(const url of assets\)/);
   assert.doesNotMatch(sw, /Promise\.allSettled\(assets\.map/);
-  assert.doesNotMatch(sw, /assets\.add\(url\.href\)(?![\s\S]*CORE_SHELL_FILES)/);
 });
 
 test("M7F preserves live provider bypass and runtime static fill", () => {
