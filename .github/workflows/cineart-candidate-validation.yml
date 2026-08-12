@@ -11,12 +11,15 @@ on:
       - "worker/src/providers/cineart-flight.js"
       - "worker/src/providers/cineart-source.js"
       - "worker/src/providers/cineart-catalogue.js"
+      - "worker/src/providers/cineart-showtimes.js"
       - "app/provider-registry.js"
       - "app/providers/cineart.js"
       - "app/cineart-status.js"
+      - "app/cineart-compare-enrichment.js"
       - "app/multi-provider-registry-extension.js"
       - "app/index.html"
       - "tests/m7-cineart-provider-adapter.test.mjs"
+      - "tests/m7-cineart-showtime-comparison.test.mjs"
       - "scripts/m7-cineart-preview-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
@@ -32,7 +35,7 @@ permissions:
 jobs:
   cineart-live-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
 
     steps:
       - name: Checkout
