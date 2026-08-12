@@ -49,6 +49,54 @@ test("home tabs remain interactive on the mobile viewport", async ({ page }) => 
   await expect(page.locator("#movieGrid")).toBeVisible();
 });
 
+test("Metro filter dropdown stays anchored without moving neighboring matrix tiles", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  await expect(firstMovie).toBeVisible({ timeout: 30_000 });
+  await firstMovie.click();
+
+  const overlay = page.locator("#providerCompareOverlay");
+  await expect(overlay).toBeVisible({ timeout: 12_000 });
+  const filterToggle = overlay.locator("[data-provider-filter-toggle]");
+  await expect(filterToggle).toBeVisible({ timeout: 12_000 });
+  if ((await filterToggle.getAttribute("aria-expanded")) !== "true") await filterToggle.click();
+
+  const controls = overlay.locator(".phase8c-controls");
+  await expect(controls).toBeVisible();
+  await expect(controls).toHaveAttribute("data-phase9b3-compact", "true", { timeout: 5_000 });
+
+  const provider = controls.locator('[data-phase9b3-group="provider"]');
+  const language = controls.locator('[data-phase9b3-group="language"]');
+  await expect(provider).toBeVisible();
+  await expect(language).toBeVisible();
+
+  const beforeProvider = await provider.boundingBox();
+  const beforeLanguage = await language.boundingBox();
+  await provider.locator("[data-phase9b3-group-toggle]").click();
+
+  const body = provider.locator(".phase9b3-filter-group-body");
+  await expect(body).toBeVisible();
+  const bodyStyle = await body.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { position: style.position, zIndex: style.zIndex };
+  });
+  expect(bodyStyle.position).toBe("absolute");
+  expect(Number(bodyStyle.zIndex)).toBeGreaterThan(1);
+
+  const afterProvider = await provider.boundingBox();
+  const afterLanguage = await language.boundingBox();
+  expect(Math.abs((afterProvider?.x || 0) - (beforeProvider?.x || 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((afterProvider?.y || 0) - (beforeProvider?.y || 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((afterLanguage?.x || 0) - (beforeLanguage?.x || 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((afterLanguage?.y || 0) - (beforeLanguage?.y || 0))).toBeLessThanOrEqual(1);
+
+  const firstOption = body.locator("button").first();
+  await expect(firstOption).toBeVisible();
+  await firstOption.click();
+  await expect(body).toBeHidden();
+});
+
 test("Classic mobile polish stays inside the viewport and keeps key touch targets usable", async ({ page }) => {
   await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
 

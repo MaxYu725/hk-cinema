@@ -12,7 +12,7 @@ const [index, css, sw] = await Promise.all([
 
 test("Metro loads the Smart Picks layer after comparison and filter presentation", () => {
   const comparison = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  const filters = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-2");
+  const filters = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-3");
   const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
   assert.ok(comparison >= 0 && filters > comparison && picks > filters);
 });
