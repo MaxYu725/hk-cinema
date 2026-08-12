@@ -1,0 +1,42 @@
+{
+  "provider": {
+    "id": "fixture",
+    "displayName": "Fixture Cinema",
+    "healthLabel": "Fixture",
+    "capabilities": {
+      "catalogue": true,
+      "showtimes": true,
+      "prices": false,
+      "seatSummary": false,
+      "seatMap": false,
+      "booking": true
+    }
+  },
+  "catalogueEntry": {
+    "sourceId": "fixture-movie-1",
+    "title": {
+      "zh": "測試電影",
+      "en": "Fixture Movie"
+    },
+    "releaseDate": "2026-08-12",
+    "durationMinutes": 105
+  },
+  "movieAggregate": {
+    "key": "fixture-movie",
+    "title": "測試電影",
+    "providers": ["fixture"]
+  },
+  "showtime": {
+    "sourceId": "fixture-session-1",
+    "cinema": {
+      "sourceId": "fixture-cinema-1",
+      "name": "Fixture Central"
+    },
+    "date": "2026-08-12",
+    "time": "20:00",
+    "bookingUrl": "https://example.invalid/fixture-session-1"
+  },
+  "price": null,
+  "seatSummary": null,
+  "seatMap": null
+}
