@@ -62,7 +62,10 @@ test("production mobile PWA exposes live CineArt comparison, price and strict se
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
 
-  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 45_000 });
+  // Preserve the GitHub Pages project path from baseURL. A root-relative "/"
+  // navigation would incorrectly resolve to https://maxyu725.github.io/.
+  await page.goto("./", { waitUntil: "domcontentloaded", timeout: 45_000 });
+  expect(new URL(page.url()).pathname).toMatch(/\/hk-cinema\/?$/);
 
   await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
   await expect(page.locator('[data-tab="now"]')).toBeVisible();
