@@ -130,6 +130,11 @@ function setStatus(type, title, text) {
   elements.systemStatus.dataset.status = type;
 }
 
+function setBroadwayGridState(value) {
+  elements.movieGrid.dataset.broadwayState = value;
+  delete elements.movieGrid.dataset.multiProviderEmpty;
+}
+
 function getNowShowingMovies() {
   return state.showingMovies
     .filter(movie => movie.status === "now-showing")
@@ -184,6 +189,7 @@ function getPresaleIds() {
 }
 
 function renderLoading() {
+  setBroadwayGridState("loading");
   elements.movieGrid.innerHTML = `
     <div class="empty-state">
       <strong>正在載入電影</strong>
@@ -193,6 +199,7 @@ function renderLoading() {
 }
 
 function renderError(message) {
+  setBroadwayGridState("error");
   elements.movieGrid.innerHTML = `
     <div class="empty-state">
       <strong>暫時無法取得電影資料</strong>
@@ -202,6 +209,7 @@ function renderError(message) {
 }
 
 function renderEmptyState() {
+  setBroadwayGridState("empty");
   const message =
     state.tab === "now"
       ? {
@@ -357,6 +365,7 @@ function render() {
     return;
   }
 
+  setBroadwayGridState("ready");
   elements.movieGrid.innerHTML =
     visibleMovies
       .map(renderMovieCard)
