@@ -3,6 +3,8 @@
   const LEGACY_HOME_PROVIDERS = new Set(["broadway", "mcl", "emperor"]);
   const catalogues = new Map();
   let scheduled = false;
+  let gridObserver = null;
+  let observedGrid = null;
 
   function providers() {
     return sharedCore?.providers?.() || [];
@@ -177,6 +179,12 @@
     }
   }
 
+  function observeGrid(grid) {
+    if (!gridObserver || !grid) return;
+    observedGrid = grid;
+    gridObserver.observe(grid, { childList: true, subtree: false });
+  }
+
   function apply() {
     scheduled = false;
     const grid = document.querySelector("#movieGrid");
@@ -184,15 +192,22 @@
     const broadwayState = grid.dataset.broadwayState || "loading";
     if (broadwayState === "loading") return;
 
-    for (const provider of providers()) {
-      if (LEGACY_HOME_PROVIDERS.has(provider.key)) continue;
-      const catalogue = catalogues.get(provider.key) || window.HKCinemaProviders?.[provider.key]?.catalogue || null;
-      if (!catalogue) continue;
-      applyProvider(provider.key, catalogue, grid);
-    }
+    // Mutations below are owned by this extension. Temporarily disconnect so
+    // provider-only reconciliation cannot schedule itself forever.
+    gridObserver?.disconnect?.();
+    try {
+      for (const provider of providers()) {
+        if (LEGACY_HOME_PROVIDERS.has(provider.key)) continue;
+        const catalogue = catalogues.get(provider.key) || window.HKCinemaProviders?.[provider.key]?.catalogue || null;
+        if (!catalogue) continue;
+        applyProvider(provider.key, catalogue, grid);
+      }
 
-    window.HKCinemaMovieAggregates?.refresh?.();
-    window.HKCinemaHomeLibrary?.apply?.();
+      window.HKCinemaMovieAggregates?.refresh?.();
+      window.HKCinemaHomeLibrary?.apply?.();
+    } finally {
+      observeGrid(grid);
+    }
   }
 
   function schedule() {
@@ -215,8 +230,8 @@
 
   const grid = document.querySelector("#movieGrid");
   if (grid) {
-    const observer = new MutationObserver(() => schedule());
-    observer.observe(grid, { childList: true, subtree: false });
+    gridObserver = new MutationObserver(() => schedule());
+    observeGrid(grid);
   }
 
   window.HKCinemaRegistryCatalogueExtension = Object.freeze({
