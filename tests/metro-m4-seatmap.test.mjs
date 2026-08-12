@@ -14,7 +14,7 @@ test("Metro loads the seat-map layer after comparison Smart Picks", () => {
   const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
   const seatmap = index.indexOf("metro-m4-seat-view.css?v=m4-seatmap-1");
   assert.ok(picks >= 0 && seatmap > picks);
-  assert.match(index, /metro-runtime\.js\?v=m4-1/);
+  assert.match(index, /metro-runtime\.js\?v=m6b-2/);
 });
 
 test("Metro seat-map shell matches the square black reference structure", () => {
