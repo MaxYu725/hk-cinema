@@ -155,6 +155,13 @@ test("M7C generic catalogue extension gates home cards on catalogue + showtimes 
   assert.doesNotMatch(extension, /providerId !== ["']cineart["']/);
 });
 
+test("M7C registry extension disconnects its observer during extension-owned card reconciliation", async () => {
+  const extension = await read("app/multi-provider-registry-extension.js");
+  assert.match(extension, /gridObserver\?\.disconnect\?\.\(\)/);
+  assert.match(extension, /finally \{\s*observeGrid\(grid\);\s*\}/s);
+  assert.match(extension, /gridObserver = new MutationObserver\(\(\) => schedule\(\)\)/);
+});
+
 test("M7C production load order installs CineArt adapter before health loader and shared home extension", async () => {
   const index = await read("app/index.html");
   const registry = index.indexOf("provider-registry.js?v=m7c-1");
