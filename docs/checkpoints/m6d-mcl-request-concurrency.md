@@ -1,0 +1,133 @@
+# M6D Checkpoint 2C — MCL request concurrency + duplicate-request audit
+
+Date: 2026-08-12 repository time
+
+Baseline:
+
+- branch base: `a4a15462b30d957b637b0c912ac968d3e4d4d74e` (docs-only tracker)
+- authoritative parent application checkpoint: `c189cbb52c48321b96a90f3c9ecb639bc2a85cbc`
+- Metro remains production default
+- Classic remains available through `?skin=classic`
+- no real fourth provider is added
+
+## Scope
+
+Included:
+
+- inventory MCL primary metadata, price, bulk and seat-summary concurrency
+- bound/reduce duplicated price requests before provider count grows
+- make the MovieSet bulk sidecar lifecycle-cancellable and timeout-cancellable
+- prevent initial → resolved-date bulk duplication
+- keep lazy price and lazy seat enrichment bounded and viewport-driven
+
+Excluded:
+
+- seat-map redesign
+- changing Broadway or Emperor request behavior
+- broad parser rewrite
+- a real new provider
+
+## Before 2C
+
+The MCL comparison path had four enrichment layers:
+
+1. WebAPI2 base discovery requested list/grid/show-days/cinema-map in parallel.
+2. WebAPI2 selected-session metadata enrichment used a bounded 8-worker pool for `GetSessionInfo.aspx`.
+3. The same WebAPI2 implementation then used another 8-worker pool to request `GetPrice.aspx` eagerly for as many as 40 sessions.
+4. Separately, the MovieSet bulk wrapper started one bulk sidecar and the rendered comparison later had a lazy-price owner capped at four concurrent `GetPrice.aspx` requests near the viewport.
+
+Seat summaries were already separate and bounded at two concurrent lazy requests.
+
+The resulting price ownership was redundant: the app had both a one-shot bulk price source and a viewport-driven lazy price source, but retained the older whole-selection eager per-session price network path.
+
+The old bulk timeout also used `Promise.race()`. It stopped waiting after 4.5 seconds but did not abort the underlying MovieSet request, and it had no parent comparison AbortSignal.
+
+## 2C request ownership
+
+### Session metadata
+
+WebAPI2 remains the foreground metadata owner. Its `GetSessionInfo.aspx` work stays bounded at eight concurrent requests because language/house metadata is needed by comparison/filter presentation.
+
+2C deliberately does not rewrite this parser/enrichment path.
+
+### Prices
+
+Price network ownership is now:
+
+- one best-effort MovieSet bulk sidecar for a movie/date, cached for 90 seconds;
+- then the existing lazy-price runtime for any still-missing MCL prices near the viewport, capped at four concurrent requests and cached per session for five minutes.
+
+The older WebAPI2 eager `GetPrice.aspx` request signature is retired at the network-policy boundary. The legacy code remains in the stable parser module as a compatibility fallback structure, but requests carrying its unique `Accept` signature are answered locally with an empty price payload instead of reaching MCL. The lazy-price runtime uses a different request signature and remains network-active.
+
+This avoids a risky rewrite of the mature MCL parser while removing the actual up-to-40-request eager price fan-out.
+
+### Seats
+
+The existing lazy seat-summary owner remains unchanged:
+
+- at most two concurrent requests;
+- per-session dedupe/cache;
+- viewport-driven observation;
+- lifecycle cancellation.
+
+No seat-map behavior changes in 2C.
+
+## MovieSet bulk sidecar
+
+`mcl-ticketing-bulk-enrichment.js` no longer relies on an uncancelled `Promise.race()` timeout in production.
+
+The production bulk path now:
+
+- performs one direct `services.mclcinema.com/Ticketing/MovieSet` request;
+- owns an AbortController;
+- propagates the parent comparison AbortSignal;
+- aborts the actual request after 4.5 seconds;
+- normalizes only the MovieSet fields needed for conservative SessionID-based merge;
+- never adds sessions that the primary WebAPI2 path did not return;
+- never overwrites a primary price that is already present.
+
+The previously captured provider getter remains only as a restricted/test fallback when `window.fetch` is unavailable; normal browser production uses the directly cancellable path.
+
+## Bulk duplicate suppression
+
+The bulk layer has its own 90-second in-memory cache because it remains an outer enrichment wrapper around the main MCL result.
+
+It stores successful MovieSet snapshots by movie/date and aliases an initial request to the payload's resolved selected date. Therefore the common initial-discovery → automatic selected-date transition does not start a second MovieSet request for the same resolved day.
+
+The cache is intentionally local to the comparison runtime. Live MCL data is not placed in the Service Worker shell cache.
+
+## Resulting concurrency boundary
+
+For one active MCL movie/date:
+
+- base WebAPI2 discovery remains bounded by its existing fixed request set;
+- session metadata: maximum 8 concurrent;
+- bulk MovieSet: maximum one sidecar per uncached comparison call, with 90-second successful-result reuse and true lifecycle/timeout cancellation;
+- eager per-session price network fan-out: retired;
+- lazy price: maximum 4 concurrent;
+- lazy seat summary: maximum 2 concurrent.
+
+This is a materially safer provider-expansion boundary than allowing metadata + up-to-40 eager prices + bulk + lazy prices to overlap.
+
+## Regression coverage
+
+`tests/m6d-mcl-concurrency.test.mjs` locks:
+
+- the legacy eager WebAPI2 `GetPrice` signature does not reach native fetch;
+- the lazy-price request signature is not blocked;
+- initial MovieSet bulk data aliases to the resolved date and avoids a second sidecar request;
+- bulk uses AbortController/parent signal and no longer uses `Promise.race()` timeout semantics;
+- metadata remains bounded at eight;
+- lazy price remains capped at four;
+- lazy seat summary remains capped at two;
+- the changed bulk runtime is cache-busted in production HTML.
+
+Existing `mcl-bulk-enrichment` and `mcl-lazy-prices` regressions remain applicable.
+
+## Remaining network/concurrency work
+
+Checkpoint 2C closes the known MCL price/bulk amplification issue without changing provider parsers or seat-map behavior.
+
+The remaining broad M6D network item is to verify whether any cross-consumer duplicate requests outside these audited home/comparison/MCL enrichment paths still warrant coalescing. Avoid adding generic global coalescing unless a concrete duplicate path is demonstrated.
+
+Next bounded step after 2C should be a short **M6D Checkpoint 2D — final duplicate-request/coalescing audit + expansion gate preparation**, not a new provider integration.
