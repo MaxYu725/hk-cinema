@@ -1,6 +1,6 @@
 # Phase M6 — durable progress checklist
 
-This file is the recovery/checkpoint source of truth for Phase M6. Update it after every merged M6 pull request so work can resume from the repository even if a chat/session is lost.
+This file is the recovery/checkpoint source of truth for Phase M6. Update it as M6 advances so work can resume from the repository even if a chat/session is lost.
 
 ## Current checkpoint
 
@@ -8,11 +8,13 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it aft
 - Production UI: Metro default
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
-- Latest completed M6 checkpoint: **M6B Checkpoint 4**
-- Latest production `main`: `8bc54af1d631129d2937a22c4b7915f22e0b751a`
-- Latest merged PR: **#71 — Phase M6B: fold Metro seat-map patch layer**
-- Main Actions Run #439: regression tests, mobile browser smoke and GitHub Pages deploy passed
-- Next planned work: **M6B Checkpoint 5 — continue narrow presentation-layer consolidation; review the Metro M2 homepage polish layer as the next candidate, preserving the accepted UI exactly**
+- Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
+- Tracker last refreshed from production base: `0bc4b7a5e0182c6bf7799d750d98dacc27ecc5b3`
+- Latest completed production application checkpoint before current PR: **M6B Checkpoint 4 / PR #71 / `8bc54af1d631129d2937a22c4b7915f22e0b751a`**
+- Current work: **M6B Checkpoint 5 / PR #73 — fold Metro homepage polish layer**
+- Current PR head at tracker update: `808a6af9e5250182ca1bc4b494493feae51b44c1` (subsequent tracker commit may move this head)
+- Checkpoint 5 implementation: complete on branch; CI/mobile smoke/merge validation pending
+- Next after Checkpoint 5: **M6B completion audit + architecture map; only consolidate another layer if a concrete remaining ownership overlap is proven**
 
 ## Fixed M6 boundaries
 
@@ -100,16 +102,20 @@ Checkpoint:
 - merge commit: `8bc54af1d631129d2937a22c4b7915f22e0b751a`
 - notes: `docs/m6b-seat-style-layer-fold.md`
 
-### Checkpoint 5 — next narrow consolidation
+### Checkpoint 5 — Metro homepage CSS layer fold
 
-Status: **next**
+Status: **implementation complete; validation pending**
 
-- [ ] Audit `metro-m2-home-polish.css` against `metro-theme.css`.
-- [ ] Confirm M2 contains presentation overrides owned entirely by the Metro homepage layer and has no independent runtime/data contract.
-- [ ] If safe, fold the M2 rules into the owning Metro theme/home layer without changing selectors/values.
-- [ ] Retire the redundant M2 `<link>` only after regression coverage locks the accepted homepage dimensions.
-- [ ] Run full regression tests + Chromium mobile smoke + Pages deploy.
-- [ ] Update this checklist with the merged PR number and new `main` commit.
+- [x] Audit `metro-m2-home-polish.css` against `metro-theme.css`.
+- [x] Confirm M2 contains presentation overrides owned entirely by the Metro homepage layer and has no independent runtime/data contract.
+- [x] Fold the complete M2 rule block into the end of `metro-theme.css` without changing selectors or values.
+- [x] Retire the redundant `metro-m2-home-polish.css` production stylesheet and `<link>`.
+- [x] Version the consolidated Metro theme as `metro-theme.css?v=m6b-5`.
+- [x] Add regression coverage for the accepted homepage dimensions and M3 load order.
+- [ ] PR #73 regression tests pass.
+- [ ] PR #73 Chromium mobile smoke passes.
+- [ ] PR #73 squash merge succeeds and main Pages deploy passes.
+- [ ] Record PR #73 merged main SHA and main Run result in issue #66.
 
 ### Remaining M6B completion criteria
 
@@ -184,20 +190,19 @@ Status: **not started**
 ## Recovery procedure after chat/session interruption
 
 1. Open this file first: `docs/m6-checklist.md`.
-2. Read issue #66 for the current M6 objective and checkpoint comments.
-3. Verify the current `main` head; if it is newer than the commit recorded above, inspect merged PRs after the recorded checkpoint and update this file before doing new work.
-4. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B work.
-5. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then update this checklist.
-6. If a Worker file changed, also verify the Cloudflare Workers build/check on the merged main commit.
+2. Read issue #66 for the current M6 objective and the latest merged-main/CI checkpoint.
+3. Verify current `main`. If it is newer than the production base/checkpoint recorded here, inspect merged PRs after the recorded checkpoint before doing new work.
+4. If an M6 PR is open, inspect that PR and its checks before starting another branch.
+5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B work.
+6. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then record the result in issue #66 and advance this checklist in the next M6 working branch.
+7. If a Worker file changed, also verify the Cloudflare Workers build/check on the merged main commit.
 
 ## Update rule
 
-After every M6 merge, this document must be updated with:
+For every M6 application/runtime checkpoint:
 
-- latest completed checkpoint
-- PR number/title
-- production `main` commit
-- CI/deploy status
-- first unchecked next action
+- advance this file on the active M6 branch with completed work, PR number and next action;
+- after squash merge, record the authoritative merged `main` SHA and main CI/deploy result in issue #66;
+- the next M6 branch refreshes this file from that verified production base.
 
-The checklist is deliberately stored in the repository rather than relying on chat history.
+A docs-only tracker merge does not require another self-referential tracker-only merge. The repository checklist plus issue #66 together are the durable recovery record, rather than chat history.
