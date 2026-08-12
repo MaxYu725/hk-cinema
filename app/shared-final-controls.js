@@ -66,7 +66,7 @@
     let badge = button.querySelector(`[data-classic-final-tab-count="${tab}"]`);
     if (!badge) {
       badge = document.createElement("span");
-      badge.className = "classic-final-tab-count shared-final-tab-count";
+      badge.className = "classic-final-tab-count";
       badge.dataset.classicFinalTabCount = tab;
       badge.dataset.sharedFinalTabCount = tab;
       badge.setAttribute("aria-hidden", "true");
