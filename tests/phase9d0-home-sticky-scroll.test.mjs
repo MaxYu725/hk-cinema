@@ -10,33 +10,48 @@ function read(relativePath) {
   return fs.readFileSync(path.join(app, relativePath), "utf8");
 }
 
-test("home sticky hotfix separates transient stuck state from compact layout", () => {
-  const css = read("phase9d0-home-sticky-scroll.css");
-  assert.match(css, /\.home-library-tools\.is-stuck \.home-library-filter-options\s*\{\s*display:\s*flex/);
-  assert.match(css, /\.home-library-tools\.is-stuck \.home-library-footer\s*\{\s*display:\s*flex/);
-  assert.match(css, /\.home-library-tools\.is-stuck-latched \.home-library-filter-options/);
-  assert.match(css, /\.home-library-tools\.is-stuck-latched \.home-library-footer/);
-  assert.match(css, /display:\s*none/);
+test("Classic sticky runtime owns both transient and latched states", () => {
+  const js = read("phase9d0-home-sticky-scroll.js");
+  assert.match(js, /dataset\.skin !== "classic"/);
+  assert.match(js, /function setStuck\(element, next\)/);
+  assert.match(js, /classList\.toggle\("is-stuck", stuck\)/);
+  assert.match(js, /function setLatched\(element, next\)/);
+  assert.match(js, /classList\.toggle\("is-stuck-latched", latched\)/);
+  assert.match(js, /version:\s*VERSION/);
+  assert.match(js, /9d0-m6b-3/);
 });
 
-test("sticky latch has a buffered enter threshold and independent exit threshold", () => {
+test("sticky latch keeps the buffered enter threshold and independent exit threshold", () => {
   const js = read("phase9d0-home-sticky-scroll.js");
   assert.match(js, /MIN_ENTER_BUFFER\s*=\s*64/);
   assert.match(js, /EXIT_BUFFER\s*=\s*8/);
   assert.match(js, /expandedHeight - compactHeight \+ 16/);
+  assert.match(js, /setStuck\(element, edge > anchor\)/);
   assert.match(js, /edge >= anchor \+ enterBuffer\(element\)/);
   assert.match(js, /edge <= anchor - EXIT_BUFFER/);
-  assert.match(js, /is-stuck-latched/);
   assert.match(js, /addEventListener\("scroll", schedule, \{ passive: true \}\)/);
 });
 
-test("production loads sticky hotfix after home library runtime and late in CSS cascade", () => {
+test("sticky presentation effects are scoped to Classic instead of being counteracted by Metro JS", () => {
+  const baseCss = read("home-library.css");
+  const stickyCss = read("phase9d0-home-sticky-scroll.css");
+  const metro = read("metro-runtime.js");
+
+  assert.match(baseCss, /html\[data-skin="classic"\] \.home-library-tools\.is-stuck/);
+  assert.match(baseCss, /html\[data-skin="classic"\] \.home-library-tools\.is-stuck \.home-library-filter-options/);
+  assert.match(stickyCss, /html\[data-skin="classic"\] \.home-library-tools\.is-stuck-latched/);
+  assert.doesNotMatch(stickyCss, /html\[data-skin="metro"\]/);
+  assert.doesNotMatch(metro, /syncLegacyStickyState|style\.display\s*=\s*"grid"/);
+  assert.doesNotMatch(metro, /addEventListener\("scroll", scheduleSync/);
+});
+
+test("production versions the consolidated sticky owner after the home library", () => {
   const html = read("index.html");
   const homeScript = html.indexOf("./home-library.js?v=8e3");
-  const hotfixScript = html.indexOf("./phase9d0-home-sticky-scroll.js?v=9d0-scroll1");
-  assert.ok(homeScript >= 0 && hotfixScript > homeScript);
+  const stickyScript = html.indexOf("./phase9d0-home-sticky-scroll.js?v=m6b-3");
+  assert.ok(homeScript >= 0 && stickyScript > homeScript);
 
-  const homeCss = html.indexOf("./home-library.css?v=6k1");
-  const hotfixCss = html.indexOf("./phase9d0-home-sticky-scroll.css?v=9d0-scroll1");
-  assert.ok(homeCss >= 0 && hotfixCss > homeCss);
+  const homeCss = html.indexOf("./home-library.css?v=m6b-3");
+  const stickyCss = html.indexOf("./phase9d0-home-sticky-scroll.css?v=m6b-3");
+  assert.ok(homeCss >= 0 && stickyCss > homeCss);
 });
