@@ -261,6 +261,7 @@
   window.addEventListener("offline", () => setOnline(false));
   window.addEventListener("online", () => setOnline(true));
 
+  armImmersiveFallback();
   if (!navigator.onLine) setOnline(false);
   if (document.readyState === "complete") register();
   else window.addEventListener("load", register, { once: true });
