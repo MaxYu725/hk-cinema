@@ -151,6 +151,6 @@ test("M6D 2C keeps bounded lazy price and seat owners with the MCL cache outermo
   assert.match(seats, /const MAX_CONCURRENT = 2/);
   const hybrid = index.indexOf("mcl-ticketing-hybrid.js?v=7a2");
   const bulkIndex = index.indexOf("mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c");
-  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2b");
+  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2d");
   assert.ok(hybrid >= 0 && bulkIndex > hybrid && cache > bulkIndex);
 });
