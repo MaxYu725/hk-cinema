@@ -153,6 +153,51 @@ test("M7D normalizes CineArt home shows without treating avaliable as selectable
   assert.equal(session.bookingUrl, null);
 });
 
+test("M7D missing upstream numerics stay unknown instead of becoming zero", () => {
+  const props = {
+    ...HOME_PROPS,
+    shows: [{
+      id: 91000,
+      published: true,
+      hold: false,
+      date: "2026-08-12T00:00:00.000Z",
+      time: "2026-08-12T14:00:00.000Z",
+      price: null,
+      seats: null,
+      sold: undefined,
+      avaliable: "",
+      movie: { id: 778 },
+      site: { id: 16 },
+      house: { id: 44 }
+    }]
+  };
+  const snapshot = normalizeCineArtShowtimeSnapshot(props, { nowMs: NOW });
+  const session = snapshot.sessions[0];
+
+  assert.equal(session.price, null);
+  assert.equal(session.seatSummary, null);
+
+  const detail = normalizeCineArtShowDetail({
+    props: {
+      showId: "91000",
+      showDetail: {
+        show: {
+          id: 91000,
+          price: null,
+          movie: { id: 778 },
+          ticketPrice: {
+            ticketTypes: [{ active: true, online: true, name: "成人 Adult", price: null }]
+          }
+        }
+      },
+      seatStatus: { seats: {} }
+    }
+  }, { nowMs: NOW });
+  assert.equal(detail.price?.display ?? null, null);
+  assert.equal(detail.price?.adult ?? null, null);
+  assert.equal(detail.seatSummary, null);
+});
+
 test("M7D movie show selection exposes stable dates, show IDs and requested date sessions", () => {
   const snapshot = normalizeCineArtShowtimeSnapshot(HOME_PROPS, { nowMs: NOW });
   const result = selectCineArtMovieShows(snapshot, "778", "2026-08-13");
