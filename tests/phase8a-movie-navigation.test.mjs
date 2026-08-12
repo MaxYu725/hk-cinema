@@ -14,7 +14,7 @@ test("movie-first navigation loads after the active comparison engine", async ()
   const navigation = index.indexOf("phase8a-movie-navigation.js");
 
   assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6b-2/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3/);
   assert.ok(compare >= 0);
   assert.ok(navigation > compare);
 });
@@ -28,7 +28,7 @@ test("movie-first home keeps aggregate navigation without migration UI", async (
   assert.match(source, /window\.HKCinemaProviderMatches =/);
   assert.match(source, /#movieGrid \.movie-card:not\(\.movie-group-member\)/);
   assert.match(source, /HKCinemaProviderCompare\?\.open/);
-  assert.match(source, /version: "8e1"/);
+  assert.match(source, /version: "m6c-3"/);
   assert.doesNotMatch(source, /data-phase8a-variant-open/);
   assert.doesNotMatch(source, /phase8a-version-rail/);
   assert.doesNotMatch(css, /homeProviderFilters/);
