@@ -22,9 +22,25 @@
     "durationMinutes": 105
   },
   "movieAggregate": {
-    "key": "fixture-movie",
-    "title": "測試電影",
-    "providers": ["fixture"]
+    "kind": "movie-aggregate",
+    "schemaVersion": 1,
+    "id": "phase8a:fixture-movie",
+    "title": {
+      "display": "測試電影",
+      "secondary": "Fixture Movie"
+    },
+    "posterUrl": null,
+    "facts": {
+      "classification": null,
+      "durationMinutes": 105,
+      "releaseDate": "2026-08-12"
+    },
+    "providerCount": 1,
+    "sources": {
+      "fixture": ["fixture-movie-1"]
+    },
+    "variants": [],
+    "primaryMatchId": "phase8a:fixture-movie:default"
   },
   "showtime": {
     "sourceId": "fixture-session-1",
