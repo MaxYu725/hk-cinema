@@ -10,6 +10,13 @@ on:
       - "worker/src/providers/cineart-probe.js"
       - "worker/src/providers/cineart-flight.js"
       - "worker/src/providers/cineart-source.js"
+      - "worker/src/providers/cineart-catalogue.js"
+      - "app/provider-registry.js"
+      - "app/providers/cineart.js"
+      - "app/cineart-status.js"
+      - "app/multi-provider-registry-extension.js"
+      - "app/index.html"
+      - "tests/m7-cineart-provider-adapter.test.mjs"
       - "scripts/m7-cineart-preview-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
