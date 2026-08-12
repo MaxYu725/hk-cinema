@@ -1,6 +1,6 @@
 # Phase M7 — CineArt fourth-provider integration
 
-Status: **IN PROGRESS — M7A complete**
+Status: **IN PROGRESS — M7A/M7B complete**
 
 Phase M7 starts from the completed M6 provider-expansion contract. Do not reopen the Metro redesign while onboarding the fourth provider.
 
@@ -10,14 +10,17 @@ Phase M7 starts from the completed M6 provider-expansion contract. Do not reopen
 - Tracking issue: #86
 - Selected candidate: **CineArt / 影藝戲院**
 - M7A: **complete**
-- Authoritative M7 application/runtime SHA: `220ee09891cf2a14afdd5dcd13f230b2d61a6f4b`
+- M7B: **complete**
+- Authoritative M7 application/runtime SHA: `dafdab741a0864d4e036dc345b548d052cbe99d0`
 - M7A PR: #87 — `M7A: add CineArt live provider probe`
-- PR final head: `1a0ef741da720577948c9bfc551cb9ad8a6e2309`
-- PR Run #505: regression tests + Chromium mobile smoke passed.
-- CineArt Candidate Validation Run #3: passed against the Cloudflare branch preview.
+- M7B PR: #88 — `M7B: discover CineArt catalogue and show sources`
+- M7B PR final head: `de1a62d427bca83536d4645549a78cb00c0dedba`
+- PR Run #507: regression tests + Chromium mobile smoke passed.
+- CineArt Candidate Validation Run #4: M7A origin probe + M7B live source discovery passed against the final Cloudflare branch preview.
 - Final-head Cloudflare preview deployment succeeded.
-- Main Run #506: regression tests + Chromium mobile smoke + GitHub Pages deploy passed.
-- Next bounded work: **M7B — active CineArt catalogue/showtime data-source discovery**.
+- Main Run #508: regression tests + Chromium mobile smoke + GitHub Pages deploy passed.
+- M7B source contract: `docs/checkpoints/m7b-cineart-data-source-discovery.md`
+- Next bounded work: **M7C — normalized CineArt provider adapter + catalogue snapshot**.
 
 ## Baseline
 
@@ -33,13 +36,13 @@ Phase M7 starts from the completed M6 provider-expansion contract. Do not reopen
 
 Why it is being tested first:
 
-- still an active Hong Kong circuit with multiple locations;
-- current official site is reachable at `https://cinearthouse.com.hk/hk`;
-- current official mobile app remains maintained in 2026;
-- historical official ticketing pages expose movie, language/subtitle, showtime and price data;
-- existing site generations expose movie/detail and seat/ticketing route families, making a full contract path plausible.
+- active Hong Kong circuit with multiple locations;
+- current official `/hk` origin is reachable by the Cloudflare Worker;
+- current Next.js Flight source exposes structured movie/show/site/house data;
+- current show-detail source exposes ticket types, seat states and read-only seat-plan geometry;
+- the complete provider contract can therefore be built from current routes rather than obsolete ticketing pages.
 
-CineArt is **not yet registered in the production provider registry**. M7A only proves the current official origin is reachable and structurally identifiable from the Worker. The current site has moved from older `/zh|en/.../index/...` routes to newer `/hk/...` routes, so M7B must identify the active data source before catalogue/showtime adoption.
+CineArt is **not yet registered in the production provider registry**. M7A proves origin reachability; M7B proves the active current catalogue/show/detail source. M7C is the first phase that may register CineArt in the normalized production provider contract.
 
 ## M7A — live provider probe
 
@@ -59,35 +62,92 @@ Status: **complete**
 Live final-head evidence:
 
 - endpoint: branch-preview `/api/providers/probe/cineart`;
-- result: `healthy: true` on the first validation attempt;
-- latency: approximately 1.32 seconds;
-- evidence source: `cinearthouse-hk` / `site-shell-cinema-directory`;
+- result: `healthy: true`;
 - detected cinemas: `maritime-square`, `jp`, `megabox`, `hollywood`, `mostown`;
 - cinema count: 5;
-- current site generation also exposed Next.js evidence.
+- current site generation exposes Next.js evidence.
 
-Initial M7A live validation correctly failed before merge because the current homepage advertises a body larger than the first 1 MiB cap. The probe was corrected to bounded streaming evidence detection rather than removing the safety bound or buffering the entire page. The next live validation passed.
+Initial M7A live validation correctly failed before merge because the current homepage advertises a body larger than the first 1 MiB cap. The probe was corrected to bounded streaming evidence detection rather than removing the safety bound or buffering the entire page.
 
-M7A exit condition: **met**. A real Cloudflare Worker preview can reach and identify the current CineArt official origin. This does **not** mean CineArt catalogue/showtimes are integrated yet.
+M7A exit condition: **met**.
 
 ## M7B — active data-source discovery
 
-- [ ] Identify the current official catalogue/showtime data source used by the `/hk` web/app generation.
-- [ ] Prefer structured JSON/API/bootstrap data over scraping rendered HTML.
-- [ ] Confirm stable source IDs for movies and sessions.
-- [ ] Confirm cinema identifiers for the active CineArt locations.
-- [ ] Determine whether price is available at showtime level.
-- [ ] Determine whether seat summary/full seat map can be read without a purchase-side effect.
-- [ ] Record upstream request count and cacheability.
+Status: **complete**
 
-Exit condition: catalogue + showtime inputs can be normalized without depending on obsolete 2025 routes.
+- [x] Identify the current official catalogue/showtime data source used by the `/hk` web generation.
+- [x] Prefer structured Next.js Flight/RSC data over scraping rendered HTML.
+- [x] Confirm stable source IDs for movies and show/session records.
+- [x] Confirm cinema identifiers for the five active CineArt locations.
+- [x] Confirm base price is available at showtime level and detailed ticket types are available through show detail.
+- [x] Confirm coarse seat summary and read-only detailed seat states/full seat-plan geometry can be read without a purchase-side effect.
+- [x] Record bounded upstream request ownership and production cache boundary.
+- [x] Validate the same sources live through the Cloudflare branch preview rather than relying only on the uploaded HAR.
+
+### M7B source contract
+
+Home source:
+
+- `GET https://cinearthouse.com.hk/hk`
+- structured Next.js Flight props expose `movies`, `shows`, `showSites`, `showDates`, `houseList`;
+- individual show records include stable show/movie/site/house IDs, date/time, base price and coarse seat counters.
+
+Show-detail source:
+
+- `GET /hk/show/<showId>`;
+- GET-only RSC fallback for the same route when the direct document does not embed detail props;
+- exposes detailed ticket types/prices, `seatStatus`, seat classes and referenced seat-plan geometry.
+
+Stable current site IDs:
+
+- `16 / MB` — MegaBox
+- `17 / MT` — Maritime Square / 青衣城
+- `18 / JP` — JP / 翡翠明珠
+- `19 / HW` — Hollywood / 荷里活
+- `23 / MO` — MOSTown / 新港城中心
+
+Seat-state semantics proven from the current source/frontend:
+
+- `A` = available/selectable
+- `H` = held
+- `U` = sold/unavailable
+- `L` = locked
+
+Important normalization rule: upstream home field `avaliable` is **not** strict selectable availability. Live sample `80483` had 381 seats with home `sold=50` and `avaliable=331`, while detail returned `A=327`, `H=3`, `U=50`, `L=1`. Thus `U == sold`, while `A + H + L == avaliable`. M7C/M7D must not count held or locked seats as selectable.
+
+Live final-head discovery evidence:
+
+- 22 movies
+- 659 shows
+- 5 sites
+- 25 houses
+- date range: 2026-08-12 through 2026-08-28
+- sample show: `80483`
+- sample ticket types: 9
+- sample seat states: 381
+- sample seat-plan geometry: 26 blocks, 1270 × 670
+
+The uploaded HAR had 23 movies and 727 shows for an earlier snapshot of the same changing schedule. The different live counts are expected and demonstrate that the parser reads current upstream data rather than hard-coded HAR values.
+
+M7B diagnostic request ownership is bounded to:
+
+1. one `/hk` home GET;
+2. one `/hk/show/<showId>` GET;
+3. at most one RSC fallback GET if the direct show document lacks the detail props.
+
+Production M7C must **not** run this full 2–3 request diagnostic flow on normal home load. It should build the CineArt home snapshot from one `/hk` request and fetch show detail lazily only when detailed price/seat enrichment is required. Live cinema data remains outside Service Worker shell caching; a short-lived application/Worker cache policy must be defined before production exposure.
+
+M7B exit condition: **met**. Current catalogue + showtime inputs can be normalized without depending on obsolete 2025 routes.
+
+Detailed checkpoint: `docs/checkpoints/m7b-cineart-data-source-discovery.md`.
 
 ## M7C — provider adapter + catalogue
 
-- [ ] Register `cineart` in `provider-registry.js` with only proven capabilities.
-- [ ] Add provider-specific adapter/network/parser code.
+- [ ] Register `cineart` in `provider-registry.js` with only proven/wired capabilities.
+- [ ] Add provider-specific adapter/network/parser ownership around the proven Flight source.
 - [ ] Normalize catalogue entries through the M6 contract.
-- [ ] Publish a synchronous cached catalogue snapshot for shared home aggregation.
+- [ ] Publish a synchronous cached CineArt catalogue snapshot for shared home aggregation.
+- [ ] Define short-lived CineArt source cache/stale policy without Service Worker live-data caching.
 - [ ] Add provider-specific loading/error/stale state reporting.
 - [ ] Keep existing Broadway/MCL/Emperor behavior unchanged.
 
@@ -95,9 +155,11 @@ Exit condition: catalogue + showtime inputs can be normalized without depending 
 
 - [ ] Add CineArt showtimes to the shared comparison path.
 - [ ] Preserve `Promise.allSettled` failure isolation and request cancellation.
-- [ ] Add price only if upstream data proves it supported.
-- [ ] Add seat summary/full seat map only if upstream data proves it supported and read-only.
+- [ ] Add detailed ticket prices through lazy show-detail enrichment.
+- [ ] Normalize coarse home seat summary without treating `avaliable` as selectable seats.
+- [ ] Add strict seat summary/full seat map from `A/H/U/L` detail states only when the production normalizer/geometry adapter is complete.
 - [ ] Preserve provider-neutral Metro presentation.
+- [ ] Keep booking capability unknown/unsupported until a safe explicit booking contract is proven.
 
 ## M7E — release gate
 
@@ -115,6 +177,7 @@ Exit condition: catalogue + showtime inputs can be normalized without depending 
 3. `unsupported`, `unknown`, and `available` price/seat states remain distinct.
 4. Live cinema data stays outside the Service Worker shell cache.
 5. Do not use old `/seat/index/...` pages as a production dependency unless the current site still demonstrably uses them.
-6. Do not mark a capability true before the live source is proven.
+6. Do not mark a capability true before its production adapter path is wired, even when M7B has proven the upstream data exists.
 7. Use bounded request concurrency and abortable foreground work.
-8. Stop after each bounded checkpoint and record PR/SHA/CI before proceeding.
+8. Treat CineArt home `avaliable` as coarse remaining/not-sold, not strict selectable seats.
+9. Stop after each bounded checkpoint and record PR/SHA/CI before proceeding.
