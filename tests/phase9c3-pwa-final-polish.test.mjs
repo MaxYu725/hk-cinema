@@ -20,7 +20,7 @@ test("Service Worker waits for explicit update acceptance", () => {
 test("PWA runtime exposes controlled update and connection state without a redundant eager update", () => {
   const runtime = fs.readFileSync(path.join(app, "pwa-runtime.js"), "utf8");
 
-  assert.match(runtime, /version:\s*"9c3-1"/);
+  assert.match(runtime, /version:\s*"9c3-2"/);
   assert.match(runtime, /registration\.waiting/);
   assert.match(runtime, /"SKIP_WAITING"/);
   assert.match(runtime, /controllerchange/);
@@ -29,6 +29,19 @@ test("PWA runtime exposes controlled update and connection state without a redun
   assert.match(runtime, /updateReady:\s*state\.updateReady/);
   assert.match(runtime, /noticeKind:\s*state\.noticeKind/);
   assert.doesNotMatch(runtime, /registration\.update\(\)/);
+});
+
+test("installed standalone PWA can recover immersive fullscreen on the first user gesture", () => {
+  const runtime = fs.readFileSync(path.join(app, "pwa-runtime.js"), "utf8");
+
+  assert.match(runtime, /matchesDisplayMode\("fullscreen"\)/);
+  assert.match(runtime, /mode !== "standalone" && mode !== "minimal-ui"/);
+  assert.match(runtime, /requestFullscreen\(\{ navigationUI: "hide" \}\)/);
+  assert.match(runtime, /document\.addEventListener\("click", handleImmersiveGesture, true\)/);
+  assert.match(runtime, /event\.isTrusted/);
+  assert.match(runtime, /immersiveAttempted:\s*state\.immersiveAttempted/);
+  assert.match(runtime, /immersiveActive:\s*state\.immersiveActive/);
+  assert.match(runtime, /immersiveError:\s*state\.immersiveError/);
 });
 
 test("offline notice has priority over asynchronous update-ready events", () => {
@@ -52,8 +65,8 @@ test("installed-mode polish protects safe areas and comparison controls", () => 
   assert.match(css, /\.pwa-notice/);
 });
 
-test("document loads Phase 9C3 presentation and runtime versions", () => {
+test("document loads Phase 9C3 presentation and immersive runtime versions", () => {
   const html = fs.readFileSync(path.join(app, "index.html"), "utf8");
   assert.match(html, /phase9c3-pwa-final-polish\.css\?v=9c3-1/);
-  assert.match(html, /pwa-runtime\.js\?v=9c3-1/);
+  assert.match(html, /pwa-runtime\.js\?v=9c3-2/);
 });
