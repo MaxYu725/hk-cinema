@@ -20,6 +20,11 @@
     return error;
   }
 
+  function normalizedDate(value) {
+    const text = String(value || "").slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+  }
+
   function prune(cache) {
     const now = Date.now();
     for (const [key, entry] of cache) {
@@ -92,6 +97,23 @@
     });
   }
 
+  function aliasWorkerSelectedDate(provider, details, snapshotPromise) {
+    if (details.url.searchParams.has("date")) return;
+    snapshotPromise.then(snapshot => {
+      let payload = null;
+      try {
+        payload = JSON.parse(snapshot.body);
+      } catch {
+        return;
+      }
+      const selectedDate = normalizedDate(payload?.data?.selectedDate);
+      if (!selectedDate) return;
+      const aliasUrl = new URL(details.url.toString());
+      aliasUrl.searchParams.set("date", selectedDate);
+      write(caches[provider], aliasUrl.toString(), snapshotPromise, TTL[provider]);
+    }).catch(() => {});
+  }
+
   window.fetch = async function cachedComparisonFetch(input, init = {}) {
     const details = requestDetails(input, init);
     const provider = workerShowsProvider(details);
@@ -116,6 +138,7 @@
         headers: Array.from(response.headers.entries())
       }));
       write(cache, key, snapshotPromise, TTL[provider]);
+      aliasWorkerSelectedDate(provider, details, snapshotPromise);
       snapshotPromise.catch(() => {
         const current = cache.get(key);
         if (current?.value === snapshotPromise) cache.delete(key);
@@ -127,6 +150,18 @@
   function mclKey(movieSetId, selectedDate) {
     const id = String(movieSetId || "").replace(/^mcl:/, "");
     return `${id}:${selectedDate || "initial"}`;
+  }
+
+  function rememberMCL(movieSetId, selectedDate, data) {
+    if (!data || typeof data !== "object") return false;
+    write(caches.mcl, mclKey(movieSetId, selectedDate), data, TTL.mcl);
+    if (!selectedDate) {
+      const resolvedDate = normalizedDate(data.selectedDate);
+      if (resolvedDate) {
+        write(caches.mcl, mclKey(movieSetId, resolvedDate), data, TTL.mcl);
+      }
+    }
+    return true;
   }
 
   function workerUrl(provider, movieId, selectedDate) {
@@ -143,12 +178,20 @@
     if (provider.mainRequestCacheInstalledV3) return true;
 
     const originalGetTicketing = provider.getTicketing.bind(provider);
-    provider.getTicketing = async (movieSetId, selectedDate = null) => {
+    provider.getTicketing = async (movieSetId, selectedDate = null, options = {}) => {
+      const signal = options?.signal || null;
+      if (signal?.aborted) throw abortError();
+
       const key = mclKey(movieSetId, selectedDate);
       const cached = read(caches.mcl, key);
-      if (cached) return cached;
-      const data = await originalGetTicketing(movieSetId, selectedDate);
-      if (data && typeof data === "object") write(caches.mcl, key, data, TTL.mcl);
+      if (cached) {
+        if (signal?.aborted) throw abortError();
+        return cached;
+      }
+
+      const data = await originalGetTicketing(movieSetId, selectedDate, options);
+      if (signal?.aborted) throw abortError();
+      rememberMCL(movieSetId, selectedDate, data);
       return data;
     };
     provider.mainRequestCacheInstalledV3 = true;
@@ -156,24 +199,26 @@
     return true;
   }
 
-  async function prefetchWorker(provider, movieId, selectedDate) {
+  async function prefetchWorker(provider, movieId, selectedDate, signal = null) {
     const url = workerUrl(provider, movieId, selectedDate);
     if (!url) return false;
+    if (signal?.aborted) throw abortError();
     const cache = caches[provider];
     if (read(cache, url)) return true;
-    const response = await window.fetch(url, { cache: "no-store" });
+    const response = await window.fetch(url, { cache: "no-store", signal });
     if (!response.ok) return false;
     await response.text();
     return Boolean(read(cache, url));
   }
 
-  async function prefetchMCL(movieSetId, selectedDate) {
+  async function prefetchMCL(movieSetId, selectedDate, signal = null) {
     if (!installMCLCache()) return false;
+    if (signal?.aborted) throw abortError();
     const key = mclKey(movieSetId, selectedDate);
     if (read(caches.mcl, key)) return true;
     const provider = window.HKCinemaProviders?.mcl;
     if (!provider?.getTicketing) return false;
-    const data = await provider.getTicketing(movieSetId, selectedDate);
+    const data = await provider.getTicketing(movieSetId, selectedDate, { signal });
     return Boolean(data && read(caches.mcl, key));
   }
 
@@ -190,11 +235,11 @@
   window.HKCinemaProviderCompareMainCache = {
     clear,
     clearProvider,
-    prefetchBroadway(movieId, selectedDate) {
-      return prefetchWorker("broadway", movieId, selectedDate);
+    prefetchBroadway(movieId, selectedDate, signal = null) {
+      return prefetchWorker("broadway", movieId, selectedDate, signal);
     },
-    prefetchEmperor(movieId, selectedDate) {
-      return prefetchWorker("emperor", movieId, selectedDate);
+    prefetchEmperor(movieId, selectedDate, signal = null) {
+      return prefetchWorker("emperor", movieId, selectedDate, signal);
     },
     prefetchMCL,
     getStats() {
