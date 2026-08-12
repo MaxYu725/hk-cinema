@@ -9,20 +9,14 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-function makeContext(nativeFetch, bulkGetter = async () => null) {
-  let ready = null;
-  const provider = { getTicketing: bulkGetter };
+function makeContext(nativeFetch, primaryGetter = async () => null) {
+  const provider = { getTicketing: primaryGetter };
   const window = {
     location: { href: "https://maxyu725.github.io/hk-cinema/" },
     fetch: nativeFetch,
     HKCinemaProviders: { mcl: provider }
   };
-  const document = {
-    readyState: "loading",
-    addEventListener(type, handler) {
-      if (type === "DOMContentLoaded") ready = handler;
-    }
-  };
+  const document = { readyState: "complete", addEventListener() {} };
   const context = vm.createContext({
     window,
     document,
@@ -34,7 +28,7 @@ function makeContext(nativeFetch, bulkGetter = async () => null) {
     setTimeout,
     clearTimeout
   });
-  return { window, provider, context, getReady: () => ready };
+  return { window, provider, context };
 }
 
 test("M6D 2C retires legacy eager GetPrice network ownership without blocking lazy price", async () => {
@@ -84,11 +78,7 @@ test("M6D 2C bulk MovieSet cache aliases the resolved date and avoids duplicate 
     }
     return new Response("{}", { status: 200 });
   };
-
-  const { window, provider, context, getReady } = makeContext(nativeFetch);
-  vm.runInContext(bulk, context, { filename: "mcl-ticketing-bulk-enrichment.js" });
-
-  provider.getTicketing = async (_movieSetId, selectedDate = null) => ({
+  const primaryGetter = async (_movieSetId, selectedDate = null) => ({
     movieSetId: "14449",
     selectedDate: selectedDate || "2026-08-12",
     sessions: [{
@@ -100,7 +90,9 @@ test("M6D 2C bulk MovieSet cache aliases the resolved date and avoids duplicate 
     metadataComplete: true,
     source: { transport: "browser-direct-mclwebapi2" }
   });
-  getReady()();
+
+  const { provider, context } = makeContext(nativeFetch, primaryGetter);
+  vm.runInContext(bulk, context, { filename: "mcl-ticketing-bulk-enrichment.js" });
 
   const initial = await provider.getTicketing("14449", null, {});
   assert.equal(initial.sessions[0].price.adult, 92);
@@ -121,7 +113,7 @@ test("M6D 2C bulk sidecar uses real abort plumbing instead of an uncancelled Pro
   assert.doesNotMatch(bulk, /function timeoutAfter\(/);
 });
 
-test("M6D 2C keeps bounded lazy price and seat owners", async () => {
+test("M6D 2C keeps bounded lazy price and seat owners with the MCL cache outermost", async () => {
   const [worker, prices, seats, bulk, index] = await Promise.all([
     source("app/mcl-ticketing-worker.js"),
     source("app/provider-compare-prices.js"),
@@ -137,5 +129,8 @@ test("M6D 2C keeps bounded lazy price and seat owners", async () => {
   assert.match(prices, /const MAX_CONCURRENT = 4/);
   assert.match(prices, /application\/json, text\/javascript, \*\/\*; q=0\.01/);
   assert.match(seats, /const MAX_CONCURRENT = 2/);
-  assert.match(index, /mcl-ticketing-bulk-enrichment\.js\?v=8d2-m6d2c/);
+  const hybrid = index.indexOf("mcl-ticketing-hybrid.js?v=7a2");
+  const bulkIndex = index.indexOf("mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c");
+  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2b");
+  assert.ok(hybrid >= 0 && bulkIndex > hybrid && cache > bulkIndex);
 });
