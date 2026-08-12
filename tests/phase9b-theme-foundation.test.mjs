@@ -27,7 +27,7 @@ test("Phase 9B1 exposes skin, semantic and legacy token layers", () => {
 test("Phase 9B1 retires preview-era shell copy", () => {
   assert.doesNotMatch(index, /電影資料來源將於下一階段接入/);
   assert.doesNotMatch(index, /HK Cinema · Preview/);
-  assert.match(index, /正在同步 Broadway、MCL 及 Emperor 最新電影資料/);
+  assert.match(index, /正在同步各院線最新電影資料/);
   assert.match(index, /HK Cinema · 香港戲院場次比較/);
 });
 
