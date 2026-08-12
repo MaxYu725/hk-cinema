@@ -1,8 +1,23 @@
 (() => {
+  const VERSION = "9d0-m6b-3";
+
+  if (document.documentElement.dataset.skin !== "classic") {
+    window.HKCinemaHomeStickyScroll = Object.freeze({
+      version: VERSION,
+      sync() {},
+      resetForLayoutChange() {},
+      getState() {
+        return { anchor: null, latched: false, stuck: false };
+      }
+    });
+    return;
+  }
+
   const MOBILE_QUERY = "(max-width: 640px)";
   const MIN_ENTER_BUFFER = 64;
   const EXIT_BUFFER = 8;
   let latched = false;
+  let stuck = false;
   let anchor = null;
   let queued = false;
 
@@ -37,6 +52,12 @@
     anchor = element ? documentFlowTop(element) : null;
   }
 
+  function setStuck(element, next) {
+    if (stuck === next) return;
+    stuck = next;
+    element.classList.toggle("is-stuck", stuck);
+  }
+
   function setLatched(element, next) {
     if (latched === next) return;
     latched = next;
@@ -48,6 +69,7 @@
     if (!element) return;
 
     if (!window.matchMedia(MOBILE_QUERY).matches) {
+      setStuck(element, false);
       setLatched(element, false);
       anchor = documentFlowTop(element);
       return;
@@ -57,6 +79,8 @@
     if (!Number.isFinite(anchor)) return;
 
     const edge = window.scrollY + stickyTop(element);
+    setStuck(element, edge > anchor);
+
     if (!latched) {
       if (edge >= anchor + enterBuffer(element)) setLatched(element, true);
       return;
@@ -76,7 +100,10 @@
 
   function resetForLayoutChange() {
     const element = tools();
-    if (element) setLatched(element, false);
+    if (element) {
+      setStuck(element, false);
+      setLatched(element, false);
+    }
     anchor = null;
     requestAnimationFrame(() => {
       resetAnchor();
@@ -97,11 +124,11 @@
   });
 
   window.HKCinemaHomeStickyScroll = Object.freeze({
-    version: "9d0-scroll1",
+    version: VERSION,
     sync,
     resetForLayoutChange,
     getState() {
-      return { anchor, latched };
+      return { anchor, latched, stuck };
     }
   });
 })();
