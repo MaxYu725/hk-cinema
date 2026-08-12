@@ -4,6 +4,7 @@ const BASE_URL = String(process.env.HK_CINEMA_CANDIDATE_WORKER_URL || "")
 const PROBE_MAX_ATTEMPTS = 12;
 const DISCOVERY_MAX_ATTEMPTS = 3;
 const CATALOGUE_MAX_ATTEMPTS = 3;
+const SHOWTIME_MAX_ATTEMPTS = 3;
 const RETRY_MS = 5000;
 
 if (!BASE_URL) {
@@ -180,6 +181,10 @@ async function validateCatalogue() {
         throw new Error(`invalid CineArt M7C catalogue: ${JSON.stringify(payload)}`);
       }
 
+      const sampleMovie = now.find(movie => /^\d+$/.test(String(movie?.sourceId || ""))) ||
+        coming.find(movie => /^\d+$/.test(String(movie?.sourceId || "")));
+      if (!sampleMovie) throw new Error("CineArt catalogue exposed no numeric movie source ID");
+
       return {
         ok: true,
         endpoint,
@@ -191,6 +196,8 @@ async function validateCatalogue() {
         sourceShowCount: counts.sourceShows,
         siteCount: counts.sites,
         houseCount: counts.houses,
+        sampleMovieId: String(sampleMovie.sourceId),
+        sampleMovieTitle: sampleMovie.title?.zh || sampleMovie.title?.en || null,
         cacheState,
         stale: meta.stale === true,
         updatedAt: meta.updatedAt
@@ -211,6 +218,109 @@ async function validateCatalogue() {
   );
 }
 
+async function validateShowtime(movieId) {
+  const endpoint = `${BASE_URL}/api/cineart/movies/${encodeURIComponent(movieId)}/shows`;
+  let lastFailure = "no attempt completed";
+
+  for (let attempt = 1; attempt <= SHOWTIME_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const payload = await fetchJson(endpoint, 18000);
+      const result = payload?.data || {};
+      const meta = payload?.meta || {};
+      const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+      const allSessions = Array.isArray(result.allSessions) ? result.allSessions : [];
+      const availableDates = Array.isArray(result.availableDates) ? result.availableDates : [];
+      const sample = sessions.find(session => /^\d+$/.test(String(session?.sourceId || "")));
+      const cacheState = String(meta.cacheState || result?.meta?.cacheState || "");
+
+      if (
+        meta?.provider !== "cineart" ||
+        meta?.mode !== "normalized-showtimes" ||
+        availableDates.length < 1 ||
+        sessions.length < 1 ||
+        allSessions.length < sessions.length ||
+        !sample ||
+        String(sample.movieSourceId) !== String(movieId) ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(String(sample.date || "")) ||
+        !/^\d{2}:\d{2}$/.test(String(sample.time || "")) ||
+        !String(sample?.cinema?.name?.zh || sample?.cinema?.name?.en || "").trim() ||
+        sample?.bookingUrl !== null ||
+        sample?.seatSummary?.quality !== "coarse-not-sold" ||
+        sample?.seatSummary?.available !== null ||
+        !Number.isFinite(Number(sample?.price?.display)) ||
+        !["network", "fresh-edge", "stale-edge"].includes(cacheState)
+      ) {
+        throw new Error(`invalid CineArt M7D showtimes: ${JSON.stringify(payload)}`);
+      }
+
+      const detailEndpoint = `${BASE_URL}/api/cineart/shows/${encodeURIComponent(sample.sourceId)}/detail?movieId=${encodeURIComponent(movieId)}`;
+      const detailPayload = await fetchJson(detailEndpoint, 20000);
+      const detail = detailPayload?.data || {};
+      const detailMeta = detailPayload?.meta || {};
+      const seat = detail?.seatSummary || {};
+      const price = detail?.price || {};
+
+      if (
+        detailMeta?.provider !== "cineart" ||
+        detailMeta?.mode !== "lazy-show-detail" ||
+        String(detail?.showSourceId) !== String(sample.sourceId) ||
+        detail?.readOnly !== true ||
+        seat?.quality !== "strict-seat-state" ||
+        !Number.isFinite(Number(seat?.total)) ||
+        !Number.isFinite(Number(seat?.available)) ||
+        !Number.isFinite(Number(seat?.held)) ||
+        !Number.isFinite(Number(seat?.sold)) ||
+        !Number.isFinite(Number(seat?.blocked)) ||
+        !Number.isFinite(Number(price?.display)) ||
+        !Array.isArray(price?.ticketTypes) ||
+        price.ticketTypes.length < 1
+      ) {
+        throw new Error(`invalid CineArt M7D detail: ${JSON.stringify(detailPayload)}`);
+      }
+
+      return {
+        ok: true,
+        endpoint,
+        detailEndpoint,
+        attempt,
+        provider: meta.provider,
+        movieId: String(movieId),
+        selectedDate: result.selectedDate,
+        availableDateCount: availableDates.length,
+        sessionCount: sessions.length,
+        allSessionCount: allSessions.length,
+        sampleShowId: String(sample.sourceId),
+        sampleCinema: sample?.cinema?.name?.zh || sample?.cinema?.name?.en || null,
+        sampleTime: sample.time,
+        basePrice: sample?.price?.display ?? null,
+        coarseSeats: {
+          total: sample?.seatSummary?.total ?? null,
+          sold: sample?.seatSummary?.sold ?? null,
+          coarseRemaining: sample?.seatSummary?.coarseRemaining ?? null,
+          selectable: sample?.seatSummary?.available ?? null
+        },
+        strictSeats: seat,
+        ticketTypeCount: price.ticketTypes.length,
+        adultPrice: price.adult ?? price.display ?? null,
+        showtimeCacheState: cacheState,
+        detailCacheState: detailMeta.cacheState || detail?.meta?.cacheState || "network"
+      };
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error);
+      if (attempt < SHOWTIME_MAX_ATTEMPTS) {
+        console.log(
+          `CineArt M7D attempt ${attempt}/${SHOWTIME_MAX_ATTEMPTS} failed: ${lastFailure}`
+        );
+        await sleep(RETRY_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `CineArt branch-preview M7D failed after ${SHOWTIME_MAX_ATTEMPTS} attempts: ${lastFailure}`
+  );
+}
+
 const probe = await validateProbe();
 console.log(JSON.stringify({ gate: "M7A", ...probe }, null, 2));
 
@@ -219,3 +329,6 @@ console.log(JSON.stringify({ gate: "M7B", ...discovery }, null, 2));
 
 const catalogue = await validateCatalogue();
 console.log(JSON.stringify({ gate: "M7C", ...catalogue }, null, 2));
+
+const showtime = await validateShowtime(catalogue.sampleMovieId);
+console.log(JSON.stringify({ gate: "M7D", ...showtime }, null, 2));

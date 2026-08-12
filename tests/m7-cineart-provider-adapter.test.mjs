@@ -127,26 +127,26 @@ test("M7C catalogue service uses one live home request, fresh edge cache, then s
   assert.equal(fetchCount, 2);
 });
 
-test("M7C registers CineArt with catalogue only until the showtime adapter is wired", async () => {
+test("M7D enables only the CineArt capabilities with complete production paths", async () => {
   const registrySource = await read("app/provider-registry.js");
   const context = { window: {} };
   vm.runInNewContext(registrySource, context);
   const registry = context.window.HKCinemaProviderRegistry;
   const cineart = registry.get("cineart");
 
-  assert.equal(registry.version, "m7c-1");
+  assert.equal(registry.version, "m7d-1");
   assert.equal(cineart.displayName, "CineArt");
   assert.deepEqual(JSON.parse(JSON.stringify(cineart.capabilities)), {
     catalogue: true,
-    showtimes: false,
-    prices: false,
-    seatSummary: false,
+    showtimes: true,
+    prices: true,
+    seatSummary: true,
     seatMap: false,
     booking: false
   });
 });
 
-test("M7C generic catalogue extension gates home cards on catalogue + showtimes without a CineArt branch", async () => {
+test("M7D generic catalogue extension gates home cards on catalogue + showtimes without a CineArt branch", async () => {
   const extension = await read("app/multi-provider-registry-extension.js");
   assert.match(extension, /capabilities\?\.catalogue === true/);
   assert.match(extension, /capabilities\?\.showtimes === true/);
@@ -155,26 +155,36 @@ test("M7C generic catalogue extension gates home cards on catalogue + showtimes 
   assert.doesNotMatch(extension, /providerId !== ["']cineart["']/);
 });
 
-test("M7C registry extension disconnects its observer during extension-owned card reconciliation", async () => {
+test("M7D registry extension invalidates and propagates provider sources through version groups", async () => {
   const extension = await read("app/multi-provider-registry-extension.js");
+  assert.match(extension, /before !== after/);
+  assert.match(extension, /syncGroupedProviderSources\(card, clean\)/);
+  assert.match(extension, /variant\.sourceIds = sourceIds/);
+  assert.match(extension, /dataset\?\.movieGroupId \|\| card\?\.dataset\?\.groupMemberOf/);
+  assert.match(extension, /data-movie-group-id/);
+  assert.match(extension, /delete groupCard\.dataset\.phase8aAggregateId/);
+  assert.match(extension, /delete card\.dataset\.phase8aAggregateId/);
   assert.match(extension, /gridObserver\?\.disconnect\?\.\(\)/);
   assert.match(extension, /finally \{\s*observeGrid\(grid\);\s*\}/s);
-  assert.match(extension, /gridObserver = new MutationObserver\(\(\) => schedule\(\)\)/);
 });
 
-test("M7C production load order installs CineArt adapter before health loader and shared home extension", async () => {
+test("M7D production load order includes CineArt lazy enrichment after shared comparison", async () => {
   const index = await read("app/index.html");
-  const registry = index.indexOf("provider-registry.js?v=m7c-1");
+  const registry = index.indexOf("provider-registry.js?v=m7d-1");
   const provider = index.indexOf("providers/cineart.js?v=m7c-1");
-  const extension = index.indexOf("multi-provider-registry-extension.js?v=m7c-1");
+  const extension = index.indexOf("multi-provider-registry-extension.js?v=m7d-1");
+  const compare = index.indexOf("provider-compare-v4.js?v=m6c-3");
+  const enrichment = index.indexOf("cineart-compare-enrichment.js?v=m7d-1");
   const status = index.indexOf("cineart-status.js?v=m7c-1");
 
   assert.ok(registry >= 0 && registry < provider);
   assert.ok(provider < extension);
-  assert.ok(extension < status);
+  assert.ok(extension < compare);
+  assert.ok(compare < enrichment);
+  assert.ok(enrichment < status);
 });
 
-test("M7C cache policy remains short-lived and source reads stay bounded", () => {
+test("M7C catalogue cache policy remains short-lived and source reads stay bounded", () => {
   assert.equal(CINEART_CATALOGUE_CONFIG.homeUrl, "https://cinearthouse.com.hk/hk");
   assert.equal(CINEART_CATALOGUE_CONFIG.timeoutMs, 4500);
   assert.equal(CINEART_CATALOGUE_CONFIG.maxBytes, 4 * 1024 * 1024);

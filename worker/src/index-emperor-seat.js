@@ -1,6 +1,10 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 import { createCineArtCatalogueService } from "./providers/cineart-catalogue.js";
+import {
+  createCineArtShowtimeService,
+  createCineArtShowDetailService
+} from "./providers/cineart-showtimes.js";
 import { discoverCineArtDataSources } from "./providers/cineart-source.js";
 import {
   providerProbeRunner,
@@ -57,6 +61,78 @@ async function routeRequest(request, env, ctx) {
           "CINEART_CATALOGUE_ERROR",
           { "cache-control": "no-store" }
         );
+      }
+    }
+
+    const cineartShowsMatch = url.pathname.match(
+      /^\/api\/cineart\/movies\/(\d+)\/shows$/
+    );
+
+    if (cineartShowsMatch) {
+      try {
+        const movieId = cineartShowsMatch[1];
+        const date = url.searchParams.get("date") || null;
+        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return json({
+            ok: false,
+            error: {
+              code: "CINEART_SHOWTIME_INVALID_DATE",
+              message: "date must use YYYY-MM-DD"
+            }
+          }, 400, { "cache-control": "no-store" });
+        }
+
+        const result = await createCineArtShowtimeService().getMovie(movieId, date, { ctx });
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            phase: "M7D",
+            provider: "cineart",
+            mode: "normalized-showtimes",
+            movieId,
+            cache: result.meta?.cache === true,
+            stale: result.meta?.stale === true,
+            cacheState: result.meta?.cacheState || "network",
+            updatedAt: result.meta?.updatedAt || new Date().toISOString()
+          }
+        }, 200, {
+          "cache-control": "no-store",
+          "x-hkcinema-upstream-cache": result.meta?.cacheState || "network"
+        });
+      } catch (error) {
+        return errorResponse(error, "CINEART_SHOWTIME_ERROR", { "cache-control": "no-store" });
+      }
+    }
+
+    const cineartDetailMatch = url.pathname.match(
+      /^\/api\/cineart\/shows\/(\d+)\/detail$/
+    );
+
+    if (cineartDetailMatch) {
+      try {
+        const showId = cineartDetailMatch[1];
+        const movieId = url.searchParams.get("movieId") || "";
+        const result = await createCineArtShowDetailService().get(showId, movieId, { ctx });
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            phase: "M7D",
+            provider: "cineart",
+            mode: "lazy-show-detail",
+            showId,
+            movieId,
+            cache: result.meta?.cache === true,
+            cacheState: result.meta?.cacheState || "network",
+            updatedAt: result.meta?.updatedAt || new Date().toISOString()
+          }
+        }, 200, {
+          "cache-control": "no-store",
+          "x-hkcinema-upstream-cache": result.meta?.cacheState || "network"
+        });
+      } catch (error) {
+        return errorResponse(error, "CINEART_SHOW_DETAIL_ERROR", { "cache-control": "no-store" });
       }
     }
 

@@ -1,5 +1,146 @@
 import { test, expect } from "@playwright/test";
 
+const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
+const CLASSIC_MOVIE = {
+  id: "broadway:1059",
+  provider: "broadway",
+  sourceId: "1059",
+  movieKey: null,
+  title: {
+    zh: "KATSEYE: WILD HEARTS (2026)",
+    en: "KATSEYE: WILD HEARTS (2026)"
+  },
+  releaseDate: "2026-08-12",
+  status: "now-showing",
+  durationMinutes: 84,
+  category: "IIA",
+  rating: "IIA",
+  language: ["英文"],
+  subtitles: ["中文"],
+  director: ["Nadia Hallgren"],
+  cast: ["KATSEYE"],
+  poster: null,
+  trailer: null,
+  formats: ["Music"]
+};
+const CLASSIC_DATES = ["2026-08-12", "2026-08-13"];
+
+function classicShowsPayload(selectedDate) {
+  const date = CLASSIC_DATES.includes(selectedDate) ? selectedDate : CLASSIC_DATES[0];
+  return {
+    ok: true,
+    data: {
+      movie: {
+        id: CLASSIC_MOVIE.id,
+        provider: CLASSIC_MOVIE.provider,
+        sourceId: CLASSIC_MOVIE.sourceId,
+        title: CLASSIC_MOVIE.title,
+        releaseDate: CLASSIC_MOVIE.releaseDate,
+        durationMinutes: CLASSIC_MOVIE.durationMinutes,
+        rating: CLASSIC_MOVIE.rating,
+        language: "英文",
+        subtitles: ["中文"],
+        director: CLASSIC_MOVIE.director,
+        cast: CLASSIC_MOVIE.cast,
+        description: null,
+        poster: null,
+        trailer: null
+      },
+      availableDates: CLASSIC_DATES,
+      selectedDate: date,
+      sessions: [{
+        id: `broadway:test-${date}`,
+        provider: "broadway",
+        sourceId: `test-${date}`,
+        movieId: CLASSIC_MOVIE.id,
+        cinemaId: "broadway:1",
+        cinema: {
+          id: "broadway:1",
+          provider: "broadway",
+          sourceId: "1",
+          name: {
+            zh: "MOViE MOViE Pacific Place (金鐘)",
+            en: "MOViE MOViE Pacific Place (Admiralty)"
+          }
+        },
+        house: { id: "6", name: "5院" },
+        startAt: `${date}T19:40:00+08:00`,
+        date,
+        time: "19:40",
+        format: null,
+        language: "英文",
+        subtitles: ["中文"],
+        bookingUrl: "https://www.cinema.com.hk/",
+        price: {
+          currency: "HKD",
+          adult: 130,
+          display: 130,
+          lowest: 130,
+          serviceFee: 0,
+          ticketTypes: [],
+          updatedAt: "2026-08-12T00:00:00.000Z"
+        },
+        seatSummary: {
+          total: 100,
+          available: 40,
+          unavailable: 60,
+          held: 0,
+          sold: 60,
+          blocked: 0,
+          accessibleAvailable: 0,
+          occupancy: 0.6,
+          source: "provider-summary",
+          updatedAt: "2026-08-12T00:00:00.000Z"
+        }
+      }]
+    },
+    meta: {
+      provider: "broadway",
+      updatedAt: "2026-08-12T00:00:00.000Z"
+    }
+  };
+}
+
+async function installClassicUiApiFixture(page) {
+  await page.route(`${API_BASE}/**`, async route => {
+    const url = new URL(route.request().url());
+    let payload = null;
+
+    if (url.pathname === "/api/broadway/movies") {
+      payload = {
+        ok: true,
+        data: [CLASSIC_MOVIE],
+        meta: { provider: "broadway", updatedAt: "2026-08-12T00:00:00.000Z" }
+      };
+    } else if (url.pathname === "/api/broadway/upcoming") {
+      payload = {
+        ok: true,
+        data: [],
+        meta: { provider: "broadway", updatedAt: "2026-08-12T00:00:00.000Z" }
+      };
+    } else if (url.pathname === "/api/broadway/movies/1059/shows") {
+      payload = classicShowsPayload(url.searchParams.get("date"));
+    }
+
+    if (payload) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+      return;
+    }
+
+    // These are presentation smoke tests. Keep unrelated live providers from
+    // turning layout assertions into upstream-availability checks; the release
+    // workflows exercise provider live gates separately.
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: false,
+        error: { message: "provider unavailable in deterministic Classic UI fixture" }
+      })
+    });
+  });
+}
+
 async function openComparisonWithMultipleDates(page) {
   const movies = page.locator("#movieGrid .movie-card:not(.movie-group-member)");
   await expect(movies.first()).toBeVisible({ timeout: 30_000 });
@@ -23,7 +164,7 @@ async function openComparisonWithMultipleDates(page) {
           intervals: [250, 500, 1_000]
         }).toBeGreaterThan(1);
       } catch {
-        // A genuine single-date movie is not a test failure; try the next live candidate.
+        // A genuine single-date movie is not a test failure; try the next candidate.
       }
       dateCount = await dates.count();
     }
@@ -34,8 +175,12 @@ async function openComparisonWithMultipleDates(page) {
     await expect(overlay).toBeHidden({ timeout: 5_000 });
   }
 
-  throw new Error(`No movie with at least two comparison dates found among ${candidateCount} live candidates`);
+  throw new Error(`No movie with at least two comparison dates found among ${candidateCount} fixture candidates`);
 }
+
+test.beforeEach(async ({ page }) => {
+  await installClassicUiApiFixture(page);
+});
 
 test("final Classic homepage puts movie tabs first and relocates data health beneath sort", async ({ page }) => {
   await page.goto("/?skin=classic", { waitUntil: "domcontentloaded" });
