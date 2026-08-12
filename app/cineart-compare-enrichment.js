@@ -25,6 +25,12 @@
       .trim();
   }
 
+  function numberOrNull(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
   function isCineArtCard(card) {
     return card?.dataset?.provider === "cineart";
   }
@@ -38,7 +44,7 @@
     const date = selectedDate();
     const time = card?.querySelector(".provider-compare-show-time")?.textContent?.trim() || "";
     const cinema = card?.querySelector(".provider-compare-show-main strong")?.textContent?.trim() || "";
-    const secondary = card?.querySelector(".provider-compare-show-secondary")?.textContent?.trim() || "";
+    const secondary = card?.querySelector(".provider-compare-show-main > p")?.textContent?.trim() || "";
     if (!/^\d+$/.test(movieId) || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || "")) || !/^\d{1,2}:\d{2}$/.test(time)) {
       return null;
     }
@@ -151,32 +157,38 @@
   }
 
   function updatePrice(card, price) {
-    const display = Number(price?.adult ?? price?.display);
+    const display = numberOrNull(price?.adult ?? price?.display);
     if (!Number.isFinite(display)) return;
+    const student = numberOrNull(price?.student);
+    const child = numberOrNull(price?.child);
+    const senior = numberOrNull(price?.senior);
     const node = card.querySelector(".provider-compare-show-price");
     if (!node) return;
     node.textContent = `$${display}`;
     card.dataset.priceLoaded = "true";
     card.dataset.priceAdult = String(display);
-    if (Number.isFinite(price?.student)) card.dataset.priceStudent = String(price.student);
-    if (Number.isFinite(price?.child)) card.dataset.priceChild = String(price.child);
-    if (Number.isFinite(price?.senior)) card.dataset.priceSenior = String(price.senior);
+    if (Number.isFinite(student)) card.dataset.priceStudent = String(student);
+    if (Number.isFinite(child)) card.dataset.priceChild = String(child);
+    if (Number.isFinite(senior)) card.dataset.priceSenior = String(senior);
 
     window.dispatchEvent(new CustomEvent("hkcinema:compare-price", {
       detail: {
         provider: "cineart",
         adult: display,
-        student: Number.isFinite(price?.student) ? price.student : null,
-        child: Number.isFinite(price?.child) ? price.child : null,
-        senior: Number.isFinite(price?.senior) ? price.senior : null
+        student,
+        child,
+        senior
       }
     }));
   }
 
   function updateSeat(card, summary) {
-    const available = Number(summary?.available);
-    const total = Number(summary?.total);
+    const available = numberOrNull(summary?.available);
+    const total = numberOrNull(summary?.total);
     if (!Number.isFinite(available)) return;
+    const held = numberOrNull(summary?.held);
+    const sold = numberOrNull(summary?.sold);
+    const blocked = numberOrNull(summary?.blocked);
     const node = card.querySelector(".provider-compare-seat");
     if (!node) return;
     node.classList.remove("unknown", "available", "limited", "full", "loading");
@@ -185,18 +197,18 @@
     card.dataset.seatLoaded = "true";
     card.dataset.seatAvailable = String(available);
     if (Number.isFinite(total)) card.dataset.seatTotal = String(total);
-    if (Number.isFinite(summary?.held)) card.dataset.seatHeld = String(summary.held);
-    if (Number.isFinite(summary?.sold)) card.dataset.seatSold = String(summary.sold);
-    if (Number.isFinite(summary?.blocked)) card.dataset.seatBlocked = String(summary.blocked);
+    if (Number.isFinite(held)) card.dataset.seatHeld = String(held);
+    if (Number.isFinite(sold)) card.dataset.seatSold = String(sold);
+    if (Number.isFinite(blocked)) card.dataset.seatBlocked = String(blocked);
 
     window.dispatchEvent(new CustomEvent("hkcinema:compare-seat-summary", {
       detail: {
         provider: "cineart",
         available,
-        total: Number.isFinite(total) ? total : null,
-        held: Number.isFinite(summary?.held) ? summary.held : null,
-        sold: Number.isFinite(summary?.sold) ? summary.sold : null,
-        blocked: Number.isFinite(summary?.blocked) ? summary.blocked : null
+        total,
+        held,
+        sold,
+        blocked
       }
     }));
   }
