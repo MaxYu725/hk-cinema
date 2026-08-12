@@ -83,7 +83,7 @@ test("initial Broadway showtime response aliases its resolved date and avoids a 
   assert.equal(body.data.selectedDate, "2026-08-12");
 });
 
-test("MCL main comparison cache forwards AbortSignal and aliases initial result to resolved date", async () => {
+test("MCL main comparison cache forwards AbortSignal and aliases complete initial result to resolved date", async () => {
   const calls = [];
   const original = async (movieSetId, selectedDate, options = {}) => {
     calls.push({ movieSetId, selectedDate, signal: options.signal || null });
@@ -118,7 +118,7 @@ test("MCL main comparison cache forwards AbortSignal and aliases initial result 
     "2026-08-12",
     { signal: secondController.signal }
   );
-  assert.equal(calls.length, 1, "resolved-date request should reuse the initial MCL primary cache entry");
+  assert.equal(calls.length, 1, "complete resolved-date request should reuse the initial MCL primary cache entry");
   assert.equal(second.selectedDate, "2026-08-12");
 
   const aborted = new AbortController();
@@ -128,6 +128,34 @@ test("MCL main comparison cache forwards AbortSignal and aliases initial result 
     error => error?.name === "AbortError"
   );
   assert.equal(calls.length, 1, "aborted requests must not reach the wrapped MCL transport");
+});
+
+test("incomplete initial MCL metadata is not aliased over the explicit-date retry", async () => {
+  const calls = [];
+  const original = async (movieSetId, selectedDate) => {
+    calls.push({ movieSetId, selectedDate });
+    return {
+      movieSetId: String(movieSetId),
+      availableDates: ["2026-08-12"],
+      selectedDate: selectedDate || "2026-08-12",
+      sessions: [],
+      allSessions: [],
+      metadataComplete: selectedDate !== null
+    };
+  };
+
+  const { window, context } = mainCacheContext({ mclGetTicketing: original });
+  vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
+    filename: "provider-compare-main-cache-v3.js"
+  });
+
+  const initial = await window.HKCinemaProviders.mcl.getTicketing("456", null);
+  assert.equal(initial.metadataComplete, false);
+  assert.equal(calls.length, 1);
+
+  const explicit = await window.HKCinemaProviders.mcl.getTicketing("456", "2026-08-12");
+  assert.equal(calls.length, 2, "explicit date must retry when initial MCL metadata is incomplete");
+  assert.equal(explicit.metadataComplete, true);
 });
 
 test("adjacent-date prefetch keeps an AbortController and passes its signal into provider cache helpers", async () => {
