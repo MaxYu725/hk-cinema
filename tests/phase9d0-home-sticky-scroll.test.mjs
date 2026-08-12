@@ -10,13 +10,14 @@ function read(relativePath) {
   return fs.readFileSync(path.join(app, relativePath), "utf8");
 }
 
-test("Classic sticky runtime owns both transient and latched states", () => {
+test("Classic latch is isolated while the transient sticky marker remains neutral", () => {
   const js = read("phase9d0-home-sticky-scroll.js");
+  const home = read("home-library.js");
   assert.match(js, /dataset\.skin !== "classic"/);
-  assert.match(js, /function setStuck\(element, next\)/);
-  assert.match(js, /classList\.toggle\("is-stuck", stuck\)/);
   assert.match(js, /function setLatched\(element, next\)/);
   assert.match(js, /classList\.toggle\("is-stuck-latched", latched\)/);
+  assert.doesNotMatch(js, /classList\.toggle\("is-stuck",/);
+  assert.match(home, /classList\.toggle\("is-stuck", stuck\)/);
   assert.match(js, /version:\s*VERSION/);
   assert.match(js, /9d0-m6b-3/);
 });
@@ -26,7 +27,6 @@ test("sticky latch keeps the buffered enter threshold and independent exit thres
   assert.match(js, /MIN_ENTER_BUFFER\s*=\s*64/);
   assert.match(js, /EXIT_BUFFER\s*=\s*8/);
   assert.match(js, /expandedHeight - compactHeight \+ 16/);
-  assert.match(js, /setStuck\(element, edge > anchor\)/);
   assert.match(js, /edge >= anchor \+ enterBuffer\(element\)/);
   assert.match(js, /edge <= anchor - EXIT_BUFFER/);
   assert.match(js, /addEventListener\("scroll", schedule, \{ passive: true \}\)/);
