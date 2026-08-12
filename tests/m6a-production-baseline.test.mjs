@@ -25,9 +25,10 @@ test("Metro presentation remains the final accepted CSS and runtime layer", () =
   const classicCss = index.indexOf("classic-final-ui-polish.css");
   const phase10Css = index.indexOf("phase10r3a-mobile-shell-date-strip.css");
   const metroTheme = index.indexOf("metro-theme.css");
-  const metroSeat = index.indexOf("metro-m4b-seat-scroll-fix.css");
+  const metroSeat = index.indexOf("metro-m4-seat-view.css?v=m6b-4");
   assert.ok(classicCss >= 0 && phase10Css > classicCss);
   assert.ok(metroTheme > phase10Css && metroSeat > metroTheme);
+  assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
 
   const classicRuntime = index.indexOf("classic-final-ui-polish.js");
   const phase10Runtime = index.indexOf("phase10r3a-mobile-shell-date-strip.js");
