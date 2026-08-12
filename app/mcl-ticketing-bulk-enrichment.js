@@ -1,6 +1,7 @@
 (() => {
-  const providerAtCapture = window.HKCinemaProviders?.mcl;
-  const legacyBulkGetTicketing = providerAtCapture?.getTicketing?.bind(providerAtCapture);
+  const legacyBulkGetTicketing = typeof window.__HKCinemaMCLLegacyBulkGetter === "function"
+    ? window.__HKCinemaMCLLegacyBulkGetter
+    : null;
   const SERVICES_BASE = "https://services.mclcinema.com/";
   const SITE_BASE = "https://www.mclcinema.com/";
   const BULK_TIMEOUT_MS = 4500;
@@ -431,9 +432,11 @@
     }
   });
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", install, { once: true });
-  } else {
-    setTimeout(install, 0);
+  if (!install()) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", install, { once: true });
+    } else {
+      setTimeout(install, 0);
+    }
   }
 })();
