@@ -226,10 +226,8 @@
       registration.addEventListener("updatefound", () => watchInstalling(registration));
       navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-      // register() can resolve after updatefound has already fired. Inspect the current
-      // installing/waiting slots immediately so an in-flight update cannot miss the
-      // user-facing reload prompt. The registration call owns the normal update check;
-      // do not add a second eager manual update request here.
+      // register() can resolve after updatefound has already fired. Inspect current
+      // installing/waiting slots immediately, without forcing a second update check.
       watchInstalling(registration);
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
@@ -274,8 +272,6 @@
 
   armImmersiveFallback();
   if (!navigator.onLine) setOnline(false);
-
-  // The script already runs at the end of <body>. Do not wait for window.load: a slow
-  // non-critical asset must not postpone Service Worker recovery/update detection.
-  queueMicrotask(register);
+  if (document.readyState === "complete") register();
+  else window.addEventListener("load", register, { once: true });
 })();
