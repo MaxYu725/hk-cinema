@@ -4,11 +4,12 @@ import { readFile } from "node:fs/promises";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Phase M3 loads the Metro comparison presentation after the existing Metro layers", async () => {
+test("Phase M3 loads the Metro comparison presentation after the consolidated Metro theme", async () => {
   const index = await read("app/index.html");
-  const m2 = index.indexOf("metro-m2-home-polish.css?v=m2-1");
+  const theme = index.indexOf("metro-theme.css?v=m6b-5");
   const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  assert.ok(m2 >= 0 && m3 > m2);
+  assert.ok(theme >= 0 && m3 > theme);
+  assert.doesNotMatch(index, /metro-m2-home-polish\.css/);
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
   assert.match(index, /metro-runtime\.js\?v=m6b-3/);
 });
