@@ -9,14 +9,16 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
 - Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
-- Latest completed application checkpoint: **M6B completion / PR #74 — finalize presentation ownership map**
-- Latest application checkpoint commit: `554cab11c0f307b116abd7f2c135fdc26248b34f`
-- Main Actions Run #444: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
-- Cloudflare PR branch preview for PR #74: successful
+- Latest completed application checkpoint: **M6C Checkpoint 1 / PR #75 — add provider registry contract**
+- Latest application checkpoint commit: `ed1c1f8957b241759e33c964ee17b28e381fcc0b`
+- PR #75 branch Run #447: regression tests and Chromium mobile smoke passed
+- PR #75 Cloudflare branch preview: successful
+- Main Actions Run #448: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
 - M6A: **complete**
 - M6B: **complete**
+- M6C: **in progress**
 - Current M6 stage: **M6C — provider onboarding contract**
-- Next planned work: **M6C Checkpoint 1 — define a registry-driven provider descriptor/capability contract and remove fixed three-provider assumptions from status presentation without adding a real fourth provider**
+- Next planned work: **M6C Checkpoint 2 — document and lock the normalized shared data/capability contract for catalogue, movie aggregation, showtimes, prices, seat summary/map and booking; then define truthful unsupported-capability semantics without provider-name branches**
 
 ## Fixed M6 boundaries
 
@@ -138,17 +140,30 @@ M6B exit decision: do not fold additional presentation files unless a future reg
 
 ## M6C — provider onboarding contract
 
-Status: **next / not started**
+Status: **in progress**
 
-### Provider identity / registry
+### Checkpoint 1 — provider identity / registry
 
-- [ ] Define one provider descriptor contract for ID, display name, health label and capabilities.
-- [ ] Remove fixed three-provider assumptions from Data Health presentation.
-- [ ] Replace fixed `Broadway / MCL / Emperor` status copy where provider count should be dynamic.
-- [ ] Replace accessibility copy such as `重新整理三院線資料` with provider-count-neutral wording.
-- [ ] Make home loading/status copy provider-count-neutral.
+Status: **complete**
 
-### Normalized capability contract
+- [x] Define one provider descriptor contract for ID, display name, health label and capabilities.
+- [x] Add `app/provider-registry.js` as the provider identity/capability metadata owner without moving provider fetch/parser logic.
+- [x] Remove fixed three-provider assumptions from Data Health presentation.
+- [x] Replace fixed `Broadway / MCL / Emperor` status copy where provider count should be dynamic.
+- [x] Replace accessibility copy such as `重新整理三院線資料` with provider-count-neutral wording.
+- [x] Make home loading/status copy provider-count-neutral.
+- [x] Add a minimal fourth-provider-shaped contract fixture without integrating a real chain.
+- [x] Prove Data Health can enumerate four registry providers and derive 4/4 totals dynamically.
+- [x] Keep the existing Broadway/MCL/Emperor provider IDs and health-report calls unchanged.
+- [x] PR #75 regression tests and Chromium mobile smoke passed in Run #447 after updating legacy test harness/copy assertions to the new registry contract.
+- [x] PR #75 Cloudflare branch preview succeeded on the final PR head.
+- [x] PR #75 squash merged; main regression/mobile smoke/Pages deploy passed in Run #448.
+- [x] Authoritative M6C Checkpoint 1 application commit: `ed1c1f8957b241759e33c964ee17b28e381fcc0b`.
+- [x] Contract notes: `docs/m6c-provider-registry-contract.md`.
+
+### Checkpoint 2 — normalized capability/data contract
+
+Status: **next**
 
 - [ ] Document fields required for home catalogue entries.
 - [ ] Document fields required for movie aggregation/matching.
@@ -158,13 +173,14 @@ Status: **next / not started**
 - [ ] Document optional full seat-map capability.
 - [ ] Document booking-link capability/fallback semantics.
 - [ ] Define how unsupported capabilities are represented without UI branching by provider name.
+- [ ] Add normalized contract fixtures/tests before changing any real provider.
 
-### Tests / fixtures
+### Remaining M6C tests / expansion proof
 
-- [ ] Add provider-contract fixture for a minimal fourth-provider-shaped record without integrating a real chain.
-- [ ] Add tests proving home/comparison/status UI can enumerate more than three providers.
-- [ ] Add tests proving a provider without seats/prices degrades cleanly.
-- [ ] Add tests proving provider identity is registry-driven rather than hard-coded in presentation modules.
+- [x] Add provider-contract fixture for a minimal fourth-provider-shaped record without integrating a real chain.
+- [ ] Add tests proving home/comparison/status UI can enumerate more than three providers. Data Health/status enumeration is covered by Checkpoint 1; home/comparison enumeration remains pending.
+- [ ] Add tests proving a provider without seats/prices degrades cleanly. The Checkpoint 1 fixture defines missing capabilities, but UI degradation semantics are not yet implemented.
+- [ ] Add tests proving provider identity is registry-driven rather than hard-coded across the relevant presentation modules. Data Health is registry-driven; remaining home/comparison assumptions are still to be audited.
 
 M6C exit condition: a hypothetical fourth cinema chain can be described by the normalized contract without adding provider-name branches to home/comparison/health UI.
 
@@ -203,7 +219,7 @@ Status: **not started**
 2. Read issue #66 for the current M6 objective and the latest merged-main/CI checkpoint.
 3. Verify current `main`. If it is newer than the application checkpoint recorded here, inspect the newer commit/PR before doing new work; a docs-only tracker commit does not invalidate the recorded application checkpoint.
 4. If an M6 PR is open, inspect that PR and its checks before starting another branch.
-5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B work.
+5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B/M6C checkpoint work.
 6. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then advance this checklist/issue record.
 7. If a Worker file changed, also verify the Cloudflare Workers build/check on the merged main commit.
 
