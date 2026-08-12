@@ -7,7 +7,7 @@
       sync() {},
       resetForLayoutChange() {},
       getState() {
-        return { anchor: null, latched: false, stuck: false };
+        return { anchor: null, latched: false };
       }
     });
     return;
@@ -17,7 +17,6 @@
   const MIN_ENTER_BUFFER = 64;
   const EXIT_BUFFER = 8;
   let latched = false;
-  let stuck = false;
   let anchor = null;
   let queued = false;
 
@@ -52,12 +51,6 @@
     anchor = element ? documentFlowTop(element) : null;
   }
 
-  function setStuck(element, next) {
-    if (stuck === next) return;
-    stuck = next;
-    element.classList.toggle("is-stuck", stuck);
-  }
-
   function setLatched(element, next) {
     if (latched === next) return;
     latched = next;
@@ -69,7 +62,6 @@
     if (!element) return;
 
     if (!window.matchMedia(MOBILE_QUERY).matches) {
-      setStuck(element, false);
       setLatched(element, false);
       anchor = documentFlowTop(element);
       return;
@@ -79,8 +71,6 @@
     if (!Number.isFinite(anchor)) return;
 
     const edge = window.scrollY + stickyTop(element);
-    setStuck(element, edge > anchor);
-
     if (!latched) {
       if (edge >= anchor + enterBuffer(element)) setLatched(element, true);
       return;
@@ -100,10 +90,7 @@
 
   function resetForLayoutChange() {
     const element = tools();
-    if (element) {
-      setStuck(element, false);
-      setLatched(element, false);
-    }
+    if (element) setLatched(element, false);
     anchor = null;
     requestAnimationFrame(() => {
       resetAnchor();
@@ -128,7 +115,7 @@
     sync,
     resetForLayoutChange,
     getState() {
-      return { anchor, latched, stuck };
+      return { anchor, latched };
     }
   });
 })();
