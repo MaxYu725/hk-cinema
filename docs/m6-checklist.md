@@ -1,6 +1,6 @@
 # Phase M6 — durable progress checklist
 
-This file is the recovery/checkpoint source of truth for Phase M6. Update it as M6 advances so work can resume from the repository even if a chat/session is lost.
+This file is the recovery/checkpoint source of truth for Phase M6. If a chat/session is lost, read this file first, then issue #66, then verify current `main` before making new changes.
 
 ## Current checkpoint
 
@@ -8,17 +8,17 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - Production UI: Metro default
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
-- Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
-- Latest completed application checkpoint: **M6C Checkpoint 2 / PR #76 — define normalized provider capability contract**
-- Latest application checkpoint commit: `4e8c9bbfc610abb275bb0de18c81f3a91160f1ae`
-- PR #76 branch Run #449: regression tests and Chromium mobile smoke passed
-- PR #76 Cloudflare branch preview: successful on final head `12ee7b1498130437f71020b13e3d91e883d35576`
-- Main Actions Run #450: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
 - M6A: **complete**
 - M6B: **complete**
 - M6C: **in progress**
-- Current M6 stage: **M6C — provider onboarding contract**
-- Next planned work: **M6C Checkpoint 3 — apply the registry/capability contract to remaining shared home/comparison presentation paths, remove provider-name capability assumptions, and prove a fourth-provider-shaped source degrades cleanly without price/seat branches**
+- Current stage: **M6C — provider onboarding contract**
+- Latest completed application checkpoint: **M6C Checkpoint 2 review-corrected / PR #77**
+- Authoritative application checkpoint: `6e5728a5061d0d9d6e5f21cd117086e6a4dca572`
+- PR #77 branch Run #451: regression tests + Chromium mobile smoke passed
+- PR #77 Cloudflare branch preview: successful on final head `c896680f32d34216ad1e3d958d6534b089247083`
+- Main Actions Run #452: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- PR #76 automated review findings were addressed in PR #77 and both original review threads are resolved
+- Next planned work: **M6C Checkpoint 3 — adopt the registry/capability contract in remaining shared home/comparison presentation paths, remove provider-name capability assumptions, and prove a fourth-provider-shaped source degrades cleanly without price/seat branches**
 
 ## Fixed M6 boundaries
 
@@ -26,9 +26,8 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - [x] Classic remains available throughout M6 as rollback/reference.
 - [x] No speculative visual redesign during hardening.
 - [x] No broad provider/parser rewrite.
-- [x] No new cinema chain until M6C provider contracts and M6D failure-isolation review are stable.
-- [x] Provider/showtime/price/seat semantics stay unchanged during presentation-only consolidation.
-- [x] Service Worker activation stays controlled; no automatic `skipWaiting()` restoration.
+- [x] No real new cinema chain until M6C contracts and M6D failure-isolation review are stable.
+- [x] Service Worker activation stays controlled; do not restore automatic `skipWaiting()`.
 - [x] Live cinema/API traffic remains outside the static PWA shell cache.
 - [x] Multi-file work uses branch → PR → CI → squash merge.
 
@@ -54,89 +53,50 @@ Status: **complete**
 
 ### Checkpoint 1 — shared UI ownership
 
-- [x] Move homepage tab counts from Classic-only runtime to neutral `shared-final-controls.js`.
-- [x] Move comparison heading sort control to neutral shared ownership.
-- [x] Make Metro the sole home Data Health DOM-placement owner.
-- [x] Keep Classic Data Health refresh behavior Classic-only.
-- [x] Preserve existing DOM hooks so both skins render unchanged.
-
-Checkpoint:
-
-- PR #68 — `Phase M6B: consolidate shared UI ownership`
-- merge commit: `fc66de22009c7e654f5d0644932e78939d2d75f0`
-- notes: `docs/m6b-shared-ui-ownership.md`
+- [x] Neutral shared ownership for homepage tab counts and comparison heading sort.
+- [x] Metro sole owner for home Data Health DOM placement.
+- [x] Classic-only Data Health refresh behavior retained.
+- PR #68 — merge `fc66de22009c7e654f5d0644932e78939d2d75f0`
+- Notes: `docs/m6b-shared-ui-ownership.md`
 
 ### Checkpoint 2 — structured movie facts
 
-- [x] Add structured aggregate facts: classification, duration and release date.
-- [x] Make Phase 8B use aggregate facts instead of parsing rendered homepage `.movie-meta` text.
-- [x] Remove the Metro hidden ` · ` metadata separator bridge.
-- [x] Add no new provider request; missing metadata remains missing rather than guessed.
-
-Checkpoint:
-
-- PR #69 — `Phase M6B: consolidate movie facts into aggregates`
-- merge commit: `32cb3bc1615fba811ef36f48402b602539829bc5`
-- notes: `docs/m6b-aggregate-movie-facts.md`
+- [x] Add aggregate classification, duration and release date.
+- [x] Remove comparison dependence on rendered homepage metadata text.
+- [x] Remove Metro hidden metadata separator bridge.
+- PR #69 — merge `32cb3bc1615fba811ef36f48402b602539829bc5`
+- Notes: `docs/m6b-aggregate-movie-facts.md`
 
 ### Checkpoint 3 — skin runtime ownership
 
-- [x] Keep neutral transient home sticky marker shared.
-- [x] Make the buffered sticky latch and collapse presentation Classic-only.
-- [x] Remove Metro JavaScript that counteracted Classic sticky state.
-- [x] Keep compact filter structure skin-neutral.
-- [x] Move Metro-only filter dropdown auto-close/outside-tap policy into `metro-runtime.js`.
+- [x] Keep neutral transient sticky marker shared.
+- [x] Make buffered sticky latch/collapse Classic-only.
+- [x] Move Metro-only filter auto-close/outside-tap policy into `metro-runtime.js`.
+- PR #70 — merge `7f03ad1a064a6d3641093a7669ef20dec29bbf28`
+- Notes: `docs/m6b-skin-runtime-ownership.md`
 
-Checkpoint:
+### Checkpoint 4 — Metro seat-map CSS fold
 
-- PR #70 — `Phase M6B: consolidate skin runtime ownership`
-- merge commit: `7f03ad1a064a6d3641093a7669ef20dec29bbf28`
-- notes: `docs/m6b-skin-runtime-ownership.md`
+- [x] Fold Broadway M4B row-label guard into `metro-m4-seat-view.css`.
+- [x] Retire redundant `metro-m4b-seat-scroll-fix.css` production layer.
+- PR #71 — merge `8bc54af1d631129d2937a22c4b7915f22e0b751a`
+- Notes: `docs/m6b-seat-style-layer-fold.md`
 
-### Checkpoint 4 — Metro seat-map CSS layer fold
+### Checkpoint 5 — Metro homepage CSS fold
 
-- [x] Fold the Broadway-only M4B row-label scroll guard into `metro-m4-seat-view.css`.
-- [x] Remove the redundant `metro-m4b-seat-scroll-fix.css` production layer.
-- [x] Preserve the Broadway selector and exact accepted styling values.
-- [x] Keep MCL/Emperor and Classic unaffected.
-
-Checkpoint:
-
-- PR #71 — `Phase M6B: fold Metro seat-map patch layer`
-- merge commit: `8bc54af1d631129d2937a22c4b7915f22e0b751a`
-- notes: `docs/m6b-seat-style-layer-fold.md`
-
-### Checkpoint 5 — Metro homepage CSS layer fold
-
-Status: **complete**
-
-- [x] Audit `metro-m2-home-polish.css` against `metro-theme.css`.
-- [x] Confirm M2 contains presentation overrides owned entirely by the Metro homepage layer and has no independent runtime/data contract.
-- [x] Fold the complete M2 rule block into the end of `metro-theme.css` without changing selectors or values.
-- [x] Retire the redundant `metro-m2-home-polish.css` production stylesheet and `<link>`.
-- [x] Version the consolidated Metro theme as `metro-theme.css?v=m6b-5`.
-- [x] Add regression coverage for the accepted homepage dimensions and M3 load order.
-- [x] PR #73 regression tests passed.
-- [x] PR #73 Chromium mobile smoke passed.
-- [x] PR #73 squash merged; main Pages deployment passed in Run #442.
-- [x] Authoritative application checkpoint: `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`.
+- [x] Fold `metro-m2-home-polish.css` into `metro-theme.css` with accepted values unchanged.
+- [x] Retire redundant stylesheet link and add regression coverage.
+- PR #73 — merge `4736d445e1ea7f7f236ab11ddb9c69c2f2b19366`
+- Main Run #442 passed.
 
 ### M6B completion audit
 
-Status: **complete**
-
-- [x] Review remaining late Metro CSS files for proven ownership overlap only; no additional redundant patch layer remains.
-- [x] Review Classic/Phase 10 runtime cross-skin dependencies; Metro Data Health ownership is guarded and shared date-centering remains intentionally shared.
-- [x] Confirm Metro runtime contains no compensating behavior for Classic sticky state.
-- [x] Confirm shared comparison facts no longer depend on presentation text/DOM formatting as a data contract.
-- [x] Stop consolidation because the remaining Metro layers have distinct feature responsibilities rather than duplicate ownership.
-- [x] Record final architecture map in `docs/m6b-architecture-map.md`.
-- [x] Add M6B completion regression contracts.
-- [x] PR #74 branch regression/mobile smoke passed and Cloudflare preview succeeded.
-- [x] PR #74 squash merged; main regression/mobile smoke/Pages deploy passed in Run #444.
-- [x] Authoritative M6B completion commit: `554cab11c0f307b116abd7f2c135fdc26248b34f`.
-
-M6B exit decision: do not fold additional presentation files unless a future regression proves a duplicate owner. Proceed to M6C.
+- [x] Remaining Metro layers have distinct feature ownership; stop speculative folding.
+- [x] Shared data contracts no longer depend on Metro rendered metadata.
+- [x] Final architecture map recorded.
+- PR #74 — authoritative M6B completion commit `554cab11c0f307b116abd7f2c135fdc26248b34f`
+- Main Run #444 passed regression + Chromium mobile smoke + Pages deploy.
+- Architecture: `docs/m6b-architecture-map.md`
 
 ## M6C — provider onboarding contract
 
@@ -146,47 +106,51 @@ Status: **in progress**
 
 Status: **complete**
 
-- [x] Define one provider descriptor contract for ID, display name, health label and capabilities.
-- [x] Add `app/provider-registry.js` as the provider identity/capability metadata owner without moving provider fetch/parser logic.
-- [x] Remove fixed three-provider assumptions from Data Health presentation.
-- [x] Replace fixed `Broadway / MCL / Emperor` status copy where provider count should be dynamic.
-- [x] Replace accessibility copy such as `重新整理三院線資料` with provider-count-neutral wording.
-- [x] Make home loading/status copy provider-count-neutral.
-- [x] Add a minimal fourth-provider-shaped contract fixture without integrating a real chain.
-- [x] Prove Data Health can enumerate four registry providers and derive 4/4 totals dynamically.
-- [x] Keep the existing Broadway/MCL/Emperor provider IDs and health-report calls unchanged.
-- [x] PR #75 regression tests and Chromium mobile smoke passed in Run #447 after updating legacy test harness/copy assertions to the new registry contract.
-- [x] PR #75 Cloudflare branch preview succeeded on the final PR head.
-- [x] PR #75 squash merged; main regression/mobile smoke/Pages deploy passed in Run #448.
-- [x] Authoritative M6C Checkpoint 1 application commit: `ed1c1f8957b241759e33c964ee17b28e381fcc0b`.
-- [x] Contract notes: `docs/m6c-provider-registry-contract.md`.
+- [x] Add `app/provider-registry.js` as provider identity/capability metadata owner.
+- [x] Define provider ID, display name, health label and capability flags.
+- [x] Make Data Health enumerate registry providers instead of a fixed three-provider array.
+- [x] Make provider-count/status/refresh/loading copy provider-neutral.
+- [x] Prove Data Health scales to a fourth registry entry without integrating a real chain.
+- [x] Keep existing Broadway/MCL/Emperor fetch/parser/report behavior unchanged.
+- PR #75 — application commit `ed1c1f8957b241759e33c964ee17b28e381fcc0b`
+- PR Run #447 passed; Cloudflare preview passed; main Run #448 passed.
+- Notes: `docs/m6c-provider-registry-contract.md`
 
 ### Checkpoint 2 — normalized capability/data contract
 
-Status: **complete**
+Status: **complete, review-corrected**
 
-- [x] Define `app/provider-contract.js` as an executable normalized shared surface contract without wiring it into production presentation yet.
-- [x] Document fields required for home catalogue entries: stable `sourceId` and truthful `title`; optional movie metadata remains optional.
-- [x] Document fields required for movie aggregation/matching output: aggregate `key`, display `title`, and contributing `providers`.
-- [x] Document fields required for showtime comparison: `sourceId`, `cinema`, `date`, and `time`; price/seat/booking remain independent optional evidence.
-- [x] Document price capability and normalized optional price fields without assuming every provider exposes the same ticket categories.
-- [x] Document seat-summary capability and normalized occupancy/count fields.
-- [x] Document optional full seat-map capability independently from showtimes/seat summary.
-- [x] Document booking-link capability/fallback semantics.
-- [x] Define explicit optional capability states: `available`, `unknown`, and `unsupported`.
+Initial contract:
+
+- [x] Add `app/provider-contract.js` defining catalogue, movie aggregate, showtime, price, seat summary, full seat map and booking surfaces.
+- [x] Define `available`, `unknown` and `unsupported` optional-capability states.
 - [x] Ensure unsupported price is not interpreted as HK$0.
-- [x] Ensure unsupported seat data is not interpreted as sold out / no seats.
-- [x] Ensure supported-but-missing data remains `unknown` rather than being treated as permanently unsupported.
-- [x] Keep shared capability evaluation descriptor-driven rather than branching on Broadway/MCL/Emperor names.
-- [x] Add `tests/fixtures/provider-contract-minimal.json`, representing a hypothetical provider with catalogue/showtimes/booking but no price/seat capabilities.
-- [x] Add regression tests for required fields, descriptor-driven capability evaluation and unsupported-vs-missing semantics.
-- [x] PR #76 regression tests and Chromium mobile smoke passed in Run #449.
-- [x] PR #76 Cloudflare branch preview succeeded on final head `12ee7b1498130437f71020b13e3d91e883d35576`.
-- [x] PR #76 squash merged; main regression/mobile smoke/Pages deploy passed in Run #450.
-- [x] Authoritative M6C Checkpoint 2 application commit: `4e8c9bbfc610abb275bb0de18c81f3a91160f1ae`.
-- [x] Contract notes: `docs/m6c-normalized-capability-contract.md`.
+- [x] Ensure unsupported seat data is not interpreted as sold out/no seats.
+- [x] Keep supported-but-missing data `unknown` rather than permanently unsupported.
+- [x] Add a hypothetical fourth-provider-shaped fixture with catalogue/showtimes/booking but no price/seat capabilities.
+- [x] Keep capability evaluation descriptor-driven instead of branching on provider names.
+- PR #76 — initial application commit `4e8c9bbfc610abb275bb0de18c81f3a91160f1ae`
+- PR Run #449 passed; Cloudflare preview passed; main Run #450 passed.
 
-Checkpoint 2 intentionally does **not** load `provider-contract.js` in the production page yet. It freezes semantics first; Checkpoint 3 will apply them to the remaining shared UI/comparison assumptions in a controlled batch.
+Post-merge review correction:
+
+- [x] Automated review found the movie aggregate contract used invented `key` / `providers` fields instead of the active Phase 8A `id` / `title` / `sources` shape.
+- [x] Align `movieAggregate.required` with the active runtime: `id`, structured `title`, provider-keyed `sources`.
+- [x] Align `tests/fixtures/provider-contract-minimal.json` with the actual Phase 8A aggregate shape.
+- [x] Add regression coverage directly checking `phase8a-movie-navigation.js` aggregate construction.
+- [x] Automated review found empty structured payloads such as `price: {}` were incorrectly considered usable.
+- [x] Make meaningful-value detection recursive for objects/arrays.
+- [x] Keep empty supported price/seat payloads `unknown`, not `available`.
+- [x] Make empty required containers such as `title: {}` and `cinema: {}` fail validation.
+- [x] Bump executable contract version to `m6c-2.1`.
+- [x] Reply to and resolve both original PR #76 review threads after the fix landed.
+- PR #77 — authoritative review-corrected application commit `6e5728a5061d0d9d6e5f21cd117086e6a4dca572`
+- PR #77 branch Run #451 passed regression + Chromium mobile smoke.
+- PR #77 Cloudflare preview succeeded on `c896680f32d34216ad1e3d958d6534b089247083`.
+- Main Run #452 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/m6c-normalized-capability-contract.md`
+
+Checkpoint 2 intentionally does **not** load `provider-contract.js` in the production page yet. Its semantics are now frozen against the actual runtime shape; Checkpoint 3 will adopt them in shared presentation/comparison paths in a controlled batch.
 
 ### Checkpoint 3 — shared presentation/comparison adoption
 
@@ -195,18 +159,21 @@ Status: **next**
 - [ ] Audit shared home/comparison modules for capability decisions still expressed through provider-name checks or assumptions that price/seat data always exists.
 - [ ] Load/use the normalized provider contract only where shared presentation needs capability decisions.
 - [ ] Keep provider-specific network/request/seat-layout adapters provider-specific; do not erase legitimate upstream differences.
-- [ ] Prove a fourth-provider-shaped source can participate in shared home/comparison paths without adding provider-name branches.
+- [ ] Remove fixed provider enumeration from shared home/movie aggregate paths where registry enumeration is appropriate.
+- [ ] Prove a fourth-provider-shaped source can participate in shared home/comparison paths without provider-name branches.
 - [ ] Prove unsupported price/seat capabilities degrade without breaking or invalidating an otherwise valid showtime.
 - [ ] Preserve current Broadway/MCL/Emperor UI and data behavior.
 
-### Remaining M6C tests / expansion proof
+### Remaining M6C expansion proof
 
-- [x] Add provider-contract fixture for a minimal fourth-provider-shaped record without integrating a real chain.
-- [ ] Add tests proving home/comparison/status UI can enumerate more than three providers. Data Health/status enumeration is covered by Checkpoint 1; home/comparison enumeration remains pending for Checkpoint 3.
-- [ ] Add tests proving a provider without seats/prices degrades cleanly in shared UI. Contract-level degradation semantics are covered by Checkpoint 2; presentation integration remains pending for Checkpoint 3.
-- [ ] Add tests proving provider identity is registry-driven rather than hard-coded across the relevant presentation modules. Data Health and contract evaluation are registry/descriptor-driven; remaining home/comparison assumptions are pending audit.
+- [x] Data Health/status can enumerate more than three providers.
+- [x] Contract-level unsupported-vs-missing price/seat semantics are covered.
+- [x] Provider identity/capability evaluation is registry/descriptor-driven at the contract boundary.
+- [ ] Home/movie aggregation can enumerate more than three providers.
+- [ ] Comparison presentation can consume a fourth-provider-shaped source without provider-name UI branches.
+- [ ] Shared UI cleanly degrades a provider with no price/seat capability.
 
-M6C exit condition: a hypothetical fourth cinema chain can be described by the normalized contract without adding provider-name branches to home/comparison/health UI.
+M6C exit condition: a hypothetical fourth cinema chain can be described and consumed by the normalized shared contract without adding provider-name branches to home/comparison/health UI.
 
 ## M6D — expansion readiness review
 
@@ -239,20 +206,20 @@ Status: **not started**
 
 ## Recovery procedure after chat/session interruption
 
-1. Open this file first: `docs/m6-checklist.md`.
-2. Read issue #66 for the current M6 objective and the latest merged-main/CI checkpoint.
-3. Verify current `main`. If it is newer than the application checkpoint recorded here, inspect the newer commit/PR before doing new work; a docs-only tracker commit does not invalidate the recorded application checkpoint.
-4. If an M6 PR is open, inspect that PR and its checks before starting another branch.
-5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B/M6C checkpoint work.
-6. Use a feature/refactor branch, open a PR, wait for regression + mobile smoke, squash merge, verify main Pages deployment, then advance this checklist/issue record.
-7. If a Worker file changed, also verify the Cloudflare Workers build/check on the merged main commit.
+1. Open `docs/m6-checklist.md` first.
+2. Read issue #66 for the current M6 objective and latest merged-main/CI checkpoint.
+3. Verify current `main`. If it is newer than the application checkpoint above, inspect the newer commit/PR before starting work; a docs-only tracker commit does not replace the recorded application checkpoint.
+4. If an M6 PR is open, inspect that PR and checks before creating another branch.
+5. Resume only the first unchecked item under the current checkpoint; do not restart completed M6A/M6B/M6C work.
+6. Use feature/hotfix branch → PR → regression + mobile smoke → squash merge → verify main Pages deploy → update this checklist and issue #66.
+7. If Worker source changes, also verify the Cloudflare Workers build/check on merged `main`.
 
 ## Update rule
 
 For every M6 application/runtime checkpoint:
 
-- advance this file with completed work, PR number, verified application commit and next action;
-- record the authoritative merged `main` SHA and main CI/deploy result in issue #66;
-- distinguish application checkpoint commits from docs-only tracker maintenance commits.
+- record completed work, PR number, authoritative merged application SHA and next action here;
+- record main CI/deploy result in issue #66;
+- distinguish application checkpoints from docs-only tracker maintenance commits.
 
-The repository checklist plus issue #66 together are the durable recovery record, rather than chat history.
+The repository checklist plus issue #66 are the durable recovery record; chat history is not required to resume safely.
