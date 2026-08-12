@@ -124,6 +124,38 @@
       : emperorCatalogue.now || [];
   }
 
+  function providerHealthRecord(provider) {
+    return window.HKCinemaDataHealth?.getState?.().records?.[provider] || null;
+  }
+
+  function mclActiveSectionState() {
+    if (mclCatalogue) {
+      return { usable: true, failed: false };
+    }
+    return {
+      usable: false,
+      failed: providerHealthRecord("mcl")?.status === "error"
+    };
+  }
+
+  function emperorActiveSectionState() {
+    if (!emperorCatalogue) {
+      return {
+        usable: false,
+        failed: providerHealthRecord("emperor")?.status === "error"
+      };
+    }
+
+    const section = getActiveTab() === "coming" ? "coming" : "now";
+    const error = emperorCatalogue.meta?.errors?.[section];
+    const fallback = Boolean(emperorCatalogue.meta?.fallbackSections?.[section]);
+
+    return {
+      usable: !error || fallback,
+      failed: Boolean(error) && !fallback
+    };
+  }
+
   function findMCLMovie(sourceId) {
     if (!mclCatalogue) return null;
     return [
@@ -568,15 +600,16 @@
     window.HKCinemaHomeLibrary?.apply?.();
   }
 
-  function renderCombinedEmptyState(broadwayState) {
+  function renderCombinedEmptyState(broadwayState, alternateFailure = false) {
     const tab = getActiveTab();
-    const marker = `${tab}:${broadwayState}`;
+    const partialFailure = broadwayState === "error" || alternateFailure;
+    const marker = `${tab}:${broadwayState}:${partialFailure ? "partial" : "clean"}`;
     if (grid.dataset.multiProviderEmpty === marker) return;
 
     const coming = tab === "coming";
     const title = coming ? "暫時沒有即將上映電影" : "暫時沒有上映場次";
     const movieType = coming ? "即將上映電影" : "上映電影";
-    const text = broadwayState === "error"
+    const text = partialFailure
       ? `部分院線資料暫時不可用；已連接院線目前沒有找到${movieType}。`
       : `已連接院線目前沒有找到${movieType}。`;
 
@@ -588,7 +621,7 @@
       </div>
     `;
     count.textContent = "0 部";
-    count.title = broadwayState === "error"
+    count.title = partialFailure
       ? "部分院線資料暫時不可用 · 已連接院線 0 部"
       : "已連接院線 0 部";
     window.HKCinemaHomeLibrary?.apply?.();
@@ -600,15 +633,18 @@
     );
     if (broadwayState === "loading") return;
 
-    const mclMovies = getMCLMovies();
-    const emperorMovies = getEmperorMovies();
-    const hasAlternateCatalogue = Boolean(mclCatalogue || emperorCatalogue);
+    const mclSection = mclActiveSectionState();
+    const emperorSection = emperorActiveSectionState();
+    const mclMovies = mclSection.usable ? getMCLMovies() : [];
+    const emperorMovies = emperorSection.usable ? getEmperorMovies() : [];
+    const hasAlternateCatalogue = mclSection.usable || emperorSection.usable;
+    const hasAlternateFailure = mclSection.failed || emperorSection.failed;
     const hasAlternateMovies = mclMovies.length > 0 || emperorMovies.length > 0;
 
     if (["error", "empty"].includes(broadwayState)) {
-      if (!hasAlternateCatalogue) return;
+      if (!hasAlternateCatalogue && !hasAlternateFailure) return;
       if (!hasAlternateMovies) {
-        renderCombinedEmptyState(broadwayState);
+        renderCombinedEmptyState(broadwayState, hasAlternateFailure);
         return;
       }
       grid.querySelector(".empty-state")?.remove();
@@ -717,6 +753,11 @@
 
   window.addEventListener("hkcinema:emperor-catalogue", event => {
     emperorCatalogue = event.detail;
+    applyCatalogue();
+  });
+
+  window.addEventListener("hkcinema:data-health", event => {
+    if (!["mcl", "emperor"].includes(event.detail?.provider)) return;
     applyCatalogue();
   });
 
