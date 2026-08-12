@@ -12,7 +12,7 @@ const ROOT = new URL("../", import.meta.url);
 const read = path => readFile(new URL(path, ROOT), "utf8");
 
 function flightHtml(props) {
-  const flight = `12:${JSON.stringify(props)}\n`;
+  const flight = `12:${JSON.stringify({ lng: "hk", ...props })}\n`;
   return `<script>self.__next_f.push([1,${JSON.stringify(flight)}])</script>`;
 }
 
