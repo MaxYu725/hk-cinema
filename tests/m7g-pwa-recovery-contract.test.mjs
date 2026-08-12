@@ -13,6 +13,12 @@ test("M7G update detection covers an already-installing worker without a redunda
   assert.match(pwa, /version: "9c3-2"/);
 });
 
+test("M7G uses a distinct cache generation so a waiting worker cannot mutate the active M7F shell", () => {
+  assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}m7g-1`/);
+  assert.doesNotMatch(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}m7f-1`/);
+  assert.match(sw, /key !== CACHE_NAME/);
+});
+
 test("M7G cold start falls back to the cached shell within a bounded navigation budget", () => {
   assert.match(sw, /const NAVIGATION_NETWORK_BUDGET_MS = 1800/);
   assert.match(sw, /Promise\.race\(\[network, navigationTimeout\(\)\]\)/);
