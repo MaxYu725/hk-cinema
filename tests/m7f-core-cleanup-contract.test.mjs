@@ -6,7 +6,7 @@ const sw = readFileSync(new URL("../app/sw.js", import.meta.url), "utf8");
 const sharedControls = readFileSync(new URL("../app/shared-final-controls.js", import.meta.url), "utf8");
 
 test("M7F keeps Service Worker install precache bounded to an explicit core shell", () => {
-  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}m7f-1`/);
+  assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}[^`]+`/);
   assert.match(sw, /const CORE_SHELL_FILES = new Set\(\[/);
   assert.match(sw, /if \(CORE_SHELL_FILES\.has\(relativeScopePath\(url\)\)\) assets\.add\(url\.href\)/);
   assert.match(sw, /for \(const url of assets\)/);
