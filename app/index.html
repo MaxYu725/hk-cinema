@@ -33,6 +33,7 @@
       try {
         applySkin(new URLSearchParams(window.location.search).get("skin"));
       } catch {
+        // Metro is now the production default; Classic remains available as an explicit fallback.
         applySkin("metro");
       }
     })();
