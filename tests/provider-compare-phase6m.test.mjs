@@ -18,7 +18,7 @@ test("Phase 6M separates seat-map and official booking actions", async () => {
     source("app/emperor-seatmap.js")
   ]);
 
-  assert.match(index, /provider-compare-v4\.js\?v=8c1/);
+  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
   assert.match(index, /provider-compare-phase6m\.js\?v=7a1/);
   assert.match(index, /provider-compare-seats\.js\?v=6o1/);
   assert.match(index, /emperor-seatmap\.js\?v=7b3/);
