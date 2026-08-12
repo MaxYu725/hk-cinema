@@ -2,18 +2,14 @@
   let scheduled = false;
 
   function placeHomeDataHealth() {
+    if (document.documentElement.dataset.skin === "metro") return false;
+
     const tools = document.querySelector("#homeLibraryTools");
     const panel = document.querySelector("#dataHealth");
     if (!tools || !panel) return false;
 
     const filters = tools.querySelector(".home-library-filter-options");
-    const metro = document.documentElement.dataset.skin === "metro";
-
-    if (metro) {
-      if (filters && panel.parentElement !== filters) filters.appendChild(panel);
-      else if (!filters && panel.parentElement !== tools) tools.appendChild(panel);
-      panel.dataset.metroHomeHealth = "true";
-    } else if (panel.parentElement !== tools) {
+    if (panel.parentElement !== tools) {
       if (filters) filters.insertAdjacentElement("afterend", panel);
       else tools.appendChild(panel);
     }
@@ -103,7 +99,7 @@
   }
 
   window.HKCinemaPhase10R3A = Object.freeze({
-    version: "10r3b-m3-1",
+    version: "10r3b-m6b-1",
     refresh: schedule,
     centerSelectedDate,
     placeHomeDataHealth,

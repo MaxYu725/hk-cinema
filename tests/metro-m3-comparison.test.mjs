@@ -9,7 +9,7 @@ test("Phase M3 loads the Metro comparison presentation after the existing Metro 
   const m2 = index.indexOf("metro-m2-home-polish.css?v=m2-1");
   const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
   assert.ok(m2 >= 0 && m3 > m2);
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m3-1/);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
   assert.match(index, /metro-runtime\.js\?v=m4-1/);
 });
 

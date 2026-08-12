@@ -4,12 +4,13 @@ import vm from "node:vm";
 import { readFile } from "node:fs/promises";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [index, manifestText, css, runtime, worker] = await Promise.all([
+const [index, manifestText, css, runtime, worker, metro] = await Promise.all([
   read("app/index.html"),
   read("app/manifest.json"),
   read("app/phase10r3a-mobile-shell-date-strip.css"),
   read("app/phase10r3a-mobile-shell-date-strip.js"),
-  read("app/sw.js")
+  read("app/sw.js"),
+  read("app/metro-runtime.js")
 ]);
 const manifest = JSON.parse(manifestText);
 
@@ -24,18 +25,17 @@ test("Phase 10R3A keeps fullscreen PWA semantics under the current controlled sh
   assert.doesNotMatch(installBlock, /skipWaiting\(\)/);
 });
 
-test("Phase 10R3A keeps the Classic home placement while Metro uses the current skin-aware placement", () => {
+test("Phase 10R3A keeps Classic home placement while Metro delegates home Data Health ownership", () => {
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.css\?v=10r3b-1/);
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m3-1/);
+  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
   assert.match(css, /\.topbar\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+150px/s);
   assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*\.home-library-tools,\s*[\s\S]*\.home-library-primary\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+126px/s);
   assert.match(css, /#dataHealth\[data-phase10r3a-home-health="true"\][\s\S]*grid-column:\s*2[\s\S]*grid-row:\s*2[\s\S]*justify-self:\s*center/s);
-  assert.match(runtime, /document\.documentElement\.dataset\.skin === "metro"/);
-  assert.match(runtime, /filters\.appendChild\(panel\)/);
-  assert.match(runtime, /panel\.dataset\.metroHomeHealth = "true"/);
-  assert.match(runtime, /panel\.dataset\.phase10r3aHomeHealth = "true"/);
+  assert.match(runtime, /function placeHomeDataHealth\(\)[\s\S]*dataset\.skin === "metro"\) return false/);
   assert.match(runtime, /filters\.insertAdjacentElement\("afterend", panel\)/);
+  assert.doesNotMatch(runtime, /metroHomeHealth|filters\.appendChild\(panel\)/);
+  assert.match(metro, /function moveDataHealthIntoControls\(\)[\s\S]*controls\.appendChild\(panel\)/);
 });
 
 test("Phase 10R3A removes obsolete date-rail gutters and recenters the active selected date after DOM replacement", () => {
