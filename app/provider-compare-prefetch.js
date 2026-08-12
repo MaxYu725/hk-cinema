@@ -6,6 +6,7 @@
   let generation = 0;
   let idleHandle = null;
   let timerHandle = null;
+  let activeController = null;
   let observer = null;
 
   function networkAllowsPrefetch() {
@@ -33,6 +34,11 @@
       clearTimeout(timerHandle);
     }
     timerHandle = null;
+
+    if (activeController) {
+      try { activeController.abort("superseded"); } catch { activeController.abort(); }
+      activeController = null;
+    }
   }
 
   function uniqueDates(values) {
@@ -82,8 +88,8 @@
     };
   }
 
-  async function runPrefetch(context, ownGeneration) {
-    if (ownGeneration !== generation || !networkAllowsPrefetch()) return;
+  async function runPrefetch(context, ownGeneration, signal) {
+    if (ownGeneration !== generation || signal?.aborted || !networkAllowsPrefetch()) return;
 
     const current = getContext();
     if (!current || current.matchId !== context.matchId || current.selectedDate !== context.selectedDate) {
@@ -94,17 +100,17 @@
     if (!cache) return;
 
     for (const date of context.targets) {
-      if (ownGeneration !== generation) return;
+      if (ownGeneration !== generation || signal?.aborted) return;
       const work = [];
 
       if (context.broadwayId && context.broadwayDates.includes(date) && typeof cache.prefetchBroadway === "function") {
-        work.push(cache.prefetchBroadway(context.broadwayId, date));
+        work.push(cache.prefetchBroadway(context.broadwayId, date, signal));
       }
       if (context.mclId && context.mclDates.includes(date) && typeof cache.prefetchMCL === "function") {
-        work.push(cache.prefetchMCL(context.mclId, date));
+        work.push(cache.prefetchMCL(context.mclId, date, signal));
       }
       if (context.emperorId && context.emperorDates.includes(date) && typeof cache.prefetchEmperor === "function") {
-        work.push(cache.prefetchEmperor(context.emperorId, date));
+        work.push(cache.prefetchEmperor(context.emperorId, date, signal));
       }
 
       if (work.length) await Promise.allSettled(work);
@@ -121,7 +127,13 @@
     const start = () => {
       idleHandle = null;
       timerHandle = null;
-      runPrefetch(context, ownGeneration).catch(() => {});
+      const controller = new AbortController();
+      activeController = controller;
+      runPrefetch(context, ownGeneration, controller.signal)
+        .catch(() => {})
+        .finally(() => {
+          if (activeController === controller) activeController = null;
+        });
     };
 
     if ("requestIdleCallback" in window) {
