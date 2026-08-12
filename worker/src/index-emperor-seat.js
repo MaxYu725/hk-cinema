@@ -2,7 +2,7 @@ import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 import {
   providerProbeRunner,
-  SUPPORTED_PROVIDERS
+  PROBEABLE_PROVIDERS
 } from "./provider-probe.js";
 
 const GEOMETRY_VERSION = "6e1-bounds-v2";
@@ -50,12 +50,12 @@ async function routeRequest(request, env, ctx) {
     if (providerProbeMatch) {
       const provider = decodeURIComponent(providerProbeMatch[1]).toLowerCase();
 
-      if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      if (!PROBEABLE_PROVIDERS.includes(provider)) {
         return json({
           ok: false,
           error: {
             code: "INVALID_PROVIDER",
-            message: "provider must be broadway, mcl or emperor"
+            message: `provider must be one of: ${PROBEABLE_PROVIDERS.join(", ")}`
           }
         }, 400, { "cache-control": "no-store" });
       }
@@ -65,8 +65,8 @@ async function routeRequest(request, env, ctx) {
         ok: true,
         data: result,
         meta: {
-          phase: "10R2B",
-          mode: "live-provider-probe",
+          phase: provider === "cineart" ? "M7A" : "10R2B",
+          mode: provider === "cineart" ? "candidate-provider-probe" : "live-provider-probe",
           updatedAt: new Date().toISOString()
         }
       }, 200, { "cache-control": "no-store" });

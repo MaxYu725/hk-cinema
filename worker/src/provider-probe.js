@@ -1,9 +1,19 @@
 import { probeEmperor } from "./providers/emperor.js";
+import { probeCineArt } from "./providers/cineart-probe.js";
 
 export const SUPPORTED_PROVIDERS = Object.freeze([
   "broadway",
   "mcl",
   "emperor"
+]);
+
+export const CANDIDATE_PROVIDERS = Object.freeze([
+  "cineart"
+]);
+
+export const PROBEABLE_PROVIDERS = Object.freeze([
+  ...SUPPORTED_PROVIDERS,
+  ...CANDIDATE_PROVIDERS
 ]);
 
 const DEFAULT_TIMEOUT_MS = 4500;
@@ -166,6 +176,9 @@ function classifyProbeFailure(error) {
   if (code.includes("RATE_LIMITED") || status === 429) {
     return { category: "rate_limited", code, status };
   }
+  if (code.includes("PAYLOAD_TOO_LARGE")) {
+    return { category: "payload_too_large", code, status };
+  }
   if (code.includes("INVALID_JSON") || code.includes("INVALID_PAYLOAD")) {
     return { category: "invalid_payload", code, status };
   }
@@ -184,6 +197,7 @@ function classifyProbeFailure(error) {
 export function createProviderProbeRunner({
   fetchImpl = globalThis.fetch,
   emperorProbe = probeEmperor,
+  cineartProbe = probeCineArt,
   clock = () => Date.now(),
   timeoutMs = DEFAULT_TIMEOUT_MS
 } = {}) {
@@ -211,12 +225,18 @@ export function createProviderProbeRunner({
         count: Number(result.count)
       };
     }
+    if (provider === "cineart") {
+      return await runWithDeadline(
+        () => cineartProbe({ fetchImpl, timeoutMs: boundedTimeout }),
+        boundedTimeout
+      );
+    }
     throw probeError("INVALID_PROVIDER", `Unsupported provider: ${provider}`, 400);
   }
 
   async function probeProvider(provider) {
     const key = String(provider || "").toLowerCase();
-    if (!SUPPORTED_PROVIDERS.includes(key)) {
+    if (!PROBEABLE_PROVIDERS.includes(key)) {
       throw probeError("INVALID_PROVIDER", `Unsupported provider: ${provider}`, 400);
     }
 
