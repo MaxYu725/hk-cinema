@@ -1,0 +1,13 @@
+{
+  "id": "fixture",
+  "displayName": "Fixture Cinema",
+  "healthLabel": "Fixture",
+  "capabilities": {
+    "catalogue": true,
+    "showtimes": true,
+    "prices": false,
+    "seatSummary": false,
+    "seatMap": false,
+    "booking": true
+  }
+}

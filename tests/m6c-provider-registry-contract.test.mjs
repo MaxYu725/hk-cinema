@@ -1,0 +1,81 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import { readFile } from "node:fs/promises";
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+const [index, registrySource, healthSource, fixtureSource] = await Promise.all([
+  read("app/index.html"),
+  read("app/provider-registry.js"),
+  read("app/data-health.js"),
+  read("tests/fixtures/provider-fourth.json")
+]);
+
+function loadRegistry() {
+  const context = { window: {} };
+  vm.runInNewContext(registrySource, context);
+  return context.window.HKCinemaProviderRegistry;
+}
+
+function loadDataHealth(providers) {
+  const window = {
+    HKCinemaProviderRegistry: { providers },
+    addEventListener() {},
+    setInterval() {}
+  };
+  vm.runInNewContext(healthSource, { window });
+  return window.HKCinemaDataHealth;
+}
+
+test("M6C provider registry loads before Data Health", () => {
+  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
+  const healthIndex = index.indexOf("data-health.js?v=m6c-1");
+  assert.ok(registryIndex >= 0);
+  assert.ok(healthIndex > registryIndex);
+});
+
+test("provider descriptors expose identity and capabilities", () => {
+  const registry = loadRegistry();
+  assert.equal(registry.version, "m6c-1");
+  assert.deepEqual(Array.from(registry.providers, item => item.id), ["broadway", "mcl", "emperor"]);
+  assert.equal(registry.get("MCL")?.displayName, "MCL");
+  assert.equal(registry.hasCapability("broadway", "seatMap"), true);
+  assert.ok(Object.isFrozen(registry.providers));
+});
+
+test("Data Health scales to a fourth registry provider", () => {
+  const registry = loadRegistry();
+  const fixture = JSON.parse(fixtureSource);
+  const providers = [...registry.providers, fixture];
+  const health = loadDataHealth(providers);
+  const now = 1_000_000;
+  const records = Object.fromEntries(providers.map(provider => [provider.id, {
+    status: "fresh",
+    source: "network",
+    updatedAt: now,
+    detail: "ok"
+  }]));
+  const summary = health.summarize(records, { now, online: true });
+  assert.equal(summary.total, 4);
+  assert.equal(summary.usable, 4);
+  assert.equal(summary.label, "院線資料最新");
+  assert.equal(summary.detail, "4/4 個來源已完成更新");
+});
+
+test("fourth-provider fixture can omit optional price and seat capabilities", () => {
+  const fixture = JSON.parse(fixtureSource);
+  assert.equal(fixture.capabilities.catalogue, true);
+  assert.equal(fixture.capabilities.showtimes, true);
+  assert.equal(fixture.capabilities.prices, false);
+  assert.equal(fixture.capabilities.seatSummary, false);
+  assert.equal(fixture.capabilities.seatMap, false);
+  assert.equal(fixture.capabilities.booking, true);
+});
+
+test("status presentation uses provider-neutral wording", () => {
+  assert.doesNotMatch(healthSource, /三院線|三個院線/);
+  assert.doesNotMatch(index, /重新整理三院線資料|正在更新三院線資料|三院線資料狀態/);
+  assert.match(index, /aria-label="重新整理戲院資料"/);
+  assert.match(index, /正在同步各院線最新電影資料/);
+});

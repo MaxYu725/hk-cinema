@@ -1,9 +1,8 @@
 (() => {
-  const PROVIDERS = [
-    { key: "broadway", label: "Broadway" },
-    { key: "mcl", label: "MCL" },
-    { key: "emperor", label: "Emperor" }
-  ];
+  const PROVIDERS = Object.freeze((window.HKCinemaProviderRegistry?.providers || []).map(provider => ({
+    key: provider.id,
+    label: provider.healthLabel || provider.displayName || provider.id
+  })));
   const FRESH_MAX_AGE_MS = 15 * 60 * 1000;
   const AGING_MAX_AGE_MS = 2 * 60 * 60 * 1000;
   const REFRESH_BUSY_MAX_MS = 35 * 1000;
@@ -93,6 +92,16 @@
     const degraded = values.filter(item => ["aging", "degraded"].includes(item.health.level)).length;
     const loading = values.filter(item => item.health.level === "loading").length;
 
+    if (!values.length) {
+      return {
+        level: "error",
+        label: "資料設定錯誤",
+        detail: "未有院線來源註冊",
+        usable: 0,
+        total: 0,
+        values
+      };
+    }
     if (!online) {
       return {
         level: usable ? "degraded" : "error",
@@ -104,7 +113,14 @@
       };
     }
     if (errors === values.length) {
-      return { level: "error", label: "資料暫不可用", detail: "三個院線來源目前均未能更新", usable, total: values.length, values };
+      return {
+        level: "error",
+        label: "資料暫不可用",
+        detail: `${values.length} 個院線來源目前均未能更新`,
+        usable,
+        total: values.length,
+        values
+      };
     }
     if (errors || stale || degraded) {
       return {
@@ -119,7 +135,7 @@
     if (loading) {
       return { level: "loading", label: "正在更新", detail: `${usable}/${values.length} 個來源已載入`, usable, total: values.length, values };
     }
-    return { level: "fresh", label: "三院線資料最新", detail: `${values.length}/${values.length} 個來源已完成更新`, usable, total: values.length, values };
+    return { level: "fresh", label: "院線資料最新", detail: `${values.length}/${values.length} 個來源已完成更新`, usable, total: values.length, values };
   }
 
   function ensurePanel(defaultOpen = false) {
@@ -188,7 +204,7 @@
     button.disabled = loading;
     button.classList.toggle("is-loading", loading);
     button.setAttribute("aria-busy", String(loading));
-    button.setAttribute("aria-label", loading ? "正在更新三院線資料" : "重新整理三院線資料");
+    button.setAttribute("aria-label", loading ? "正在更新戲院資料" : "重新整理戲院資料");
     button.title = loading ? "正在更新" : "重新整理";
 
     if (refreshWasLoading && !loading && completed) {
@@ -207,7 +223,7 @@
     panel.dataset.status = summary.level;
     panel.innerHTML = `
       <summary class="data-health-heading">
-        <div class="data-health-lights" aria-label="三院線資料狀態">
+        <div class="data-health-lights" aria-label="戲院資料狀態">
           ${summary.values.map(({ provider, health }) => `
             <span
               class="data-health-light ${escapeHtml(health.level)}"
