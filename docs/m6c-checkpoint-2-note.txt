@@ -1,1 +1,0 @@
-M6C Checkpoint 2 branch: normalized shared catalogue/movie/showtime/price/seat/booking capability contract. No real fourth provider, no production UI/data-path changes. Remove after merge if redundant with durable checklist.
