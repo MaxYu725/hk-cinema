@@ -12,7 +12,7 @@ const css = await readFile(new URL('../app/phase8c-rich-filters.css', import.met
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
 test('Phase 8C loads the aggregate comparison engine and rich filters', () => {
-  assert.match(index, /provider-compare-v4\.js\?v=8c1/);
+  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
   assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
