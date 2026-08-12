@@ -14,7 +14,7 @@ test("movie-first navigation loads after the active comparison engine", async ()
   const navigation = index.indexOf("phase8a-movie-navigation.js");
 
   assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
-  assert.match(index, /phase8a-movie-navigation\.js\?v=8e1/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=m6b-2/);
   assert.ok(compare >= 0);
   assert.ok(navigation > compare);
 });
