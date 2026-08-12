@@ -228,8 +228,8 @@
 
       // register() can resolve after updatefound has already fired. Inspect the current
       // installing/waiting slots immediately so an in-flight update cannot miss the
-      // user-facing reload prompt. register() itself owns the normal update check; do
-      // not add a second eager registration.update() request here.
+      // user-facing reload prompt. The registration call owns the normal update check;
+      // do not add a second eager manual update request here.
       watchInstalling(registration);
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
