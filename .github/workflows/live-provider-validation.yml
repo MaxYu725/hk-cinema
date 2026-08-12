@@ -7,6 +7,10 @@ on:
         description: Production Worker base URL
         required: false
         default: https://hk-cinema-api.max-yu-jp.workers.dev
+      pages_url:
+        description: Production GitHub Pages base URL
+        required: false
+        default: https://maxyu725.github.io/hk-cinema/
   pull_request:
     branches:
       - main
@@ -14,6 +18,10 @@ on:
       - ".github/workflows/live-provider-validation.yml"
       - "scripts/live-production-validation.mjs"
       - "scripts/phase10r2e-production-revalidation.mjs"
+      - "scripts/m7e-cineart-production-validation.mjs"
+      - "playwright.live.config.mjs"
+      - "tests/e2e-live/**"
+      - "tests/m7e-production-release-contract.test.mjs"
       - "tests/phase10r2-live-validation-contract.test.mjs"
       - "tests/phase10r2e-production-revalidation.test.mjs"
 
@@ -24,11 +32,12 @@ jobs:
   live-validation:
     name: production-live-validation
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     env:
       HK_CINEMA_WORKER_URL: ${{ inputs.worker_url || 'https://hk-cinema-api.max-yu-jp.workers.dev' }}
       HK_CINEMA_EXPECTED_COMMIT: ${{ github.event.pull_request.base.sha || github.sha }}
       LIVE_VALIDATION_REPORT: live-validation.json
+      M7E_CINEART_REPORT: m7e-cineart-production.json
 
     steps:
       - name: Checkout
@@ -45,11 +54,51 @@ jobs:
       - name: Re-validate deployed 10R2D diagnostics
         run: node scripts/phase10r2e-production-revalidation.mjs
 
-      - name: Upload live validation report
+      - name: Validate production CineArt catalogue, showtimes and GET-only detail
+        run: node scripts/m7e-cineart-production-validation.mjs
+
+      - name: Upload live validation reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: live-provider-validation-${{ github.run_id }}
-          path: live-validation.json
+          path: |
+            live-validation.json
+            m7e-cineart-production.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  production-mobile-ui:
+    name: production-mobile-ui
+    needs: live-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      HK_CINEMA_PAGES_URL: ${{ inputs.pages_url || 'https://maxyu725.github.io/hk-cinema/' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate deployed production mobile PWA
+        run: npx playwright test --config=playwright.live.config.mjs
+
+      - name: Upload production Playwright failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-live-${{ github.run_id }}
+          path: test-results/
           if-no-files-found: warn
           retention-days: 7
