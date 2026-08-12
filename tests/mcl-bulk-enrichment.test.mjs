@@ -78,7 +78,7 @@ test("bulk enrichment fills missing MCL prices by SessionID without adding sessi
   const context = vm.createContext({ window, document, setTimeout, clearTimeout });
   vm.runInContext(source, context, { filename: "mcl-ticketing-bulk-enrichment.js" });
 
-  const result = await provider.getTicketing("14449", "2026-08-12", {});
+  const result = await provider.getTicketing("14449", "2026-08-12", { signal: {} });
 
   assert.equal(result.sessions.length, 2);
   assert.deepEqual(result.sessions.map(session => session.sourceId), ["101", "102"]);
