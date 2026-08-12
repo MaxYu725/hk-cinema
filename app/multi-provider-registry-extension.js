@@ -63,8 +63,15 @@
     const clean = Object.fromEntries(Object.entries(sources || {})
       .map(([provider, sourceId]) => [provider, String(sourceId || "").trim()])
       .filter(([, sourceId]) => Boolean(sourceId)));
-    if (Object.keys(clean).length) card.dataset.providerSources = JSON.stringify(clean);
+    const before = card.dataset.providerSources || "";
+    const after = Object.keys(clean).length ? JSON.stringify(clean) : "";
+    if (after) card.dataset.providerSources = after;
     else delete card.dataset.providerSources;
+
+    // Phase 8A aggregates are synchronous snapshots of the source IDs currently
+    // attached to a card. When a newly eligible registry provider changes that
+    // set, force the next aggregate read to rebuild from the latest sources.
+    if (before !== after) delete card.dataset.phase8aAggregateId;
   }
 
   function mergeMetadata(card, movie) {
@@ -192,8 +199,6 @@
     const broadwayState = grid.dataset.broadwayState || "loading";
     if (broadwayState === "loading") return;
 
-    // Mutations below are owned by this extension. Temporarily disconnect so
-    // provider-only reconciliation cannot schedule itself forever.
     gridObserver?.disconnect?.();
     try {
       for (const provider of providers()) {
@@ -235,7 +240,7 @@
   }
 
   window.HKCinemaRegistryCatalogueExtension = Object.freeze({
-    version: "m7c-1",
+    version: "m7d-1",
     isHomeEligible,
     refresh: schedule,
     getCatalogue(providerId) {
