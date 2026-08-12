@@ -83,6 +83,46 @@ test("initial Broadway showtime response aliases its resolved date and avoids a 
   assert.equal(body.data.selectedDate, "2026-08-12");
 });
 
+test("HTTP 200 Worker application errors are evicted instead of being retained for the showtime TTL", async () => {
+  let nativeCalls = 0;
+  const nativeFetch = async () => {
+    nativeCalls += 1;
+    const payload = nativeCalls === 1
+      ? { ok: false, error: { message: "temporary upstream failure" } }
+      : {
+          ok: true,
+          data: {
+            availableDates: ["2026-08-12"],
+            selectedDate: "2026-08-12",
+            sessions: []
+          }
+        };
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const { window, context } = mainCacheContext({ nativeFetch });
+  vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
+    filename: "provider-compare-main-cache-v3.js"
+  });
+
+  const url = "https://hk-cinema-api.max-yu-jp.workers.dev/api/emperor/movies/9/shows";
+  const failed = await window.fetch(url, { cache: "no-store" });
+  assert.equal((await failed.json()).ok, false);
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  const recovered = await window.fetch(url, { cache: "no-store" });
+  assert.equal((await recovered.json()).ok, true);
+  assert.equal(nativeCalls, 2, "retry after an application error must reach the Worker again");
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  const cached = await window.fetch(url, { cache: "no-store" });
+  assert.equal((await cached.json()).ok, true);
+  assert.equal(nativeCalls, 2, "successful application payload should still reuse the showtime cache");
+});
+
 test("MCL main comparison cache forwards AbortSignal and aliases complete initial result to resolved date", async () => {
   const calls = [];
   const original = async (movieSetId, selectedDate, options = {}) => {
@@ -177,6 +217,6 @@ test("comparison filters stay presentation-only and changed network helpers are 
   ]);
 
   assert.doesNotMatch(filterUx, /\bfetch\s*\(/);
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2b/);
+  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d/);
   assert.match(index, /provider-compare-prefetch\.js\?v=m6d2b/);
 });
