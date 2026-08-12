@@ -27,25 +27,17 @@
     )) || null;
   }
 
-  function aggregateCard(aggregate) {
-    if (!aggregate?.id) return null;
-    try {
-      return document.querySelector(`#movieGrid [data-phase8a-aggregate-id="${CSS.escape(aggregate.id)}"]`);
-    } catch {
-      return null;
-    }
-  }
-
   function movieFacts(aggregate) {
-    const card = aggregateCard(aggregate);
-    const metaText = card?.querySelector(".movie-meta")?.textContent?.trim() || "";
-    const parts = metaText.split(" · ").map(value => value.trim()).filter(Boolean);
-    const classification = parts.find(value => !/分鐘$/.test(value) && !/^\d{4}-\d{2}-\d{2}$/.test(value)) || null;
-    const duration = parts.find(value => /分鐘$/.test(value)) || null;
-    const releaseDate = String(card?.dataset?.homeReleaseDate || "").slice(0, 10) ||
-      parts.find(value => /^\d{4}-\d{2}-\d{2}$/.test(value)) || null;
-
-    return { classification, duration, releaseDate };
+    const facts = aggregate?.facts || {};
+    const durationMinutes = Number(facts.durationMinutes);
+    const releaseDate = String(facts.releaseDate || "").slice(0, 10) || null;
+    return {
+      classification: String(facts.classification || "").trim() || null,
+      duration: Number.isFinite(durationMinutes) && durationMinutes > 0
+        ? `${durationMinutes} 分鐘`
+        : null,
+      releaseDate
+    };
   }
 
   function visibleFactChips(facts) {
