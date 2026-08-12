@@ -6,7 +6,8 @@ test("mobile release smoke keeps the movie-first comparison flow usable", async 
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator(".topbar")).toBeHidden();
+  await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
+  await expect(page.locator(".topbar")).toBeVisible();
   await expect(page.locator('[data-tab="now"]')).toBeVisible();
   await expect(page.locator('[data-tab="coming"]')).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
