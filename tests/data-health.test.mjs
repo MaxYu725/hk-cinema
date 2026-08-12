@@ -57,13 +57,14 @@ test("overall health keeps partial and offline data usable", async () => {
   const records = {
     broadway: { status: "fresh", source: "network", updatedAt: now },
     mcl: { status: "degraded", source: "cache", updatedAt: now - 60000 },
-    emperor: { status: "error", source: "network", updatedAt: null }
+    emperor: { status: "error", source: "network", updatedAt: null },
+    cineart: { status: "loading", source: "network", updatedAt: null }
   };
 
   const partial = api.summarize(records, { now, online: true });
   assert.equal(partial.level, "degraded");
   assert.equal(partial.usable, 2);
-  assert.equal(partial.total, 3);
+  assert.equal(partial.total, 4);
 
   const offline = api.summarize(records, { now, online: false });
   assert.equal(offline.level, "degraded");
