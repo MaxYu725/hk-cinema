@@ -11,14 +11,15 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6A: **complete**
 - M6B: **complete**
 - M6C: **complete**
-- Current stage: **M6D — expansion readiness review**
-- Latest completed application checkpoint: **M6D Checkpoint 2D / PR #83**
-- Authoritative application checkpoint: `e15d5cc27df0ea5e3babdca1612aa3f5162be525`
-- PR #83 final branch Run #490: regression tests + Chromium mobile smoke passed
-- PR #83 Cloudflare branch preview succeeded on final head `43ab13812c299130280b015c1ef50e6a31f7a59f`
-- PR #83 had no automated review findings or unresolved review threads at merge time
-- Main Actions Run #491: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- Next planned work: **M6 expansion gate — real-device Metro check + Classic fallback confirmation + final handoff**
+- M6D: **complete**
+- Current stage: **M6 expansion gate — physical-device sign-off**
+- Latest completed application checkpoint: **M6 Expansion Gate automation / PR #84**
+- Authoritative application checkpoint: `26b8384466eb107322e1b714aedb093c94973c9f`
+- PR #84 final branch Run #499: regression tests + Chromium mobile smoke passed
+- PR #84 Cloudflare branch preview succeeded on final head `c25e3e9efe65d6b3b170d4c70f74e106e3ca3966`
+- PR #84 automated review identified the 38×38 Metro seat-map close target; the production target was enlarged to 44×44, regression-covered, replied to and the review thread was resolved
+- Main Actions Run #500: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- Next planned work: **real-device Metro home/comparison/filters/seat-map + Classic fallback confirmation, then final M6 handoff**
 
 ## Fixed M6 boundaries
 
@@ -291,10 +292,19 @@ M6D network/concurrency review is complete. The next bounded step is the **M6 ex
 ### Expansion gate
 
 - [x] Run production regression suite and mobile smoke after M6C/D changes.
+- [x] Automated mobile gate explicitly verifies Metro default, Classic `?skin=classic`, home/comparison/filter interaction and deterministic shared Metro seat-map lifecycle.
+- [x] Gate-found Metro seat-map close touch target was hardened from 38×38 to 44×44 CSS px without changing provider/seat parsing or layout ownership.
+- [x] Cache-bust `metro-m4-seat-view.css` to `m6gate-1` and regression-lock the consolidated Metro seat-map owner/version.
+- [x] PR #84 automated review P1 was addressed, replied to and resolved.
+- PR #84 — authoritative M6 Expansion Gate application commit `26b8384466eb107322e1b714aedb093c94973c9f`
+- PR #84 final branch Run #499 passed regression + Chromium mobile smoke.
+- PR #84 Cloudflare branch preview succeeded on final head `c25e3e9efe65d6b3b170d4c70f74e106e3ca3966`.
+- Main Run #500 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/checkpoints/m6-expansion-gate-automation.md`
 - [ ] Perform real-device check on Metro home, comparison, filters and seat-map.
-- [ ] Confirm Classic fallback still works.
+- [ ] Confirm Classic fallback still works on a real device.
 - [ ] Write final M6 handoff with current `main`, known limitations and provider-integration contract.
-- [ ] Close issue #66 only after all M6C/M6D exit criteria are met.
+- [ ] Close issue #66 only after all M6C/M6D exit criteria and the physical-device gate are met.
 
 ## Recovery procedure after chat/session interruption
 
