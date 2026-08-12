@@ -1,6 +1,6 @@
 const CINEART_PROBE_URL = "https://cinearthouse.com.hk/hk";
 const DEFAULT_TIMEOUT_MS = 4500;
-const DEFAULT_MAX_BYTES = 1024 * 1024;
+const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
 
 const CINEMA_MARKERS = Object.freeze([
   Object.freeze({ key: "maritime-square", patterns: ["青衣城", "Maritime Square"] }),
@@ -23,56 +23,70 @@ function boundedPositiveInteger(value, fallback, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, Math.round(number)));
 }
 
-async function readBoundedText(response, maxBytes) {
-  const advertisedLength = Number(response.headers?.get?.("content-length"));
-  if (Number.isFinite(advertisedLength) && advertisedLength > maxBytes) {
-    throw probeError(
-      "PROBE_PAYLOAD_TOO_LARGE",
-      `CineArt probe payload exceeded ${maxBytes} bytes`
-    );
-  }
+function detectCinemas(html) {
+  return CINEMA_MARKERS
+    .filter(cinema => cinema.patterns.some(pattern => html.includes(pattern)))
+    .map(cinema => cinema.key);
+}
 
-  if (!response.body?.getReader) {
+function hasEnoughEvidence(html) {
+  return /影藝戲院|CineArt/i.test(html) && detectCinemas(html).length >= 3;
+}
+
+async function readBoundedEvidenceText(response, maxBytes) {
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const advertisedLength = Number(response.headers?.get?.("content-length"));
+    if (!Number.isFinite(advertisedLength) || advertisedLength > maxBytes) {
+      throw probeError(
+        "PROBE_PAYLOAD_TOO_LARGE",
+        "CineArt probe body was not streamable within the configured bound"
+      );
+    }
+
     const text = await response.text();
-    if (new TextEncoder().encode(text).byteLength > maxBytes) {
+    const bytes = new TextEncoder().encode(text).byteLength;
+    if (bytes > maxBytes) {
       throw probeError(
         "PROBE_PAYLOAD_TOO_LARGE",
         `CineArt probe payload exceeded ${maxBytes} bytes`
       );
     }
-    return text;
+    return { text, bytes, stoppedEarly: false };
   }
 
-  const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let totalBytes = 0;
   let text = "";
+  let stoppedEarly = false;
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
         await reader.cancel("cineart-probe-payload-too-large").catch(() => {});
         throw probeError(
           "PROBE_PAYLOAD_TOO_LARGE",
-          `CineArt probe payload exceeded ${maxBytes} bytes`
+          `CineArt probe payload exceeded ${maxBytes} bytes before structural evidence was found`
         );
       }
+
       text += decoder.decode(value, { stream: true });
+      if (hasEnoughEvidence(text)) {
+        stoppedEarly = true;
+        await reader.cancel("cineart-probe-evidence-found").catch(() => {});
+        break;
+      }
     }
-    text += decoder.decode();
-    return text;
+
+    if (!stoppedEarly) text += decoder.decode();
+    return { text, bytes: totalBytes, stoppedEarly };
   } finally {
     reader.releaseLock?.();
   }
-}
-
-function detectCinemas(html) {
-  return CINEMA_MARKERS
-    .filter(cinema => cinema.patterns.some(pattern => html.includes(pattern)))
-    .map(cinema => cinema.key);
 }
 
 export async function probeCineArt({
@@ -106,7 +120,8 @@ export async function probeCineArt({
       );
     }
 
-    const text = await readBoundedText(response, boundedMaxBytes);
+    const sample = await readBoundedEvidenceText(response, boundedMaxBytes);
+    const text = sample.text;
     const brandDetected = /影藝戲院|CineArt/i.test(text);
     const cinemas = detectCinemas(text);
 
@@ -123,7 +138,8 @@ export async function probeCineArt({
       cinemaCount: cinemas.length,
       cinemas,
       nextJsDetected: /\/_next\/|self\.__next_f\.push|__NEXT_DATA__/i.test(text),
-      bytes: new TextEncoder().encode(text).byteLength,
+      bytesRead: sample.bytes,
+      stoppedEarly: sample.stoppedEarly,
       finalUrl: response.url || CINEART_PROBE_URL
     };
   } catch (error) {
