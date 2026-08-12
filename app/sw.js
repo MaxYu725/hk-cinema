@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "hk-cinema-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}m7f-1`;
+const CACHE_NAME = `${CACHE_PREFIX}m7g-1`;
 const SCOPE_URL = new URL(self.registration.scope);
 const INDEX_URL = new URL("./index.html", self.registration.scope).href;
 const ROOT_URL = new URL("./", self.registration.scope).href;
@@ -115,6 +115,8 @@ async function staleWhileRevalidate(request) {
 
 self.addEventListener("install", event => {
   // Precache only the bounded core shell and do not interrupt an open app session.
+  // A distinct cache generation is required here: the waiting worker must never
+  // overwrite static assets that the currently active worker is still serving.
   // pwa-runtime.js explicitly asks a waiting worker to activate after user consent.
   event.waitUntil(precacheShell());
 });
