@@ -3,6 +3,7 @@ const CACHE_NAME = `${CACHE_PREFIX}m7f-1`;
 const SCOPE_URL = new URL(self.registration.scope);
 const INDEX_URL = new URL("./index.html", self.registration.scope).href;
 const ROOT_URL = new URL("./", self.registration.scope).href;
+const NAVIGATION_NETWORK_BUDGET_MS = 1800;
 const CORE_SHELL_FILES = new Set([
   "manifest.json",
   "style.css",
@@ -11,7 +12,11 @@ const CORE_SHELL_FILES = new Set([
   "phase9c3-pwa-final-polish.css",
   "phase10r3a-mobile-shell-date-strip.css",
   "metro-theme.css",
-  "pwa-runtime.js"
+  "data-health.js",
+  "app.js",
+  "pwa-runtime.js",
+  "shared-final-controls.js",
+  "metro-runtime.js"
 ]);
 
 function isSameOriginStatic(request) {
@@ -52,7 +57,7 @@ async function precacheShell() {
   // Keep installation deliberately light. Previous M5 behaviour fetched every
   // stylesheet/script in index.html at once, which now creates a very large burst
   // during the same window as provider catalogue initialization. Cache only the
-  // essential offline shell here; normal controlled browsing fills the rest via
+  // essential startup shell here; normal controlled browsing fills the rest via
   // staleWhileRevalidate below.
   for (const url of assets) {
     if (url === INDEX_URL || url === ROOT_URL) continue;
@@ -65,17 +70,32 @@ async function precacheShell() {
   }
 }
 
+function navigationTimeout() {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error("navigation network budget exceeded")), NAVIGATION_NETWORK_BUDGET_MS);
+  });
+}
+
 async function networkFirstNavigation(request) {
   const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request, { cache: "no-store" });
+  const network = fetch(request, { cache: "no-store" }).then(async response => {
     if (response.ok) await cache.put(request, response.clone());
     return response;
+  });
+
+  try {
+    return await Promise.race([network, navigationTimeout()]);
   } catch (error) {
-    return (await cache.match(request, { ignoreSearch: true })) ||
+    const fallback = (await cache.match(request, { ignoreSearch: true })) ||
       (await cache.match(INDEX_URL)) ||
-      (await cache.match(ROOT_URL)) ||
-      Promise.reject(error);
+      (await cache.match(ROOT_URL));
+
+    if (fallback) {
+      network.catch(() => {});
+      return fallback;
+    }
+
+    return network.catch(() => Promise.reject(error));
   }
 }
 
