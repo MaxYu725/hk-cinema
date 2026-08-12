@@ -155,7 +155,7 @@
   function rememberMCL(movieSetId, selectedDate, data) {
     if (!data || typeof data !== "object") return false;
     write(caches.mcl, mclKey(movieSetId, selectedDate), data, TTL.mcl);
-    if (!selectedDate) {
+    if (!selectedDate && data.metadataComplete === true) {
       const resolvedDate = normalizedDate(data.selectedDate);
       if (resolvedDate) {
         write(caches.mcl, mclKey(movieSetId, resolvedDate), data, TTL.mcl);
