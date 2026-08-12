@@ -1,5 +1,6 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
+import { discoverCineArtDataSources } from "./providers/cineart-source.js";
 import {
   providerProbeRunner,
   PROBEABLE_PROVIDERS
@@ -17,18 +18,39 @@ const json = (data, status = 200, extraHeaders = {}) =>
     }
   });
 
-function errorResponse(error, fallbackCode) {
+function errorResponse(error, fallbackCode, extraHeaders = {}) {
   return json({
     ok: false,
     error: {
       code: error?.code || fallbackCode,
       message: error instanceof Error ? error.message : String(error)
     }
-  }, Number.isFinite(error?.status) ? error.status : 502);
+  }, Number.isFinite(error?.status) ? error.status : 502, extraHeaders);
 }
 
 async function routeRequest(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/providers/cineart/discovery") {
+      try {
+        const result = await discoverCineArtDataSources();
+        return json({
+          ok: true,
+          data: result,
+          meta: {
+            phase: "M7B",
+            mode: "candidate-data-source-discovery",
+            updatedAt: new Date().toISOString()
+          }
+        }, 200, { "cache-control": "no-store" });
+      } catch (error) {
+        return errorResponse(
+          error,
+          "CINEART_DISCOVERY_ERROR",
+          { "cache-control": "no-store" }
+        );
+      }
+    }
 
     if (url.pathname === "/api/providers/probe") {
       const result = await providerProbeRunner.probeAll();
