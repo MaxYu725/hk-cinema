@@ -10,7 +10,7 @@ test("Phase M3 loads the Metro comparison presentation after the existing Metro 
   const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
   assert.ok(m2 >= 0 && m3 > m2);
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
-  assert.match(index, /metro-runtime\.js\?v=m4-1/);
+  assert.match(index, /metro-runtime\.js\?v=m6b-2/);
 });
 
 test("Phase M3 comparison shell follows the supplied Metro structure without forking provider logic", async () => {
@@ -29,7 +29,7 @@ test("Phase M3 comparison shell follows the supplied Metro structure without for
   assert.match(css, /data-mcl-seat-lazy-note[\s\S]*display:\s*none\s*!important/);
   assert.match(runtime, /MOVIEMETRO \/ 場次比較/);
   assert.match(runtime, /actions\.insertBefore\(health, close\)/);
-  assert.match(runtime, /metro-meta-separator/);
+  assert.doesNotMatch(runtime, /metro-meta-separator/);
   assert.match(runtime, /電影場次比較/);
   assert.match(runtime, /syncComparisonShell/);
   assert.match(phase10, /dataset\.skin === "metro"\) return false/);
