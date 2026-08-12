@@ -15,6 +15,7 @@
 
   let networkNoticeTimer = null;
   let immersiveArmed = false;
+  const watchedWorkers = new WeakSet();
 
   function ensureNotice() {
     let notice = document.querySelector("#pwaNotice");
@@ -84,12 +85,17 @@
 
   function watchInstalling(registration) {
     const worker = registration.installing;
-    if (!worker) return;
-    worker.addEventListener("statechange", () => {
+    if (!worker || watchedWorkers.has(worker)) return;
+    watchedWorkers.add(worker);
+
+    const handleInstalled = () => {
       if (worker.state !== "installed") return;
       const waiting = registration.waiting || worker;
       if (navigator.serviceWorker.controller) showUpdate(waiting);
-    });
+    };
+
+    worker.addEventListener("statechange", handleInstalled);
+    handleInstalled();
   }
 
   function applyUpdate() {
@@ -220,6 +226,21 @@
       registration.addEventListener("updatefound", () => watchInstalling(registration));
       navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
+      // register() can resolve after updatefound has already fired. Always inspect the
+      // current installing/waiting slots immediately so an in-flight update cannot miss
+      // the user-facing reload prompt.
+      watchInstalling(registration);
+      if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
+
+      // Force a lightweight script revalidation on launch. updateViaCache:none keeps the
+      // service-worker script itself fresh without touching cinema/provider data.
+      try {
+        await registration.update();
+      } catch {
+        // Registration remains usable even when an explicit update check is offline.
+      }
+
+      watchInstalling(registration);
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
       armImmersiveFallback();
@@ -238,7 +259,7 @@
   });
 
   window.HKCinemaPWA = Object.freeze({
-    version: "9c3-2",
+    version: "m7g-1",
     register,
     applyUpdate,
     requestImmersiveMode,
@@ -263,6 +284,8 @@
 
   armImmersiveFallback();
   if (!navigator.onLine) setOnline(false);
-  if (document.readyState === "complete") register();
-  else window.addEventListener("load", register, { once: true });
+
+  // The script already runs at the end of <body>. Do not wait for window.load: a slow
+  // non-critical asset must not postpone Service Worker recovery/update detection.
+  queueMicrotask(register);
 })();
