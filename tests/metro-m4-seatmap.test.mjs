@@ -12,7 +12,7 @@ const [index, css, runtime, sw] = await Promise.all([
 
 test("Metro loads the consolidated seat-map layer after comparison Smart Picks", () => {
   const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
-  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m6b-4");
+  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m6gate-1");
   assert.ok(picks >= 0 && seatmap > picks);
   assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
   assert.match(index, /metro-runtime\.js\?v=m6b-3/);
@@ -22,6 +22,7 @@ test("Metro seat-map shell matches the square black reference structure", () => 
   assert.match(css, /html\[data-skin="metro"\] \.shared-seatmap-sheet[\s\S]*width:\s*min\(100%,\s*500px\)/);
   assert.match(css, /shared-seatmap-sheet[\s\S]*background:\s*var\(--metro-bg\)/);
   assert.match(css, /shared-seatmap-close[\s\S]*position:\s*fixed/);
+  assert.match(css, /shared-seatmap-close[\s\S]*width:\s*44px[\s\S]*height:\s*44px/);
   assert.match(css, /shared-seatmap-close[\s\S]*border-radius:\s*0/);
   assert.match(css, /shared-seatmap-summary[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /shared-seatmap-layout[\s\S]*border:\s*1px solid var\(--metro-border\)/);
