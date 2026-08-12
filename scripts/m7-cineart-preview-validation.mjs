@@ -3,6 +3,7 @@ const BASE_URL = String(process.env.HK_CINEMA_CANDIDATE_WORKER_URL || "")
   .replace(/\/+$/, "");
 const PROBE_MAX_ATTEMPTS = 12;
 const DISCOVERY_MAX_ATTEMPTS = 3;
+const CATALOGUE_MAX_ATTEMPTS = 3;
 const RETRY_MS = 5000;
 
 if (!BASE_URL) {
@@ -148,8 +149,73 @@ async function validateDiscovery() {
   );
 }
 
+async function validateCatalogue() {
+  const endpoint = `${BASE_URL}/api/cineart/catalogue`;
+  let lastFailure = "no attempt completed";
+
+  for (let attempt = 1; attempt <= CATALOGUE_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const payload = await fetchJson(endpoint, 15000);
+      const catalogue = payload?.data;
+      const meta = payload?.meta || {};
+      const now = catalogue?.now;
+      const coming = catalogue?.coming;
+      const counts = catalogue?.meta?.counts || {};
+      const cacheState = String(meta.cacheState || catalogue?.meta?.cacheState || "");
+
+      if (
+        meta?.provider !== "cineart" ||
+        !Array.isArray(now) ||
+        !Array.isArray(coming) ||
+        now.length + coming.length < 1 ||
+        Number(counts?.sourceMovies) < 1 ||
+        Number(counts?.sourceShows) < 1 ||
+        !["network", "fresh-edge", "stale-edge"].includes(cacheState) ||
+        [...now, ...coming].some(movie =>
+          movie?.provider !== "cineart" ||
+          !String(movie?.sourceId || "").trim() ||
+          !String(movie?.title?.zh || movie?.title?.en || "").trim()
+        )
+      ) {
+        throw new Error(`invalid CineArt M7C catalogue: ${JSON.stringify(payload)}`);
+      }
+
+      return {
+        ok: true,
+        endpoint,
+        attempt,
+        provider: meta.provider,
+        nowCount: now.length,
+        comingCount: coming.length,
+        sourceMovieCount: counts.sourceMovies,
+        sourceShowCount: counts.sourceShows,
+        siteCount: counts.sites,
+        houseCount: counts.houses,
+        cacheState,
+        stale: meta.stale === true,
+        updatedAt: meta.updatedAt
+      };
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error);
+      if (attempt < CATALOGUE_MAX_ATTEMPTS) {
+        console.log(
+          `CineArt catalogue attempt ${attempt}/${CATALOGUE_MAX_ATTEMPTS} failed: ${lastFailure}`
+        );
+        await sleep(RETRY_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `CineArt branch-preview catalogue failed after ${CATALOGUE_MAX_ATTEMPTS} attempts: ${lastFailure}`
+  );
+}
+
 const probe = await validateProbe();
 console.log(JSON.stringify({ gate: "M7A", ...probe }, null, 2));
 
 const discovery = await validateDiscovery();
 console.log(JSON.stringify({ gate: "M7B", ...discovery }, null, 2));
+
+const catalogue = await validateCatalogue();
+console.log(JSON.stringify({ gate: "M7C", ...catalogue }, null, 2));

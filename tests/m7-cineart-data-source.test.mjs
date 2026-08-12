@@ -216,13 +216,15 @@ test("M7B keeps discovery bounded to the current origin and a 4 MiB maximum resp
   assert.equal(CINEART_SOURCE_CONFIG.maxBytes, 4 * 1024 * 1024);
 });
 
-test("M7B discovery remains candidate-only and outside normal app loading", async () => {
-  const [workerSource, registrySource] = await Promise.all([
+test("M7B discovery remains an explicit no-store diagnostic after M7C provider registration", async () => {
+  const [workerSource, registrySource, index] = await Promise.all([
     read("worker/src/index-emperor-seat.js"),
-    read("app/provider-registry.js")
+    read("app/provider-registry.js"),
+    read("app/index.html")
   ]);
 
   assert.match(workerSource, /\/api\/providers\/cineart\/discovery/);
   assert.match(workerSource, /cache-control": "no-store"/);
-  assert.equal(registrySource.includes("cineart"), false);
+  assert.match(registrySource, /id: "cineart"/);
+  assert.doesNotMatch(index, /providers\/cineart\/discovery/);
 });
