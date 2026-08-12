@@ -48,18 +48,6 @@
     });
   }
 
-  function syncLegacyStickyState() {
-    const tools = document.querySelector("#homeLibraryTools");
-    const filters = tools?.querySelector(".home-library-filter-options");
-    tools?.classList.remove("is-stuck");
-
-    // Classic sticky code can add `is-stuck` later in the same scroll event.
-    // Its mobile rule hides this row, while Metro intentionally keeps all four
-    // controls visible. Keep that Metro-only presentation isolated here rather
-    // than changing the shared Classic sticky behavior.
-    if (filters && filters.style.display !== "grid") filters.style.display = "grid";
-  }
-
   function moveDataHealthIntoControls() {
     const panel = document.querySelector("#dataHealth");
     const controls = document.querySelector(".home-library-filter-options");
@@ -146,12 +134,58 @@
     });
   }
 
+  function activeFilterGroup() {
+    return window.HKCinemaPhase9B3FilterUX?.getState?.().activeGroup || null;
+  }
+
+  function closeActiveFilterGroup() {
+    return window.HKCinemaPhase9B3FilterUX?.closeActiveGroup?.() || false;
+  }
+
+  function queueFilterClose() {
+    queueMicrotask(closeActiveFilterGroup);
+  }
+
+  function handleFilterClick(event) {
+    if (event.target.closest?.("[data-phase9b3-group-toggle]")) return;
+
+    const activeGroup = activeFilterGroup();
+    if (!activeGroup) return;
+
+    const portal = event.target.closest?.(".provider-compare-cinema-portal");
+    if (portal) {
+      if (event.target.closest?.(".provider-compare-cinema-portal-option")) queueFilterClose();
+      return;
+    }
+
+    const group = event.target.closest?.("[data-phase9b3-group]");
+    if (!group) {
+      closeActiveFilterGroup();
+      return;
+    }
+
+    if (
+      group.dataset.phase9b3Group === activeGroup &&
+      event.target.closest?.(".phase9b3-filter-group-body button")
+    ) {
+      // Let the shared filter engine process the option click first, then collapse
+      // the Metro floating menu without changing the shared compact decorator.
+      queueFilterClose();
+    }
+  }
+
+  function handleFilterChange(event) {
+    const activeGroup = activeFilterGroup();
+    if (!activeGroup) return;
+    const group = event.target.closest?.("[data-phase9b3-group]");
+    if (group?.dataset.phase9b3Group === activeGroup) queueFilterClose();
+  }
+
   function sync() {
     setMetroThemeColor();
     syncAppLabel();
     syncPivotLabels();
     syncSortLabel();
-    syncLegacyStickyState();
     moveDataHealthIntoControls();
     syncComparisonShell();
     syncSeatMapShell();
@@ -170,6 +204,9 @@
   function install() {
     sync();
 
+    document.addEventListener("click", handleFilterClick, true);
+    document.addEventListener("change", handleFilterChange, true);
+
     [
       "hkcinema:home-tab",
       "hkcinema:mcl-catalogue",
@@ -181,7 +218,6 @@
       "hkcinema:seatmap-opening"
     ].forEach(name => window.addEventListener(name, scheduleSync));
 
-    window.addEventListener("scroll", scheduleSync, { passive: true });
     window.addEventListener("resize", scheduleSync, { passive: true });
 
     observer = new MutationObserver(records => {
@@ -203,10 +239,11 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m6b-2",
+    version: "m6b-3",
     refresh: scheduleSync,
     syncComparisonShell,
-    syncSeatMapShell
+    syncSeatMapShell,
+    closeActiveFilterGroup
   });
 
   if (document.readyState === "loading") {
