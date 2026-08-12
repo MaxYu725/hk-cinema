@@ -27,8 +27,8 @@ test("home aggregation waits only for Broadway loading and preserves alternate p
   assert.match(multi, /renderCombinedEmptyState\(broadwayState\);/);
   assert.doesNotMatch(multi, /if \(count\.textContent\.trim\(\) === "—"\) return;/);
 
-  assert.match(index, /app\.js\?v=m6d-1/);
-  assert.match(index, /multi-provider\.js\?v=m6d-1/);
+  assert.match(index, /app\.js\?v=7b2-m6d1/);
+  assert.match(index, /multi-provider\.js\?v=8e2-m6d1/);
 });
 
 test("partial and stale showtime states remain isolated per provider", async () => {
