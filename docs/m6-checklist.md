@@ -12,13 +12,13 @@ This file is the recovery/checkpoint source of truth for Phase M6. If a chat/ses
 - M6B: **complete**
 - M6C: **complete**
 - Current stage: **M6D — expansion readiness review**
-- Latest completed application checkpoint: **M6D Checkpoint 2A / PR #80**
-- Authoritative application checkpoint: `b06a33ef92d57aac38b0d23215a3c180057e11cf`
-- PR #80 branch Run #471: regression tests + Chromium mobile smoke passed
-- PR #80 Cloudflare branch preview succeeded on final head `629836cff0bd6c4bc18b09bb9ca0f94454c939bc`
-- PR #80 had no automated review findings or unresolved review threads at merge time
-- Main Actions Run #472: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
-- Next planned work: **M6D Checkpoint 2B — comparison/showtime request fan-out + cancellation/ignore-stale-response audit**
+- Latest completed application checkpoint: **M6D Checkpoint 2B / PR #81**
+- Authoritative application checkpoint: `c189cbb52c48321b96a90f3c9ecb639bc2a85cbc`
+- PR #81 final branch Run #477: regression tests + Chromium mobile smoke passed
+- PR #81 Cloudflare branch preview succeeded on final head `e329fa34ee38652f059164a90d5c831976096d1c`
+- PR #81 automated review findings were addressed and both review threads are resolved
+- Main Actions Run #478: regression tests + Chromium mobile smoke + GitHub Pages deploy passed
+- Next planned work: **M6D Checkpoint 2C — MCL lazy metadata/price/bulk request concurrency + remaining duplicate-request behavior**
 
 ## Fixed M6 boundaries
 
@@ -185,7 +185,7 @@ M6C exit condition: **met**. A hypothetical fourth cinema chain can be described
 
 ## M6D — expansion readiness review
 
-Status: **in progress — Checkpoint 1 + Checkpoint 2A complete**
+Status: **in progress — Checkpoint 1 + Checkpoint 2A + Checkpoint 2B complete**
 
 ### Checkpoint 1 — failure isolation + partial / stale / empty-state audit
 
@@ -213,8 +213,8 @@ Checkpoint result:
 ### Checkpoint 2 — network/concurrency
 
 - [x] Inventory provider request fan-out on initial home load.
-- [ ] Inventory comparison/showtime request fan-out.
-- [ ] Review cancellation/ignore-stale-response behavior when changing movie/date/filter quickly.
+- [x] Inventory comparison/showtime request fan-out.
+- [x] Review cancellation/ignore-stale-response behavior when changing movie/date/filter quickly.
 - [ ] Review MCL lazy price/seat request concurrency before provider count grows.
 - [ ] Verify duplicate requests are deduplicated/cached where appropriate without caching live data in the Service Worker shell.
 
@@ -234,7 +234,24 @@ Checkpoint result:
 - Main Run #472 passed regression + Chromium mobile smoke + Pages deploy.
 - Notes: `docs/checkpoints/m6d-home-request-fanout.md`
 
-Next M6D batch: **Checkpoint 2B — comparison/showtime request fan-out + cancellation/ignore-stale-response audit**. Keep MCL lazy price/seat concurrency and broader request deduplication for subsequent bounded work unless they are directly coupled to a 2B finding.
+#### Checkpoint 2B — comparison/showtime request fan-out + cancellation audit
+
+- [x] Foreground comparison fan-out is source-shaped and remains provider/source failure-isolated through `Promise.allSettled`.
+- [x] Successful initial Broadway / Emperor responses are aliased to their validated resolved-date cache key, avoiding a second native Worker fetch when the preferred date is unchanged.
+- [x] MCL comparison main-cache wrapper forwards the caller `AbortSignal` into the hybrid/WebAPI2 transport and rejects already-aborted work before transport starts.
+- [x] Complete initial MCL results can alias to their resolved selected-date key; incomplete `metadataComplete: false` results deliberately remain eligible for explicit-date retry.
+- [x] Existing foreground movie/date/close request-token and stale-response guards are regression-locked.
+- [x] Adjacent-date prefetch now owns an AbortController and can abort already-started Broadway/Emperor and abortable MCL prefetch on lifecycle changes.
+- [x] Compact comparison filters remain presentation-only and do not start provider requests.
+- [x] Both PR #81 automated review findings were addressed, replied to and both review threads were resolved.
+- [ ] MCL outer bulk-enrichment sidecar still lacks parent-signal cancellation and remains part of Checkpoint 2C.
+- PR #81 — authoritative M6D Checkpoint 2B application commit `c189cbb52c48321b96a90f3c9ecb639bc2a85cbc`
+- PR #81 final branch Run #477 passed regression + Chromium mobile smoke.
+- PR #81 Cloudflare branch preview succeeded on final head `e329fa34ee38652f059164a90d5c831976096d1c`.
+- Main Run #478 passed regression + Chromium mobile smoke + Pages deploy.
+- Notes: `docs/checkpoints/m6d-comparison-request-fanout.md`
+
+Next M6D batch: **Checkpoint 2C — MCL lazy metadata/price/bulk request concurrency + remaining duplicate-request behavior**. Keep seat-map redesign and any real new provider outside this bounded work unless a direct dependency is proven.
 
 ### Expansion gate
 
