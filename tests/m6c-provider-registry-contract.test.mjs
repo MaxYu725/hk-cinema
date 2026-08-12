@@ -29,7 +29,7 @@ function loadDataHealth(providers) {
 }
 
 test("M6C provider registry loads before Data Health", () => {
-  const registryIndex = index.indexOf("provider-registry.js?v=m7c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m7d-1");
   const healthIndex = index.indexOf("data-health.js?v=m6c-1");
   assert.ok(registryIndex >= 0);
   assert.ok(healthIndex > registryIndex);
@@ -37,12 +37,16 @@ test("M6C provider registry loads before Data Health", () => {
 
 test("provider descriptors expose identity and capabilities", () => {
   const registry = loadRegistry();
-  assert.equal(registry.version, "m7c-1");
+  assert.equal(registry.version, "m7d-1");
   assert.deepEqual(Array.from(registry.providers, item => item.id), ["broadway", "mcl", "emperor", "cineart"]);
   assert.equal(registry.get("MCL")?.displayName, "MCL");
   assert.equal(registry.hasCapability("broadway", "seatMap"), true);
   assert.equal(registry.hasCapability("cineart", "catalogue"), true);
-  assert.equal(registry.hasCapability("cineart", "showtimes"), false);
+  assert.equal(registry.hasCapability("cineart", "showtimes"), true);
+  assert.equal(registry.hasCapability("cineart", "prices"), true);
+  assert.equal(registry.hasCapability("cineart", "seatSummary"), true);
+  assert.equal(registry.hasCapability("cineart", "seatMap"), false);
+  assert.equal(registry.hasCapability("cineart", "booking"), false);
   assert.ok(Object.isFrozen(registry.providers));
 });
 
