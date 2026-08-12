@@ -5,12 +5,12 @@ import { readFileSync } from "node:fs";
 const pwa = readFileSync(new URL("../app/pwa-runtime.js", import.meta.url), "utf8");
 const sw = readFileSync(new URL("../app/sw.js", import.meta.url), "utf8");
 
-test("M7G update detection covers an already-installing worker and explicit revalidation", () => {
+test("M7G update detection covers an already-installing worker without a redundant eager update", () => {
   assert.match(pwa, /const watchedWorkers = new WeakSet\(\)/);
   assert.match(pwa, /watchInstalling\(registration\);\s+if \(registration\.waiting && navigator\.serviceWorker\.controller\) showUpdate\(registration\.waiting\)/);
-  assert.match(pwa, /await registration\.update\(\)/);
+  assert.doesNotMatch(pwa, /registration\.update\(\)/);
   assert.match(pwa, /queueMicrotask\(register\)/);
-  assert.match(pwa, /version: "m7g-1"/);
+  assert.match(pwa, /version: "9c3-2"/);
 });
 
 test("M7G cold start falls back to the cached shell within a bounded navigation budget", () => {
