@@ -14,15 +14,12 @@ test("M4B Broadway guard is folded into the single Metro seat-map layer", () => 
 });
 
 test("M4B reserves an opaque sticky gutter for Broadway row labels only", () => {
-  assert.match(css, /data-seatmap-provider="broadway"/);
-  assert.match(css, /shared-seatmap-scroll\.is-scrollable/);
-  assert.match(css, /shared-seatmap-row-label/);
-  assert.match(css, /min-height:\s*calc\(var\(--seat-size,\s*24px\)\s*-\s*2px\)/);
-  assert.match(css, /background:\s*#060606/);
-  assert.match(css, /box-shadow:\s*8px\s+0\s+0\s+#060606/);
-  assert.match(css, /z-index:\s*8/);
-  const broadwayGuard = css.match(/html\[data-skin="metro"\][\s\S]*?data-seatmap-provider="broadway"[\s\S]*?shared-seatmap-row-label\s*\{[^}]*\}/)?.[0] || "";
+  const broadwayGuard = css.match(/html\[data-skin="metro"\]\s*\n\.shared-seatmap-content\[data-seatmap-provider="broadway"\]\s*\n\.shared-seatmap-scroll\.is-scrollable\s*\n\.shared-seatmap-row-label\s*\{[^}]*\}/)?.[0] || "";
   assert.ok(broadwayGuard);
+  assert.match(broadwayGuard, /min-height:\s*calc\(var\(--seat-size,\s*24px\)\s*-\s*2px\)/);
+  assert.match(broadwayGuard, /background:\s*#060606/);
+  assert.match(broadwayGuard, /box-shadow:\s*8px\s+0\s+0\s+#060606/);
+  assert.match(broadwayGuard, /z-index:\s*8/);
   assert.doesNotMatch(broadwayGuard, /data-seatmap-provider="mcl"/);
   assert.doesNotMatch(broadwayGuard, /data-seatmap-provider="emperor"/);
 });
