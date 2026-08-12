@@ -14,6 +14,7 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - PR #75 branch Run #447: regression tests and Chromium mobile smoke passed
 - PR #75 Cloudflare branch preview: successful
 - Main Actions Run #448: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
+- Durable tracker refresh after M6C Checkpoint 1: `1ebf216b433b23c26b85909842beba85b9a35b99`
 - M6A: **complete**
 - M6B: **complete**
 - M6C: **in progress**
