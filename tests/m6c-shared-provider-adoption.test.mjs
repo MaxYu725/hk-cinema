@@ -42,13 +42,13 @@ async function loadSharedCoreWithFixture() {
   return { window, sample };
 }
 
-test("M6C Checkpoint 3 shared provider core enumerates a fourth registry provider", async () => {
+test("M6C shared provider core continues to enumerate providers beyond the production fourth provider", async () => {
   const { window, sample } = await loadSharedCoreWithFixture();
   const core = window.HKCinemaProviderSharedCore;
 
   assert.equal(core.version, "m6c-3");
-  assert.deepEqual(Array.from(core.providerIds()), ["broadway", "mcl", "emperor", "fixture"]);
-  assert.deepEqual(Object.keys(core.providerMap(() => [])), ["broadway", "mcl", "emperor", "fixture"]);
+  assert.deepEqual(Array.from(core.providerIds()), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
+  assert.deepEqual(Object.keys(core.providerMap(() => [])), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
   assert.equal(core.label("fixture"), "Fixture Cinema");
   assert.deepEqual(Array.from(core.aggregateSourceIds(sample.movieAggregate, "fixture")), ["fixture-movie-1"]);
   assert.deepEqual(
@@ -58,6 +58,7 @@ test("M6C Checkpoint 3 shared provider core enumerates a fourth registry provide
   assert.equal(core.allProviderLabel(2), "兩院線");
   assert.equal(core.allProviderLabel(3), "三院線");
   assert.equal(core.allProviderLabel(4), "4 院線");
+  assert.equal(core.allProviderLabel(5), "5 院線");
 });
 
 test("provider without price or seat capability keeps a valid showtime and booking", async () => {
@@ -86,7 +87,7 @@ test("provider without price or seat capability keeps a valid showtime and booki
   assert.equal(supportedButMissing.booking.availability, "unknown");
 });
 
-test("Phase 8A movie aggregation accepts a registry provider card without a provider-name branch", async () => {
+test("Phase 8A movie aggregation accepts another registry provider card without a provider-name branch", async () => {
   const { window, sample } = await loadSharedCoreWithFixture();
   window.addEventListener = () => {};
 
@@ -142,6 +143,7 @@ test("Phase 8A movie aggregation accepts a registry provider card without a prov
   assert.equal(match.broadway, null);
   assert.equal(match.mcl, null);
   assert.equal(match.emperor, null);
+  assert.equal(match.cineart, null);
 });
 
 test("production shared home/comparison paths load and consume registry capability ownership", async () => {
@@ -151,7 +153,7 @@ test("production shared home/comparison paths load and consume registry capabili
     source("app/provider-compare-v4.js")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m7c-1");
   const contractIndex = index.indexOf("provider-contract.js?v=m6c-2.1");
   const coreIndex = index.indexOf("provider-shared-core.js?v=m6c-3");
   const multiProviderIndex = index.indexOf("multi-provider.js?v=");
