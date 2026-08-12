@@ -9,17 +9,16 @@ This file is the recovery/checkpoint source of truth for Phase M6. Update it as 
 - Classic fallback: `?skin=classic`
 - M6 tracking issue: #66
 - Durable tracker introduced by: **PR #72 — Phase M6: add durable progress checklist**
-- Latest completed application checkpoint: **M6C Checkpoint 1 / PR #75 — add provider registry contract**
-- Latest application checkpoint commit: `ed1c1f8957b241759e33c964ee17b28e381fcc0b`
-- PR #75 branch Run #447: regression tests and Chromium mobile smoke passed
-- PR #75 Cloudflare branch preview: successful
-- Main Actions Run #448: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
-- Durable tracker refresh after M6C Checkpoint 1: `1ebf216b433b23c26b85909842beba85b9a35b99`
+- Latest completed application checkpoint: **M6C Checkpoint 2 / PR #76 — define normalized provider capability contract**
+- Latest application checkpoint commit: `4e8c9bbfc610abb275bb0de18c81f3a91160f1ae`
+- PR #76 branch Run #449: regression tests and Chromium mobile smoke passed
+- PR #76 Cloudflare branch preview: successful on final head `12ee7b1498130437f71020b13e3d91e883d35576`
+- Main Actions Run #450: regression tests, Chromium mobile smoke and GitHub Pages deploy passed
 - M6A: **complete**
 - M6B: **complete**
 - M6C: **in progress**
 - Current M6 stage: **M6C — provider onboarding contract**
-- Next planned work: **M6C Checkpoint 2 — document and lock the normalized shared data/capability contract for catalogue, movie aggregation, showtimes, prices, seat summary/map and booking; then define truthful unsupported-capability semantics without provider-name branches**
+- Next planned work: **M6C Checkpoint 3 — apply the registry/capability contract to remaining shared home/comparison presentation paths, remove provider-name capability assumptions, and prove a fourth-provider-shaped source degrades cleanly without price/seat branches**
 
 ## Fixed M6 boundaries
 
@@ -164,24 +163,48 @@ Status: **complete**
 
 ### Checkpoint 2 — normalized capability/data contract
 
+Status: **complete**
+
+- [x] Define `app/provider-contract.js` as an executable normalized shared surface contract without wiring it into production presentation yet.
+- [x] Document fields required for home catalogue entries: stable `sourceId` and truthful `title`; optional movie metadata remains optional.
+- [x] Document fields required for movie aggregation/matching output: aggregate `key`, display `title`, and contributing `providers`.
+- [x] Document fields required for showtime comparison: `sourceId`, `cinema`, `date`, and `time`; price/seat/booking remain independent optional evidence.
+- [x] Document price capability and normalized optional price fields without assuming every provider exposes the same ticket categories.
+- [x] Document seat-summary capability and normalized occupancy/count fields.
+- [x] Document optional full seat-map capability independently from showtimes/seat summary.
+- [x] Document booking-link capability/fallback semantics.
+- [x] Define explicit optional capability states: `available`, `unknown`, and `unsupported`.
+- [x] Ensure unsupported price is not interpreted as HK$0.
+- [x] Ensure unsupported seat data is not interpreted as sold out / no seats.
+- [x] Ensure supported-but-missing data remains `unknown` rather than being treated as permanently unsupported.
+- [x] Keep shared capability evaluation descriptor-driven rather than branching on Broadway/MCL/Emperor names.
+- [x] Add `tests/fixtures/provider-contract-minimal.json`, representing a hypothetical provider with catalogue/showtimes/booking but no price/seat capabilities.
+- [x] Add regression tests for required fields, descriptor-driven capability evaluation and unsupported-vs-missing semantics.
+- [x] PR #76 regression tests and Chromium mobile smoke passed in Run #449.
+- [x] PR #76 Cloudflare branch preview succeeded on final head `12ee7b1498130437f71020b13e3d91e883d35576`.
+- [x] PR #76 squash merged; main regression/mobile smoke/Pages deploy passed in Run #450.
+- [x] Authoritative M6C Checkpoint 2 application commit: `4e8c9bbfc610abb275bb0de18c81f3a91160f1ae`.
+- [x] Contract notes: `docs/m6c-normalized-capability-contract.md`.
+
+Checkpoint 2 intentionally does **not** load `provider-contract.js` in the production page yet. It freezes semantics first; Checkpoint 3 will apply them to the remaining shared UI/comparison assumptions in a controlled batch.
+
+### Checkpoint 3 — shared presentation/comparison adoption
+
 Status: **next**
 
-- [ ] Document fields required for home catalogue entries.
-- [ ] Document fields required for movie aggregation/matching.
-- [ ] Document fields required for showtime comparison.
-- [ ] Document optional/required price capability.
-- [ ] Document optional/required seat-summary capability.
-- [ ] Document optional full seat-map capability.
-- [ ] Document booking-link capability/fallback semantics.
-- [ ] Define how unsupported capabilities are represented without UI branching by provider name.
-- [ ] Add normalized contract fixtures/tests before changing any real provider.
+- [ ] Audit shared home/comparison modules for capability decisions still expressed through provider-name checks or assumptions that price/seat data always exists.
+- [ ] Load/use the normalized provider contract only where shared presentation needs capability decisions.
+- [ ] Keep provider-specific network/request/seat-layout adapters provider-specific; do not erase legitimate upstream differences.
+- [ ] Prove a fourth-provider-shaped source can participate in shared home/comparison paths without adding provider-name branches.
+- [ ] Prove unsupported price/seat capabilities degrade without breaking or invalidating an otherwise valid showtime.
+- [ ] Preserve current Broadway/MCL/Emperor UI and data behavior.
 
 ### Remaining M6C tests / expansion proof
 
 - [x] Add provider-contract fixture for a minimal fourth-provider-shaped record without integrating a real chain.
-- [ ] Add tests proving home/comparison/status UI can enumerate more than three providers. Data Health/status enumeration is covered by Checkpoint 1; home/comparison enumeration remains pending.
-- [ ] Add tests proving a provider without seats/prices degrades cleanly. The Checkpoint 1 fixture defines missing capabilities, but UI degradation semantics are not yet implemented.
-- [ ] Add tests proving provider identity is registry-driven rather than hard-coded across the relevant presentation modules. Data Health is registry-driven; remaining home/comparison assumptions are still to be audited.
+- [ ] Add tests proving home/comparison/status UI can enumerate more than three providers. Data Health/status enumeration is covered by Checkpoint 1; home/comparison enumeration remains pending for Checkpoint 3.
+- [ ] Add tests proving a provider without seats/prices degrades cleanly in shared UI. Contract-level degradation semantics are covered by Checkpoint 2; presentation integration remains pending for Checkpoint 3.
+- [ ] Add tests proving provider identity is registry-driven rather than hard-coded across the relevant presentation modules. Data Health and contract evaluation are registry/descriptor-driven; remaining home/comparison assumptions are pending audit.
 
 M6C exit condition: a hypothetical fourth cinema chain can be described by the normalized contract without adding provider-name branches to home/comparison/health UI.
 
