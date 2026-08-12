@@ -10,7 +10,7 @@ test("Phase M3 loads the Metro comparison presentation after the existing Metro 
   const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
   assert.ok(m2 >= 0 && m3 > m2);
   assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
-  assert.match(index, /metro-runtime\.js\?v=m6b-2/);
+  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
 });
 
 test("Phase M3 comparison shell follows the supplied Metro structure without forking provider logic", async () => {

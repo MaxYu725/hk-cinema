@@ -4,17 +4,19 @@ import { readFile } from "node:fs/promises";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const [index, css, compact] = await Promise.all([
+const [index, css, compact, metro] = await Promise.all([
   read("app/index.html"),
   read("app/metro-m3-filter-matrix.css"),
-  read("app/phase9b3-filter-compact.js")
+  read("app/phase9b3-filter-compact.js"),
+  read("app/metro-runtime.js")
 ]);
 
 test("Metro loads the final filter matrix after the base M3 comparison skin", () => {
   const base = index.indexOf("metro-m3-comparison.css?v=m3-1");
   const matrix = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-3");
   assert.ok(base >= 0 && matrix > base);
-  assert.match(index, /phase9b3-filter-compact\.js\?v=9b3-m5a-1/);
+  assert.match(index, /phase9b3-filter-compact\.js\?v=m6b-3/);
+  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
 });
 
 test("Metro comparison keeps the final 3x3 compact filter controls", () => {
@@ -41,13 +43,18 @@ test("Metro dropdown alignment keeps left, middle and right matrix columns insid
   assert.match(css, /width:\s*min\(280px,\s*calc\(100vw - 40px\)\)/);
 });
 
-test("Metro option selection and outside taps collapse the dropdown after the shared filter engine runs", () => {
-  assert.match(compact, /function isMetro\(\)[\s\S]*dataset\.skin === "metro"/);
-  assert.match(compact, /function queueMetroClose\(\)[\s\S]*queueMicrotask/);
-  assert.match(compact, /phase9b3-filter-group-body button/);
-  assert.match(compact, /document\.addEventListener\("change", handleChange, true\)/);
-  assert.match(compact, /provider-compare-cinema-portal-option/);
-  assert.match(compact, /if \(!group\) \{[\s\S]*closeActiveGroup\(\)/);
+test("Metro owns option and outside-tap collapse while the compact decorator stays skin-neutral", () => {
+  assert.doesNotMatch(compact, /function isMetro\(|dataset\.skin|queueMetroClose|handleChange/);
+  assert.match(compact, /function closeActiveGroup\(\)/);
+  assert.match(compact, /closeActiveGroup,/);
+
+  assert.match(metro, /function activeFilterGroup\(\)/);
+  assert.match(metro, /function closeActiveFilterGroup\(\)/);
+  assert.match(metro, /function queueFilterClose\(\)[\s\S]*queueMicrotask/);
+  assert.match(metro, /phase9b3-filter-group-body button/);
+  assert.match(metro, /provider-compare-cinema-portal-option/);
+  assert.match(metro, /if \(!group\) \{[\s\S]*closeActiveFilterGroup\(\)/);
+  assert.match(metro, /document\.addEventListener\("change", handleFilterChange, true\)/);
 });
 
 test("Metro cinema filter keeps the portalled list inside viewport gutters", () => {

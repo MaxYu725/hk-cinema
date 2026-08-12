@@ -3,10 +3,6 @@
   let scheduled = false;
   let applying = false;
 
-  function isMetro() {
-    return document.documentElement.dataset.skin === "metro";
-  }
-
   function hongKongDate() {
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Hong_Kong",
@@ -97,12 +93,6 @@
     return true;
   }
 
-  function queueMetroClose() {
-    queueMicrotask(() => {
-      if (isMetro()) closeActiveGroup();
-    });
-  }
-
   function decorateGroup(group, index) {
     if (group.dataset.phase9b3Compact === "true") return;
     const key = groupKey(group, index);
@@ -151,43 +141,13 @@
 
   function handleClick(event) {
     const summary = event.target.closest?.("[data-phase9b3-group-toggle]");
-    if (summary) {
-      event.preventDefault();
-      event.stopPropagation();
-      const key = summary.dataset.phase9b3GroupToggle;
-      activeGroup = activeGroup === key ? null : key;
-      syncAllGroups();
-      return;
-    }
+    if (!summary) return;
 
-    if (!isMetro() || activeGroup === null) return;
-
-    const portal = event.target.closest?.(".provider-compare-cinema-portal");
-    if (portal) {
-      if (event.target.closest?.(".provider-compare-cinema-portal-option")) queueMetroClose();
-      return;
-    }
-
-    const group = event.target.closest?.("[data-phase9b3-group]");
-    if (!group) {
-      closeActiveGroup();
-      return;
-    }
-
-    if (
-      group.dataset.phase9b3Group === activeGroup &&
-      event.target.closest?.(".phase9b3-filter-group-body button")
-    ) {
-      // Let the shared filter engine process the option click first, then collapse the
-      // floating menu without disturbing the 3x3 matrix positions.
-      queueMetroClose();
-    }
-  }
-
-  function handleChange(event) {
-    if (!isMetro() || activeGroup === null) return;
-    const group = event.target.closest?.("[data-phase9b3-group]");
-    if (group?.dataset.phase9b3Group === activeGroup) queueMetroClose();
+    event.preventDefault();
+    event.stopPropagation();
+    const key = summary.dataset.phase9b3GroupToggle;
+    activeGroup = activeGroup === key ? null : key;
+    syncAllGroups();
   }
 
   function resetComparison() {
@@ -197,7 +157,6 @@
 
   function install() {
     document.addEventListener("click", handleClick, true);
-    document.addEventListener("change", handleChange, true);
     window.addEventListener("hkcinema:provider-compare-open", resetComparison);
     window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
 
@@ -216,9 +175,10 @@
   }
 
   window.HKCinemaPhase9B3FilterUX = Object.freeze({
-    version: "9b3-date-filter2",
+    version: "9b3-m6b-3",
     refresh: schedule,
     hongKongDate,
+    closeActiveGroup,
     getState() { return { activeGroup }; }
   });
 

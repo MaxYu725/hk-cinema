@@ -8,7 +8,7 @@ const runtime = readFileSync(new URL("../app/phase9b3-filter-compact.js", import
 
 test("Phase 9B3 loads after Classic polish and filter scroll stability", () => {
   assert.match(index, /phase9b2-classic-mobile-polish\.css\?v=9b2[\s\S]*phase9b3-date-filter-ux\.css\?v=9b3/);
-  assert.match(index, /phase8d1-filter-scroll-stability\.js\?v=8d1[\s\S]*phase9b3-filter-compact\.js\?v=9b3/);
+  assert.match(index, /phase8d1-filter-scroll-stability\.js\?v=8d1[\s\S]*phase9b3-filter-compact\.js\?v=m6b-3/);
 });
 
 test("selected date explicitly restores dark active contrast", () => {
@@ -35,6 +35,8 @@ test("expanded filters become single-open compact groups without replacing filte
   assert.match(runtime, /activeGroup = activeGroup === key \? null : key/);
   assert.match(runtime, /phase9b3-filter-group-body/);
   assert.match(runtime, /while \(group\.firstChild\) body\.appendChild\(group\.firstChild\)/);
+  assert.match(runtime, /closeActiveGroup,/);
+  assert.doesNotMatch(runtime, /dataset\.skin/);
   assert.match(css, /phase9b3-filter-group-summary/);
   assert.match(css, /\[data-phase9b3-group="district"\] \.phase9b3-filter-group-body/);
 });

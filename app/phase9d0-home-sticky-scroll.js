@@ -1,4 +1,18 @@
 (() => {
+  const VERSION = "9d0-m6b-3";
+
+  if (document.documentElement.dataset.skin !== "classic") {
+    window.HKCinemaHomeStickyScroll = Object.freeze({
+      version: VERSION,
+      sync() {},
+      resetForLayoutChange() {},
+      getState() {
+        return { anchor: null, latched: false };
+      }
+    });
+    return;
+  }
+
   const MOBILE_QUERY = "(max-width: 640px)";
   const MIN_ENTER_BUFFER = 64;
   const EXIT_BUFFER = 8;
@@ -97,7 +111,7 @@
   });
 
   window.HKCinemaHomeStickyScroll = Object.freeze({
-    version: "9d0-scroll1",
+    version: VERSION,
     sync,
     resetForLayoutChange,
     getState() {

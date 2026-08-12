@@ -4,19 +4,21 @@ import { readFile } from "node:fs/promises";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const [index, shared, classic, phase10, metro] = await Promise.all([
+const [index, shared, classic, phase10, metro, sticky, compact] = await Promise.all([
   read("app/index.html"),
   read("app/shared-final-controls.js"),
   read("app/classic-final-ui-polish.js"),
   read("app/phase10r3a-mobile-shell-date-strip.js"),
-  read("app/metro-runtime.js")
+  read("app/metro-runtime.js"),
+  read("app/phase9d0-home-sticky-scroll.js"),
+  read("app/phase9b3-filter-compact.js")
 ]);
 
 test("M6B loads one neutral shared owner before skin-specific final runtimes", () => {
   const sharedIndex = index.indexOf("shared-final-controls.js?v=m6b-1");
   const classicIndex = index.indexOf("classic-final-ui-polish.js?v=classic-final-m6b-1");
   const phase10Index = index.indexOf("phase10r3a-mobile-shell-date-strip.js?v=10r3b-m6b-1");
-  const metroIndex = index.indexOf("metro-runtime.js?v=m6b-2");
+  const metroIndex = index.indexOf("metro-runtime.js?v=m6b-3");
   assert.ok(sharedIndex >= 0);
   assert.ok(classicIndex > sharedIndex);
   assert.ok(phase10Index > classicIndex);
@@ -37,6 +39,14 @@ test("Metro home Data Health has one DOM-placement owner", () => {
   assert.match(phase10, /function placeHomeDataHealth\(\)[\s\S]*dataset\.skin === "metro"\) return false/);
   assert.doesNotMatch(phase10, /metroHomeHealth|filters\.appendChild\(panel\)/);
   assert.match(metro, /function moveDataHealthIntoControls\(\)[\s\S]*controls\.appendChild\(panel\)/);
+});
+
+test("skin-specific interaction behavior no longer leaks into neutral decorators", () => {
+  assert.match(sticky, /dataset\.skin !== "classic"/);
+  assert.doesNotMatch(compact, /dataset\.skin|isMetro|queueMetroClose/);
+  assert.match(compact, /closeActiveGroup,/);
+  assert.match(metro, /function closeActiveFilterGroup\(\)/);
+  assert.doesNotMatch(metro, /syncLegacyStickyState/);
 });
 
 test("ownership consolidation preserves accepted DOM hooks for both skins", () => {

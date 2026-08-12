@@ -29,7 +29,7 @@ test("Phase 8B reads aggregate facts instead of parsing rendered homepage metada
 });
 
 test("Metro presentation no longer preserves hidden delimiters for the comparison parser", () => {
-  assert.match(index, /metro-runtime\.js\?v=m6b-2/);
+  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
   assert.match(metro, /function decorateMovieMetadata\(\)/);
   assert.doesNotMatch(metro, /metro-meta-separator/);
   assert.doesNotMatch(metro, /separator\.textContent\s*=\s*" · "/);
