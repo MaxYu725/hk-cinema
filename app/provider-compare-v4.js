@@ -28,6 +28,33 @@
     return PROVIDER_TIMEOUTS[provider] || DEFAULT_TIMEOUT_MS;
   }
 
+  const COMPARISON_ADAPTERS = Object.freeze({
+    broadway: Object.freeze({
+      normalizeSession: normalizeBroadwaySession
+    }),
+    mcl: Object.freeze({
+      fetchShows: fetchMCLShows,
+      normalizeSession: normalizeMCLSession,
+      metadataComplete(successes) {
+        return successes.every(item => item.result?.metadataComplete === true);
+      },
+      canReuse(result) {
+        return result?.metadataComplete === true;
+      }
+    }),
+    emperor: Object.freeze({
+      normalizeSession: normalizeEmperorSession
+    })
+  });
+
+  function comparisonAdapter(provider) {
+    const builtIn = COMPARISON_ADAPTERS[provider] || null;
+    const runtime = window.HKCinemaProviders?.[provider]?.comparison || null;
+    return builtIn || runtime
+      ? { ...(builtIn || {}), ...(runtime || {}) }
+      : null;
+  }
+
   const state = {
     match: null,
     loadingInitial: false,
@@ -295,14 +322,13 @@
     }
   }
 
-  async function fetchProviderSource(provider, sourceId, date, signal) {
-    if (provider !== "mcl") return fetchWorkerShows(provider, sourceId, date, signal);
-    const mcl = window.HKCinemaProviders?.mcl;
-    if (!mcl?.getTicketing) throw new Error("MCL ticketing provider 未能載入");
-    const lifecycle = childController(signal, timeoutForProvider("mcl"));
+  async function fetchMCLShows(provider, sourceId, date, signal) {
+    const providerAdapter = window.HKCinemaProviders?.[provider];
+    if (!providerAdapter?.getTicketing) throw new Error(`${labelForProvider(provider)} ticketing provider 未能載入`);
+    const lifecycle = childController(signal, timeoutForProvider(provider));
     try {
-      const result = await mcl.getTicketing(sourceId, date, { signal: lifecycle.controller.signal });
-      if (lifecycle.timedOut()) throw new Error("MCL 場次讀取逾時，請稍後重試。");
+      const result = await providerAdapter.getTicketing(sourceId, date, { signal: lifecycle.controller.signal });
+      if (lifecycle.timedOut()) throw new Error(`${labelForProvider(provider)} 場次讀取逾時，請稍後重試。`);
       return {
         ...result,
         _health: {
@@ -311,11 +337,16 @@
         }
       };
     } catch (error) {
-      if (lifecycle.timedOut()) throw new Error("MCL 場次讀取逾時，請稍後重試。");
+      if (lifecycle.timedOut()) throw new Error(`${labelForProvider(provider)} 場次讀取逾時，請稍後重試。`);
       throw error;
     } finally {
       lifecycle.cleanup();
     }
+  }
+
+  async function fetchProviderSource(provider, sourceId, date, signal) {
+    const handler = comparisonAdapter(provider)?.fetchShows || fetchWorkerShows;
+    return handler(provider, sourceId, date, signal);
   }
 
   function enrichSessionWithVariant(provider, sourceId, session, match) {
@@ -358,7 +389,10 @@
       (item.result?.allSessions || []).map(session => enrichSessionWithVariant(provider, item.sourceId, session, match))
     );
     const selectedDates = uniqueDates(successes.map(item => item.result?.selectedDate));
-    const metadataComplete = provider !== "mcl" || successes.every(item => item.result?.metadataComplete === true);
+    const completenessPolicy = comparisonAdapter(provider)?.metadataComplete;
+    const metadataComplete = typeof completenessPolicy === "function"
+      ? Boolean(completenessPolicy(successes))
+      : true;
 
     return {
       availableDates: uniqueDates(successes.flatMap(item => item.result?.availableDates || [])),
@@ -398,7 +432,7 @@
   function normalizedBase(provider, session, seatAvailable, seatTotal, price, bookingUrl, seatText, klass) {
     const metadata = sessionMetadata(session);
     const providerLabel = labelForProvider(provider);
-    const fallbackCinema = provider === "emperor" ? "Emperor Cinemas" : `${providerLabel} 戲院`;
+    const fallbackCinema = `${providerLabel} 戲院`;
     return {
       id: `${provider}:${session?.sourceId || session?.id || Math.random()}`,
       provider,
@@ -486,10 +520,10 @@
   }
 
   function normalizeSession(provider, session) {
-    if (provider === "mcl") return normalizeMCLSession(session);
-    if (provider === "emperor") return normalizeEmperorSession(session);
-    if (provider === "broadway") return normalizeBroadwaySession(session);
-    return normalizeGenericSession(provider, session);
+    const normalizer = comparisonAdapter(provider)?.normalizeSession;
+    return typeof normalizer === "function"
+      ? normalizer(session)
+      : normalizeGenericSession(provider, session);
   }
 
   function timeValue(time) {
@@ -680,7 +714,9 @@
       const key = provider.key;
       const hasDate = state.availableDates[key].includes(date);
       if (!hasDate) return Promise.resolve(null);
-      const reusableSelectedDate = state.data[key]?._requestedDate === date && (key !== "mcl" || state.data[key]?.metadataComplete === true);
+      const reusePolicy = comparisonAdapter(key)?.canReuse;
+      const reusableSelectedDate = state.data[key]?._requestedDate === date &&
+        (typeof reusePolicy !== "function" || reusePolicy(state.data[key]));
       if (reusableSelectedDate) return Promise.resolve(state.data[key]);
       return fetchProvider(key, state.match, date, signal);
     });
@@ -749,7 +785,7 @@
   }
 
   window.HKCinemaProviderCompare = {
-    version: "m6c-3",
+    version: "m7r7-1",
     open,
     close,
     getState() {
