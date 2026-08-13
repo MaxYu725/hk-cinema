@@ -90,7 +90,7 @@ test("M8A2 hotfix keeps the Broadway screen inside the same horizontal scroll ow
   const renderGrid = shared.slice(renderGridStart, renderAreaStart);
 
   const viewportIndex = renderGrid.indexOf('class="shared-seatmap-viewport"');
-  const scrollIndex = renderGrid.indexOf('class="shared-seatmap-scroll');
+  const scrollIndex = renderGrid.indexOf('<div class="shared-seatmap-scroll ');
   const gridIndex = renderGrid.indexOf('class="shared-seatmap-grid"');
   const screenOwnerIndex = renderGrid.indexOf('class="shared-seatmap-grid-screen"');
   const screenIndex = renderGrid.indexOf("renderScreen(model.screenLabel, screenWidth)");
