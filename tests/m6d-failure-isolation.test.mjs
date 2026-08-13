@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -38,8 +39,8 @@ test("home aggregation waits for the base renderer while preserving alternate pr
   assert.match(multi, /hkcinema:data-health/);
   assert.doesNotMatch(multi, /if \(count\.textContent\.trim\(\) === "—"\) return;/);
 
-  assert.match(index, /app\.js\?v=7b2-m6d1/);
-  assert.match(index, /multi-provider\.js\?v=8e2-m7r2-1/);
+  assertAsset(index, "app.js");
+  assertAsset(index, "multi-provider.js");
 });
 
 test("partial and stale showtime states remain isolated per provider", async () => {

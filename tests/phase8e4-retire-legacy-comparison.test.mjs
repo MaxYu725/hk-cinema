@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const RETIRED = [
@@ -27,19 +28,18 @@ test("production and syntax checks point at the current comparison stack", async
   ]);
 
   for (const current of [
-    "provider-compare-v4.js?v=m6c-3",
-    "provider-compare-insights-v4.js?v=8c1-m7r4-1",
-    "provider-compare-preferences-v2.js?v=8c1-m7r4-1",
-    "provider-compare-recommendations-v4.js?v=10r3b-m7r4-1"
+    "provider-compare-v4.js",
+    "provider-compare-insights-v4.js",
+    "provider-compare-preferences-v2.js",
+    "provider-compare-recommendations-v4.js",
+    "provider-compare-main-cache-v3.js",
+    "provider-compare-resilience-v3.js"
   ]) {
-    assert.match(index, new RegExp(current.replaceAll(".", "\\.").replace("?", "\\?")));
+    assertAsset(index, current);
   }
 
   for (const retired of RETIRED.map(path => path.replace("app/", ""))) {
     assert.doesNotMatch(index, new RegExp(`<script[^>]+${retired.replaceAll(".", "\\.")}`));
     assert.doesNotMatch(pkg, new RegExp(retired.replaceAll(".", "\\.")));
   }
-
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d-m7r6-1/);
-  assert.match(index, /provider-compare-resilience-v3\.js\?v=10r3b-m7r6-1/);
 });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assetPosition, assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -348,12 +349,18 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
     source("worker/src/index.js")
   ]);
 
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=8e2"));
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=m6c-3-m7r5-1"));
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /mcl-ticketing-worker\.js\?v=7a1/);
-  assert.match(index, /mcl-ticketing-hybrid\.js\?v=7a2/);
+  for (const asset of [
+    "showtime-metadata.js",
+    "multi-provider.js",
+    "provider-compare-v4.js",
+    "provider-compare-insights-v4.js",
+    "provider-compare-preferences-v2.js",
+    "mcl-ticketing-worker.js",
+    "mcl-ticketing-hybrid.js"
+  ]) assertAsset(index, asset);
+  const metadataIndex = assetPosition(index, "showtime-metadata.js");
+  assert.ok(metadataIndex < assetPosition(index, "multi-provider.js"));
+  assert.ok(metadataIndex < assetPosition(index, "provider-compare-v4.js"));
   assert.match(multiProvider, /genericMCL/);
   assert.match(multiProvider, /isGenericBridgeSource/);
   assert.match(multiProvider, /comparisonMclSourceId/);

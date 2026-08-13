@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -15,14 +16,7 @@ const [index, shared, classic, phase10, metro, sticky, compact] = await Promise.
 ]);
 
 test("M6B loads one neutral shared owner before skin-specific final runtimes", () => {
-  const sharedIndex = index.indexOf("shared-final-controls.js?v=m6b-1");
-  const classicIndex = index.indexOf("classic-final-ui-polish.js?v=classic-final-m6b-1");
-  const phase10Index = index.indexOf("phase10r3a-mobile-shell-date-strip.js?v=10r3b-m6b-1");
-  const metroIndex = index.indexOf("metro-runtime.js?v=m6b-3");
-  assert.ok(sharedIndex >= 0);
-  assert.ok(classicIndex > sharedIndex);
-  assert.ok(phase10Index > classicIndex);
-  assert.ok(metroIndex > phase10Index);
+  assertAssetOrder(index, "shared-final-controls.js", "classic-final-ui-polish.js", "phase10r3a-mobile-shell-date-strip.js", "metro-runtime.js");
 });
 
 test("tab counts and comparison sort are no longer owned by Classic runtime", () => {

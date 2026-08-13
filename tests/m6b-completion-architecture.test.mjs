@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -35,19 +36,14 @@ const [
 ]);
 
 test("M6B ends with five distinct Metro presentation owners and no retired patch links", () => {
-  const links = [
-    "metro-theme.css?v=m6b-5",
-    "metro-m3-comparison.css?v=m3-1",
-    "metro-m3-filter-matrix.css?v=m3-filter-3",
-    "metro-m3-smart-picks.css?v=m3-picks-2",
-    "metro-m4-seat-view.css?v=m6gate-1"
-  ];
-  let previous = -1;
-  for (const link of links) {
-    const position = index.indexOf(link);
-    assert.ok(position > previous, `${link} should follow the previous Metro owner`);
-    previous = position;
-  }
+  assertAssetOrder(
+    index,
+    "metro-theme.css",
+    "metro-m3-comparison.css",
+    "metro-m3-filter-matrix.css",
+    "metro-m3-smart-picks.css",
+    "metro-m4-seat-view.css"
+  );
   assert.doesNotMatch(index, /metro-m2-home-polish\.css|metro-m4b-seat-scroll-fix\.css/);
 });
 

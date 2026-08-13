@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assetPosition, assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [index, css, runtime, sw] = await Promise.all([
@@ -11,11 +12,11 @@ const [index, css, runtime, sw] = await Promise.all([
 ]);
 
 test("Metro loads the consolidated seat-map layer after comparison Smart Picks", () => {
-  const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
-  const seatmap = index.indexOf("metro-m4-seat-view.css?v=m6gate-1");
-  assert.ok(picks >= 0 && seatmap > picks);
+  assertAsset(index, "metro-m3-smart-picks.css");
+  assertAsset(index, "metro-m4-seat-view.css");
+  assertAsset(index, "metro-runtime.js");
+  assert.ok(assetPosition(index, "metro-m4-seat-view.css") > assetPosition(index, "metro-m3-smart-picks.css"));
   assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
-  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
 });
 
 test("Metro seat-map shell matches the square black reference structure", () => {

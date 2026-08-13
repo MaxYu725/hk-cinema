@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [index, css] = await Promise.all([
@@ -13,9 +14,7 @@ const start = css.indexOf(marker);
 const polish = start >= 0 ? css.slice(start) : "";
 
 test("M6B loads one consolidated Metro home theme before the comparison layer", () => {
-  const theme = index.indexOf("metro-theme.css?v=m6b-5");
-  const comparison = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  assert.ok(theme >= 0 && comparison > theme);
+  assertAssetOrder(index, "metro-theme.css", "metro-m3-comparison.css");
   assert.doesNotMatch(index, /metro-m2-home-polish\.css/);
 });
 

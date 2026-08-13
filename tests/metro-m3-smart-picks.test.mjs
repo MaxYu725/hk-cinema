@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -11,10 +12,7 @@ const [index, css, sw] = await Promise.all([
 ]);
 
 test("Metro loads the Smart Picks layer after comparison and filter presentation", () => {
-  const comparison = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  const filters = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-3");
-  const picks = index.indexOf("metro-m3-smart-picks.css?v=m3-picks-2");
-  assert.ok(comparison >= 0 && filters > comparison && picks > filters);
+  assertAssetOrder(index, "metro-m3-comparison.css", "metro-m3-filter-matrix.css", "metro-m3-smart-picks.css");
 });
 
 test("Metro Smart Picks overrides the legacy mobile carousel with a fixed 2x2 matrix", () => {

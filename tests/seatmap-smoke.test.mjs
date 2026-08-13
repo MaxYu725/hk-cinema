@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assetPosition, assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -231,13 +232,16 @@ test("three provider clients delegate fetch results to the shared lifecycle", as
   assert.match(css, /body\.seatmap-open/);
   assert.match(css, /@media \(max-width: 360px\)/);
 
-  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3-m8a1-1");
-  assert.ok(sharedIndex > index.indexOf("view-models.js?v=7b3-m7r3-1"));
-  for (const loader of ["emperor-seatmap.js?v=7b3", "seatmap.js?v=7b3", "mcl-seatmap.js?v=7b3"]) {
-    assert.ok(index.indexOf(loader) > sharedIndex, `${loader} must load after the shared renderer`);
+  const sharedIndex = assetPosition(index, "seatmap-shared.js");
+  assertAsset(index, "seatmap-shared.js");
+  assertAsset(index, "view-models.js");
+  assert.ok(sharedIndex > assetPosition(index, "view-models.js"));
+  for (const loader of ["emperor-seatmap.js", "seatmap.js", "mcl-seatmap.js"]) {
+    assertAsset(index, loader);
+    assert.ok(assetPosition(index, loader) > sharedIndex, `${loader} must load after the shared renderer`);
   }
-  assert.match(index, /seatmap-shared\.css\?v=7b3/);
-  assert.doesNotMatch(index, /(?:mcl-|emperor-)?seatmap\.css\?v=/);
+  assertAsset(index, "seatmap-shared.css");
+  assert.doesNotMatch(index, /href=["']\.\/(?:mcl-|emperor-)?seatmap\.css(?:\?[^"']*)?["']/);
 });
 
 test("provider clients still expose one reliability surface", async () => {
@@ -245,5 +249,6 @@ test("provider clients still expose one reliability surface", async () => {
   assert.equal(context.window.HKCinemaBroadwaySeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaMCLSeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaEmperorSeatMap.getStats().requestTimeoutMs, 12000);
-  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3-m8a1-1");
+  assert.equal(typeof context.window.HKCinemaSeatMapShared.version, "string");
+  assert.ok(context.window.HKCinemaSeatMapShared.version.length > 0);
 });

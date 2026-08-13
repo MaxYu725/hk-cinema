@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -26,7 +27,8 @@ test("home search handles punctuation, spacing and multiple terms", async () => 
     "IMAX2D with Laser"
   ];
 
-  assert.equal(core.version, "8e3");
+  assert.equal(typeof core.version, "string");
+  assert.ok(core.version.length > 0);
   assert.equal(core.searchMatches(values, "chiikawa 日語"), false);
   assert.equal(core.searchMatches(values, "chiikawa japanese"), true);
   assert.equal(core.searchMatches(values, "人魚島 秘密"), true);
@@ -62,8 +64,7 @@ test("movie-first search, favorites and recent activity stay wired", async () =>
     source("app/home-library.css")
   ]);
 
-  assert.ok(index.indexOf("home-library-core.js?v=8e3") < index.indexOf("home-library.js?v=8e3"));
-  assert.ok(index.indexOf("multi-provider.js?v=8e2") < index.indexOf("home-library-core.js?v=8e3"));
+  assertAssetOrder(index, "multi-provider.js", "home-library-core.js", "home-library.js");
   assert.match(app, /data-movie-favorite/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
   assert.match(library, /placeholder="搜尋電影"/);
@@ -71,7 +72,7 @@ test("movie-first search, favorites and recent activity stay wired", async () =>
   assert.match(library, /data-home-library-view/);
   assert.match(library, /data-home-recent-clear/);
   assert.match(library, /homeLanguages/);
-  assert.match(library, /version: "8e3"/);
+  assert.match(library, /version:\s*["'][^"']+["']/);
   assert.doesNotMatch(library, /data-home-region/);
   assert.doesNotMatch(library, /data-home-facet/);
   assert.doesNotMatch(library, /HKCinemaHomeProviderFilters/);

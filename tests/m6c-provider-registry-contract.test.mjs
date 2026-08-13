@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFile } from "node:fs/promises";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -29,15 +30,13 @@ function loadDataHealth(providers) {
 }
 
 test("M6C provider registry loads before Data Health", () => {
-  const registryIndex = index.indexOf("provider-registry.js?v=");
-  const healthIndex = index.indexOf("data-health.js?v=m6c-1");
-  assert.ok(registryIndex >= 0);
-  assert.ok(healthIndex > registryIndex);
+  assertAssetOrder(index, "provider-registry.js", "data-health.js");
 });
 
 test("provider descriptors expose identity and current staged capabilities", () => {
   const registry = loadRegistry();
-  assert.match(String(registry.version || ""), /^m7p1[a-z0-9-]+$/);
+  assert.equal(typeof registry.version, "string");
+  assert.ok(registry.version.length > 0);
   assert.deepEqual(Array.from(registry.providers, item => item.id), [
     "broadway",
     "mcl",

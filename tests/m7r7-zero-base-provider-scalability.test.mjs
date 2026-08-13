@@ -6,6 +6,7 @@ import {
   createProviderManifest,
   providerHealthMap
 } from "../worker/src/provider-manifest.js";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -421,7 +422,7 @@ test("M7R7 zero-base static guard rejects shared three-provider dispatch and fix
   assert.match(manifest, /createProviderManifest/);
   assert.match(manifest, /WORKER_PROVIDER_IDS/);
 
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d-m7r6-1-m7r7-1/);
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3-m7r5-1-m7r7-1/);
-  assert.match(index, /view-models\.js\?v=7b3-m7r3-1-m7r7-1/);
+  for (const asset of ["provider-compare-main-cache-v3.js", "provider-compare-v4.js", "view-models.js"]) {
+    assertAsset(index, asset);
+  }
 });

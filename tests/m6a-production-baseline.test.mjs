@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assetPosition, assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -22,17 +23,19 @@ test("M6A freezes Metro as production default while retaining explicit Classic f
 });
 
 test("Metro presentation remains the final accepted CSS and runtime layer", () => {
-  const classicCss = index.indexOf("classic-final-ui-polish.css");
-  const phase10Css = index.indexOf("phase10r3a-mobile-shell-date-strip.css");
-  const metroTheme = index.indexOf("metro-theme.css");
-  const metroSeat = index.indexOf("metro-m4-seat-view.css?v=m6gate-1");
+  for (const asset of ["classic-final-ui-polish.css", "phase10r3a-mobile-shell-date-strip.css", "metro-theme.css", "metro-m4-seat-view.css"]) assertAsset(index, asset);
+  const classicCss = assetPosition(index, "classic-final-ui-polish.css");
+  const phase10Css = assetPosition(index, "phase10r3a-mobile-shell-date-strip.css");
+  const metroTheme = assetPosition(index, "metro-theme.css");
+  const metroSeat = assetPosition(index, "metro-m4-seat-view.css");
   assert.ok(classicCss >= 0 && phase10Css > classicCss);
   assert.ok(metroTheme > phase10Css && metroSeat > metroTheme);
   assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
 
-  const classicRuntime = index.indexOf("classic-final-ui-polish.js");
-  const phase10Runtime = index.indexOf("phase10r3a-mobile-shell-date-strip.js");
-  const metroRuntime = index.indexOf("metro-runtime.js");
+  for (const asset of ["classic-final-ui-polish.js", "phase10r3a-mobile-shell-date-strip.js", "metro-runtime.js"]) assertAsset(index, asset);
+  const classicRuntime = assetPosition(index, "classic-final-ui-polish.js");
+  const phase10Runtime = assetPosition(index, "phase10r3a-mobile-shell-date-strip.js");
+  const metroRuntime = assetPosition(index, "metro-runtime.js");
   assert.ok(classicRuntime >= 0 && phase10Runtime > classicRuntime && metroRuntime > phase10Runtime);
   assert.match(metro, /dataset\.skin !== "metro"\) return/);
 });

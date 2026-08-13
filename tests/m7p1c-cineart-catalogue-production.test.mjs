@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { createCineArtCatalogueService } from "../worker/src/providers/cineart-catalogue.js";
+import { assetPosition, assertAsset, assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -142,15 +143,10 @@ test("M7P1C shared catalogue publication remains observer-free after later CineA
     source("docs/checkpoints/m7p1c-cineart-catalogue-production.md")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=");
-  const healthIndex = index.indexOf("data-health.js?v=m6c-1");
-  const providerIndex = index.indexOf("providers/cineart.js?v=");
-  const multiIndex = index.indexOf("multi-provider.js?v=8e2-m7r2-1");
-  const statusIndex = index.indexOf("cineart-status.js?v=m7p1c-1");
-
-  assert.ok(registryIndex >= 0 && registryIndex < healthIndex);
-  assert.ok(providerIndex > healthIndex);
-  assert.ok(statusIndex > multiIndex);
+  assertAssetOrder(index, "provider-registry.js", "data-health.js", "providers/cineart.js");
+  assertAsset(index, "multi-provider.js");
+  assertAsset(index, "cineart-status.js");
+  assert.ok(assetPosition(index, "cineart-status.js") > assetPosition(index, "multi-provider.js"));
   assert.match(status, /HKCinemaProviderSharedCore\?\.publishCatalogue\?\.\("cineart"/);
   assert.doesNotMatch(status, /MutationObserver|IntersectionObserver|hkcinema:cineart-catalogue/);
   assert.doesNotMatch(adapter, /cinearthouse\.com\.hk/);

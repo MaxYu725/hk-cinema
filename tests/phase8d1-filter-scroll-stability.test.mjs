@@ -2,16 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import { assertAssetOrder } from './index-assets.mjs';
 
 const source = await readFile(new URL('../app/phase8d1-filter-scroll-stability.js', import.meta.url), 'utf8');
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
 test('Phase 8D1 loads after the Phase 8B layout and listens before document filter handlers', () => {
-  assert.match(index, /phase8d1-filter-scroll-stability\.js\?v=8d1/);
-  assert.ok(
-    index.indexOf('phase8b-comparison-layout.js?v=8b1') <
-    index.indexOf('phase8d1-filter-scroll-stability.js?v=8d1')
-  );
+  assertAssetOrder(index, 'phase8b-comparison-layout.js', 'phase8d1-filter-scroll-stability.js');
   assert.match(source, /window\.addEventListener\("pointerdown"[\s\S]*true\)/);
   assert.match(source, /window\.addEventListener\("click"[\s\S]*true\)/);
   assert.match(source, /window\.addEventListener\("change"[\s\S]*true\)/);

@@ -1,17 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { assertAsset, assertAssetOrder } from './index-assets.mjs';
 
 const layout = await readFile(new URL('../app/phase8b-comparison-layout.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../app/phase8b-comparison-layout.css', import.meta.url), 'utf8');
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
 test('Phase 8B loads after Phase 8A navigation', () => {
-  const phase8a = index.indexOf('phase8a-movie-navigation-refresh.js');
-  const phase8b = index.indexOf('phase8b-comparison-layout.js');
-  assert.ok(phase8a >= 0);
-  assert.ok(phase8b > phase8a);
-  assert.ok(index.includes('phase8b-comparison-layout.css?v=8b1'));
+  assertAssetOrder(index, 'phase8a-movie-navigation-refresh.js', 'phase8b-comparison-layout.js');
+  assertAsset(index, 'phase8b-comparison-layout.css');
 });
 
 test('Phase 8B establishes the mobile-first section order', () => {

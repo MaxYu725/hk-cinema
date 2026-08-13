@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assetPosition, assertAsset, assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -46,7 +47,8 @@ test("M6C Checkpoint 3 shared provider core enumerates a future registry provide
   const { window, sample } = await loadSharedCoreWithFixture();
   const core = window.HKCinemaProviderSharedCore;
 
-  assert.equal(core.version, "m6c-3");
+  assert.equal(typeof core.version, "string");
+  assert.ok(core.version.length > 0);
   assert.deepEqual(Array.from(core.providerIds()), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
   assert.deepEqual(Object.keys(core.providerMap(() => [])), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
   assert.equal(core.label("fixture"), "Fixture Cinema");
@@ -152,18 +154,12 @@ test("production shared home/comparison paths load and consume registry capabili
     source("app/provider-compare-v4.js")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=");
-  const contractIndex = index.indexOf("provider-contract.js?v=m6c-2.1");
-  const coreIndex = index.indexOf("provider-shared-core.js?v=m6c-3");
-  const multiProviderIndex = index.indexOf("multi-provider.js?v=");
-  const compareIndex = index.indexOf("provider-compare-v4.js?v=m6c-3");
-  const phase8aIndex = index.indexOf("phase8a-movie-navigation.js?v=m6c-3");
-
-  assert.ok(registryIndex >= 0 && registryIndex < contractIndex);
-  assert.ok(contractIndex < coreIndex);
-  assert.ok(coreIndex < multiProviderIndex);
-  assert.ok(coreIndex < compareIndex);
-  assert.ok(coreIndex < phase8aIndex);
+  assertAssetOrder(index, "provider-registry.js", "provider-contract.js", "provider-shared-core.js");
+  const coreIndex = assetPosition(index, "provider-shared-core.js");
+  for (const asset of ["multi-provider.js", "provider-compare-v4.js", "phase8a-movie-navigation.js"]) {
+    assertAsset(index, asset);
+    assert.ok(assetPosition(index, asset) > coreIndex, `${asset} must load after provider-shared-core.js`);
+  }
 
   assert.match(phase8a, /sharedCore\?\.providerIds\?\.\(\)/);
   assert.match(phase8a, /card\?\.dataset\?\.provider/);

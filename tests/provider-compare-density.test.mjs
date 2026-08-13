@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -19,7 +20,7 @@ test("Phase 6L comparison keeps dates, filters and explanations compact on the c
     source("app/provider-compare-density.css")
   ]);
 
-  assert.match(index, /provider-compare-density\.css\?v=6l1/);
+  assertAsset(index, "provider-compare-density.css");
   assert.match(compare, /provider-compare-date-rail/);
   assert.doesNotMatch(compare, /provider-compare-dates-section/);
   assert.match(compare, /<details class="provider-compare-note">/);

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { createCineArtShowtimeService } from "../worker/src/providers/cineart-showtimes.js";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -219,7 +220,7 @@ test("M7P1F public showtime boundary remains seat-map-free after M7P1G enables a
   assert.doesNotMatch(showtimesSource, /seatPlan\s*:/);
   assert.doesNotMatch(adapterSource, /MutationObserver|IntersectionObserver|cinearthouse\.com\.hk/);
   assert.match(manifest, /catalogue-showtimes-detailed-price-strict-seats-seatmap-production-readonly/);
-  assert.ok(index.includes("providers/cineart.js?v=m7p1g-1"));
+  assertAsset(index, "providers/cineart.js");
   assert.match(checkpoint, /seatMap:\s*false/);
   assert.match(checkpoint, /booking:\s*false/);
 });

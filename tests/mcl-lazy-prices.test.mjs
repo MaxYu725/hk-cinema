@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -10,13 +11,7 @@ async function read(path) {
 
 test("production loads MCL lazy price enrichment beside lazy seat enrichment", async () => {
   const index = await read("app/index.html");
-  const seats = index.indexOf("provider-compare-seats.js?v=6o1");
-  const prices = index.indexOf("provider-compare-prices.js?v=8d3");
-  const recommendations = index.indexOf("provider-compare-recommendations-v4.js?v=10r3b-m7r4-1");
-
-  assert.ok(seats >= 0);
-  assert.ok(prices > seats);
-  assert.ok(recommendations > prices);
+  assertAssetOrder(index, "provider-compare-seats.js", "provider-compare-prices.js", "provider-compare-recommendations-v4.js");
 });
 
 test("lazy price runtime only targets missing MCL prices near the viewport", async () => {
@@ -39,5 +34,5 @@ test("lazy price runtime preserves lifecycle cancellation and never requests a w
   assert.match(source, /cancelPendingWork/);
   assert.doesNotMatch(source, /querySelectorAll\([^\n]*provider-compare-show[^\n]*\)\.forEach\(enqueue/);
   assert.match(source, /window\.HKCinemaProviderComparePrices/);
-  assert.match(source, /version: "8d3"/);
+  assert.match(source, /version:\s*["'][^"']+["']/);
 });

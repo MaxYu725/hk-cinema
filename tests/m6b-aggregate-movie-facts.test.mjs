@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -12,7 +13,7 @@ const [index, phase8a, phase8b, metro] = await Promise.all([
 ]);
 
 test("M6B aggregate contract carries structured movie facts from provider catalogues", () => {
-  assert.match(index, /phase8a-movie-navigation\.js\?v=[^"]*m7r5-1/);
+  assertAsset(index, "phase8a-movie-navigation.js");
   assert.match(phase8a, /function factsFromSourceSets\(/);
   assert.match(phase8a, /sharedCore\?\.catalogue\?\.\(provider\)/);
   assert.match(phase8a, /window\.HKCinemaProviders\?\.\[provider\]/);
@@ -23,14 +24,14 @@ test("M6B aggregate contract carries structured movie facts from provider catalo
 });
 
 test("Phase 8B reads aggregate facts instead of parsing rendered homepage metadata", () => {
-  assert.match(index, /phase8b-comparison-layout\.js\?v=m6b-2/);
+  assertAsset(index, "phase8b-comparison-layout.js");
   assert.match(phase8b, /const facts = aggregate\?\.facts \|\| \{\}/);
   assert.match(phase8b, /Number\(facts\.durationMinutes\)/);
   assert.doesNotMatch(phase8b, /aggregateCard|\.movie-meta|split\(" · "\)/);
 });
 
 test("Metro presentation no longer preserves hidden delimiters for the comparison parser", () => {
-  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
+  assertAsset(index, "metro-runtime.js");
   assert.match(metro, /function decorateMovieMetadata\(\)/);
   assert.doesNotMatch(metro, /metro-meta-separator/);
   assert.doesNotMatch(metro, /separator\.textContent\s*=\s*" · "/);
