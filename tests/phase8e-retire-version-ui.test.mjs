@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { assertAsset } from './index-assets.mjs';
 
 const APP = new URL('../app/', import.meta.url);
 
@@ -16,9 +17,9 @@ test('Phase 8E keeps a single movie entry and retires the temporary top-level ve
     read('phase8c-rich-filters.css')
   ]);
 
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3/);
-  assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
-  assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
+  for (const asset of ['phase8a-movie-navigation.js', 'phase8a-movie-navigation.css', 'phase8c-rich-filters.css']) {
+    assertAsset(index, asset);
+  }
   assert.doesNotMatch(navigation, /data-phase8a-variant-open/);
   assert.doesNotMatch(navigation, /phase8a-version-rail/);
   assert.doesNotMatch(navigationCss, /phase8a-version-rail/);
@@ -41,10 +42,12 @@ test('merged variant data remains available to the Phase 8C comparison engine', 
 test('production index loads only the current comparison, filter and recommendation runtimes', async () => {
   const index = await read('index.html');
 
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-m7r4-1/);
+  for (const asset of [
+    'provider-compare-v4.js',
+    'provider-compare-insights-v4.js',
+    'provider-compare-preferences-v2.js',
+    'provider-compare-recommendations-v4.js'
+  ]) assertAsset(index, asset);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-insights-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-preferences\.js/);
