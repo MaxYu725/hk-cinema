@@ -29,7 +29,7 @@ function loadDataHealth(providers) {
 }
 
 test("M6C provider registry loads before Data Health", () => {
-  const registryIndex = index.indexOf("provider-registry.js?v=m7d-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
   const healthIndex = index.indexOf("data-health.js?v=m6c-1");
   assert.ok(registryIndex >= 0);
   assert.ok(healthIndex > registryIndex);
@@ -37,20 +37,14 @@ test("M6C provider registry loads before Data Health", () => {
 
 test("provider descriptors expose identity and capabilities", () => {
   const registry = loadRegistry();
-  assert.equal(registry.version, "m7d-1");
-  assert.deepEqual(Array.from(registry.providers, item => item.id), ["broadway", "mcl", "emperor", "cineart"]);
+  assert.equal(registry.version, "m6c-1");
+  assert.deepEqual(Array.from(registry.providers, item => item.id), ["broadway", "mcl", "emperor"]);
   assert.equal(registry.get("MCL")?.displayName, "MCL");
   assert.equal(registry.hasCapability("broadway", "seatMap"), true);
-  assert.equal(registry.hasCapability("cineart", "catalogue"), true);
-  assert.equal(registry.hasCapability("cineart", "showtimes"), true);
-  assert.equal(registry.hasCapability("cineart", "prices"), true);
-  assert.equal(registry.hasCapability("cineart", "seatSummary"), true);
-  assert.equal(registry.hasCapability("cineart", "seatMap"), false);
-  assert.equal(registry.hasCapability("cineart", "booking"), false);
   assert.ok(Object.isFrozen(registry.providers));
 });
 
-test("Data Health scales beyond the production fourth provider", () => {
+test("Data Health scales to a fourth registry provider", () => {
   const registry = loadRegistry();
   const fixture = JSON.parse(fixtureSource);
   const providers = [...registry.providers, fixture];
@@ -63,10 +57,10 @@ test("Data Health scales beyond the production fourth provider", () => {
     detail: "ok"
   }]));
   const summary = health.summarize(records, { now, online: true });
-  assert.equal(summary.total, 5);
-  assert.equal(summary.usable, 5);
+  assert.equal(summary.total, 4);
+  assert.equal(summary.usable, 4);
   assert.equal(summary.label, "院線資料最新");
-  assert.equal(summary.detail, "5/5 個來源已完成更新");
+  assert.equal(summary.detail, "4/4 個來源已完成更新");
 });
 
 test("fourth-provider fixture can omit optional price and seat capabilities", () => {

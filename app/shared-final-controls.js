@@ -2,7 +2,6 @@
   const TAB_KEYS = ["now", "coming"];
   const tabCounts = new Map();
   let observer = null;
-  let syncQueued = false;
 
   function titleOf(movie) {
     return movie?.title?.zh || movie?.title?.en || movie?.title || "";
@@ -136,10 +135,7 @@
   }
 
   function scheduleSync() {
-    if (syncQueued) return;
-    syncQueued = true;
     requestAnimationFrame(() => {
-      syncQueued = false;
       syncTabCounts();
       syncComparison();
     });
@@ -175,7 +171,7 @@
   }
 
   window.HKCinemaSharedFinalControls = Object.freeze({
-    version: "m7f-1",
+    version: "m6b-1",
     refresh: scheduleSync,
     ensureSortControl,
     getTabCounts() { return Object.fromEntries(tabCounts); }

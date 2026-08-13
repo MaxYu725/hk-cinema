@@ -1,14 +1,8 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
-import { createCineArtCatalogueService } from "./providers/cineart-catalogue.js";
-import {
-  createCineArtShowtimeService,
-  createCineArtShowDetailService
-} from "./providers/cineart-showtimes.js";
-import { discoverCineArtDataSources } from "./providers/cineart-source.js";
 import {
   providerProbeRunner,
-  PROBEABLE_PROVIDERS
+  SUPPORTED_PROVIDERS
 } from "./provider-probe.js";
 
 const GEOMETRY_VERSION = "6e1-bounds-v2";
@@ -23,139 +17,18 @@ const json = (data, status = 200, extraHeaders = {}) =>
     }
   });
 
-function errorResponse(error, fallbackCode, extraHeaders = {}) {
+function errorResponse(error, fallbackCode) {
   return json({
     ok: false,
     error: {
       code: error?.code || fallbackCode,
       message: error instanceof Error ? error.message : String(error)
     }
-  }, Number.isFinite(error?.status) ? error.status : 502, extraHeaders);
+  }, Number.isFinite(error?.status) ? error.status : 502);
 }
 
 async function routeRequest(request, env, ctx) {
     const url = new URL(request.url);
-
-    if (url.pathname === "/api/cineart/catalogue") {
-      try {
-        const catalogue = await createCineArtCatalogueService().get({ ctx });
-        return json({
-          ok: true,
-          data: catalogue,
-          meta: {
-            phase: "M7C",
-            provider: "cineart",
-            mode: "normalized-catalogue",
-            cache: catalogue.meta?.cache === true,
-            stale: catalogue.meta?.stale === true,
-            cacheState: catalogue.meta?.cacheState || "network",
-            updatedAt: catalogue.meta?.updatedAt || new Date().toISOString()
-          }
-        }, 200, {
-          "cache-control": "no-store",
-          "x-hkcinema-upstream-cache": catalogue.meta?.cacheState || "network"
-        });
-      } catch (error) {
-        return errorResponse(
-          error,
-          "CINEART_CATALOGUE_ERROR",
-          { "cache-control": "no-store" }
-        );
-      }
-    }
-
-    const cineartShowsMatch = url.pathname.match(
-      /^\/api\/cineart\/movies\/(\d+)\/shows$/
-    );
-
-    if (cineartShowsMatch) {
-      try {
-        const movieId = cineartShowsMatch[1];
-        const date = url.searchParams.get("date") || null;
-        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          return json({
-            ok: false,
-            error: {
-              code: "CINEART_SHOWTIME_INVALID_DATE",
-              message: "date must use YYYY-MM-DD"
-            }
-          }, 400, { "cache-control": "no-store" });
-        }
-
-        const result = await createCineArtShowtimeService().getMovie(movieId, date, { ctx });
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            phase: "M7D",
-            provider: "cineart",
-            mode: "normalized-showtimes",
-            movieId,
-            cache: result.meta?.cache === true,
-            stale: result.meta?.stale === true,
-            cacheState: result.meta?.cacheState || "network",
-            updatedAt: result.meta?.updatedAt || new Date().toISOString()
-          }
-        }, 200, {
-          "cache-control": "no-store",
-          "x-hkcinema-upstream-cache": result.meta?.cacheState || "network"
-        });
-      } catch (error) {
-        return errorResponse(error, "CINEART_SHOWTIME_ERROR", { "cache-control": "no-store" });
-      }
-    }
-
-    const cineartDetailMatch = url.pathname.match(
-      /^\/api\/cineart\/shows\/(\d+)\/detail$/
-    );
-
-    if (cineartDetailMatch) {
-      try {
-        const showId = cineartDetailMatch[1];
-        const movieId = url.searchParams.get("movieId") || "";
-        const result = await createCineArtShowDetailService().get(showId, movieId, { ctx });
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            phase: "M7D",
-            provider: "cineart",
-            mode: "lazy-show-detail",
-            showId,
-            movieId,
-            cache: result.meta?.cache === true,
-            cacheState: result.meta?.cacheState || "network",
-            updatedAt: result.meta?.updatedAt || new Date().toISOString()
-          }
-        }, 200, {
-          "cache-control": "no-store",
-          "x-hkcinema-upstream-cache": result.meta?.cacheState || "network"
-        });
-      } catch (error) {
-        return errorResponse(error, "CINEART_SHOW_DETAIL_ERROR", { "cache-control": "no-store" });
-      }
-    }
-
-    if (url.pathname === "/api/providers/cineart/discovery") {
-      try {
-        const result = await discoverCineArtDataSources();
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            phase: "M7B",
-            mode: "candidate-data-source-discovery",
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "no-store" });
-      } catch (error) {
-        return errorResponse(
-          error,
-          "CINEART_DISCOVERY_ERROR",
-          { "cache-control": "no-store" }
-        );
-      }
-    }
 
     if (url.pathname === "/api/providers/probe") {
       const result = await providerProbeRunner.probeAll();
@@ -177,12 +50,12 @@ async function routeRequest(request, env, ctx) {
     if (providerProbeMatch) {
       const provider = decodeURIComponent(providerProbeMatch[1]).toLowerCase();
 
-      if (!PROBEABLE_PROVIDERS.includes(provider)) {
+      if (!SUPPORTED_PROVIDERS.includes(provider)) {
         return json({
           ok: false,
           error: {
             code: "INVALID_PROVIDER",
-            message: `provider must be one of: ${PROBEABLE_PROVIDERS.join(", ")}`
+            message: "provider must be broadway, mcl or emperor"
           }
         }, 400, { "cache-control": "no-store" });
       }
@@ -192,8 +65,8 @@ async function routeRequest(request, env, ctx) {
         ok: true,
         data: result,
         meta: {
-          phase: provider === "cineart" ? "M7A" : "10R2B",
-          mode: provider === "cineart" ? "candidate-provider-probe" : "live-provider-probe",
+          phase: "10R2B",
+          mode: "live-provider-probe",
           updatedAt: new Date().toISOString()
         }
       }, 200, { "cache-control": "no-store" });
