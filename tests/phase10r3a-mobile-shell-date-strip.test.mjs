@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFile } from "node:fs/promises";
+import { assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [index, manifestText, css, runtime, worker, metro] = await Promise.all([
@@ -17,7 +18,7 @@ const manifest = JSON.parse(manifestText);
 test("Phase 10R3A keeps fullscreen PWA semantics under the current controlled shell cache", () => {
   assert.equal(manifest.display, "fullscreen");
   assert.deepEqual(manifest.display_override.slice(0, 2), ["fullscreen", "standalone"]);
-  assert.match(index, /manifest\.json\?v=m5-1/);
+  assertAsset(index, "manifest.json");
   assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m5-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
@@ -26,8 +27,8 @@ test("Phase 10R3A keeps fullscreen PWA semantics under the current controlled sh
 });
 
 test("Phase 10R3A keeps Classic home placement while Metro delegates home Data Health ownership", () => {
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.css\?v=10r3b-1/);
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
+  assertAsset(index, "phase10r3a-mobile-shell-date-strip.css");
+  assertAsset(index, "phase10r3a-mobile-shell-date-strip.js");
   assert.match(css, /\.topbar\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.home-library-tools\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+150px/s);
   assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*\.home-library-tools,\s*[\s\S]*\.home-library-primary\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+126px/s);
