@@ -1,16 +1,10 @@
 (() => {
-  let mclCatalogue = window.HKCinemaMCLCatalogue || null;
-  let emperorCatalogue = window.HKCinemaEmperorCatalogue || null;
-
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
+  const PROVIDERS = Object.freeze(sharedCore?.providers?.() || []);
   const grid = document.querySelector("#movieGrid");
   const count = document.querySelector("#movieCount");
-  const PROVIDER_OPTIONS = [
-    { key: "broadway", label: "Broadway" },
-    { key: "mcl", label: "MCL" },
-    { key: "emperor", label: "Emperor" }
-  ];
 
-  if (!grid || !count) return;
+  if (!grid || !count || !sharedCore || !PROVIDERS.length) return;
 
   const matchRecords = new Map();
   const groupRecords = new Map();
@@ -77,7 +71,7 @@
 
     writeCardMetadata(card, "homeLanguages", [
       ...readCardMetadata(card, "homeLanguages"),
-      ...metadataValues(movie.language)
+      ...metadataValues(movie.language || movie.languages)
     ]);
 
     writeCardMetadata(card, "homeFormats", [
@@ -110,80 +104,204 @@
     return document.querySelector(".tab.active")?.dataset.tab || "now";
   }
 
-  function getMCLMovies() {
-    if (!mclCatalogue) return [];
-    return getActiveTab() === "coming"
-      ? mclCatalogue.coming || []
-      : mclCatalogue.now || [];
+  function providerIds() {
+    return PROVIDERS.map(provider => provider.key);
   }
 
-  function getEmperorMovies() {
-    if (!emperorCatalogue) return [];
-    return getActiveTab() === "coming"
-      ? emperorCatalogue.coming || []
-      : emperorCatalogue.now || [];
+  function providerLabel(provider) {
+    return sharedCore.label?.(provider) || provider;
+  }
+
+  function providerDatasetKey(provider) {
+    return /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
+  }
+
+  function normalizeSourceId(provider, value) {
+    return sharedCore.normalizeSourceId?.(provider, value) ||
+      String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+  }
+
+  function parseProviderSources(card) {
+    try {
+      const parsed = JSON.parse(card?.dataset?.providerSources || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function directProvider(card) {
+    return sharedCore.registeredProviderId?.(card?.dataset?.provider) || null;
+  }
+
+  function baseProvider() {
+    const explicit = sharedCore.registeredProviderId?.(grid.dataset.homeBaseProvider);
+    if (explicit) return explicit;
+
+    for (const card of grid.querySelectorAll(".movie-card:not(.provider-only-card)")) {
+      const provider = directProvider(card);
+      if (provider) return provider;
+    }
+    return PROVIDERS[0]?.key || null;
+  }
+
+  function cardProviderSources(card) {
+    const sources = {};
+    const explicit = parseProviderSources(card);
+
+    for (const provider of PROVIDERS) {
+      const key = provider.key;
+      const datasetKey = providerDatasetKey(key);
+      const value = normalizeSourceId(
+        key,
+        explicit[key] || (datasetKey ? card?.dataset?.[datasetKey] : "")
+      );
+      if (value) sources[key] = value;
+    }
+
+    const direct = directProvider(card);
+    const directSourceId = direct
+      ? normalizeSourceId(direct, card?.dataset?.sourceId)
+      : "";
+    if (direct && directSourceId) sources[direct] = directSourceId;
+
+    if (!direct) {
+      const base = baseProvider();
+      const sourceId = base
+        ? normalizeSourceId(base, card?.dataset?.sourceId)
+        : "";
+      if (base && sourceId && !card?.dataset?.providerOnly) sources[base] = sourceId;
+    }
+
+    return sources;
+  }
+
+  function writeProviderSources(card, sources) {
+    if (!card) return;
+    const normalized = {};
+
+    for (const provider of PROVIDERS) {
+      const key = provider.key;
+      const sourceId = normalizeSourceId(key, sources?.[key]);
+      const datasetKey = providerDatasetKey(key);
+
+      if (datasetKey) {
+        if (sourceId) card.dataset[datasetKey] = sourceId;
+        else delete card.dataset[datasetKey];
+      }
+      if (sourceId) normalized[key] = sourceId;
+    }
+
+    card.dataset.providerSources = JSON.stringify(normalized);
+    card.dataset.providers = Object.keys(normalized).join(",");
+  }
+
+  function setCardProviderSource(card, provider, sourceId) {
+    const key = sharedCore.registeredProviderId?.(provider);
+    const normalized = key ? normalizeSourceId(key, sourceId) : "";
+    if (!key || !normalized) return false;
+    const sources = cardProviderSources(card);
+    sources[key] = normalized;
+    writeProviderSources(card, sources);
+    return true;
+  }
+
+  function resetCardProviderSources(card) {
+    const direct = directProvider(card);
+    const base = direct || baseProvider();
+    const sourceId = base ? normalizeSourceId(base, card?.dataset?.sourceId) : "";
+    writeProviderSources(card, base && sourceId ? { [base]: sourceId } : {});
+  }
+
+  function cardProviders(card) {
+    const sources = cardProviderSources(card);
+    return PROVIDERS
+      .filter(provider => Boolean(sources[provider.key]))
+      .map(provider => provider.key);
+  }
+
+  function setCardProviders(card, providers) {
+    const current = cardProviderSources(card);
+    const allowed = new Set((providers || [])
+      .map(value => sharedCore.registeredProviderId?.(value))
+      .filter(Boolean));
+    const next = Object.fromEntries(
+      Object.entries(current).filter(([provider]) => allowed.has(provider))
+    );
+    writeProviderSources(card, next);
   }
 
   function providerHealthRecord(provider) {
     return window.HKCinemaDataHealth?.getState?.().records?.[provider] || null;
   }
 
-  function mclActiveSectionState() {
-    if (mclCatalogue) {
-      return { usable: true, failed: false };
+  function providerCatalogue(provider) {
+    const published = sharedCore.catalogue?.(provider) || null;
+    if (published) return published;
+
+    // The existing first provider remains the current home-base renderer. Only read
+    // its already-loaded synchronous snapshot here; aggregation never starts network IO.
+    if (provider === baseProvider()) {
+      return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
     }
-    return {
-      usable: false,
-      failed: providerHealthRecord("mcl")?.status === "error"
-    };
+    return null;
   }
 
-  function emperorActiveSectionState() {
-    if (!emperorCatalogue) {
+  function providerSectionState(provider) {
+    const catalogue = providerCatalogue(provider);
+    if (!catalogue) {
       return {
         usable: false,
-        failed: providerHealthRecord("emperor")?.status === "error"
+        failed: providerHealthRecord(provider)?.status === "error",
+        catalogue: null
       };
     }
 
     const section = getActiveTab() === "coming" ? "coming" : "now";
-    const error = emperorCatalogue.meta?.errors?.[section];
-    const fallback = Boolean(emperorCatalogue.meta?.fallbackSections?.[section]);
+    const error = catalogue.meta?.errors?.[section];
+    const fallback = Boolean(catalogue.meta?.fallbackSections?.[section]);
 
     return {
       usable: !error || fallback,
-      failed: Boolean(error) && !fallback
+      failed: Boolean(error) && !fallback,
+      catalogue
     };
   }
 
-  function findMCLMovie(sourceId) {
-    if (!mclCatalogue) return null;
-    return [
-      ...(mclCatalogue.now || []),
-      ...(mclCatalogue.coming || []),
-      ...(mclCatalogue.festival || [])
-    ].find(movie => String(movie.sourceId) === String(sourceId)) || null;
+  function providerMovies(provider, state = providerSectionState(provider)) {
+    if (!state.usable || !state.catalogue) return [];
+    const section = getActiveTab() === "coming" ? "coming" : "now";
+    return Array.isArray(state.catalogue?.[section]) ? state.catalogue[section] : [];
   }
 
-  function findEmperorMovie(sourceId) {
-    if (!emperorCatalogue) return null;
+  function catalogueMovie(provider, sourceId) {
+    const catalogue = providerCatalogue(provider);
+    if (!catalogue) return null;
+    const normalized = normalizeSourceId(provider, sourceId);
     return [
-      ...(emperorCatalogue.now || []),
-      ...(emperorCatalogue.coming || [])
-    ].find(movie => String(movie.sourceId) === String(sourceId)) || null;
+      ...(catalogue.now || []),
+      ...(catalogue.coming || []),
+      ...(catalogue.festival || [])
+    ].find(movie => (
+      normalizeSourceId(provider, movie?.sourceId || movie?.id) === normalized
+    )) || null;
   }
 
   function movieTitle(movie) {
-    return movie?.title?.zh || movie?.title?.en || "未命名電影";
+    return movie?.title?.zh || movie?.title?.en || movie?.title || "未命名電影";
   }
 
   function renderProviderOnlyCard(movie, provider) {
     const title = movieTitle(movie);
-    const providerClass = provider === "mcl" ? "mcl-only-card" : "emperor-only-card";
-    const poster = movie.poster
+    const sourceId = normalizeSourceId(provider, movie?.sourceId || movie?.id);
+    const providerClass = /^[a-z][a-z0-9-]*$/i.test(provider)
+      ? `${provider}-only-card`
+      : "";
+    const posterUrl = movie.poster || movie.posterUrl || "";
+    const poster = posterUrl
       ? `
         <img
-          src="${escapeHtml(movie.poster)}"
+          src="${escapeHtml(posterUrl)}"
           alt="${escapeHtml(title)}"
           loading="lazy"
           onerror="this.style.display='none';this.parentElement.classList.add('poster-error');"
@@ -200,11 +318,13 @@
 
     return `
       <article
-        class="movie-card ${providerClass}"
-        data-provider="${provider}"
-        data-source-id="${escapeHtml(movie.sourceId)}"
+        class="movie-card provider-only-card ${escapeHtml(providerClass)}"
+        data-provider-only="true"
+        data-provider="${escapeHtml(provider)}"
+        data-source-id="${escapeHtml(sourceId)}"
+        data-provider-sources="${escapeHtml(JSON.stringify({ [provider]: sourceId }))}"
         data-booking-url="${escapeHtml(movie.bookingUrl || "")}"
-        data-home-languages="${metadataAttribute(movie.language)}"
+        data-home-languages="${metadataAttribute(movie.language || movie.languages)}"
         data-home-formats="${metadataAttribute(movie.formats || movie.format)}"
         data-home-release-date="${escapeHtml(movie.releaseDate || "")}"
         role="button"
@@ -231,90 +351,47 @@
     `;
   }
 
-  function cardProviderData(card) {
-    const isMCLOnly = card.classList.contains("mcl-only-card");
-    const isEmperorOnly = card.classList.contains("emperor-only-card");
-
-    const broadwaySourceId = !isMCLOnly && !isEmperorOnly
-      ? String(card.dataset.sourceId || "").trim()
-      : "";
-    const mclSourceId = String(
-      card.dataset.mclSourceId ||
-      (isMCLOnly ? card.dataset.sourceId : "") ||
-      ""
-    ).trim();
-    const emperorSourceId = String(
-      card.dataset.emperorSourceId ||
-      (isEmperorOnly ? card.dataset.sourceId : "") ||
-      ""
-    ).trim();
-
+  function providerEntry(provider, sourceId, card = null, extras = {}) {
+    const normalized = normalizeSourceId(provider, sourceId);
+    if (!normalized) return null;
+    const movie = catalogueMovie(provider, normalized);
+    const poster = card?.querySelector?.(".movie-poster img")?.src || movie?.poster || movie?.posterUrl || null;
     return {
-      broadwaySourceId,
-      mclSourceId,
-      emperorSourceId
+      provider,
+      sourceId: normalized,
+      movie,
+      poster,
+      ...extras
     };
   }
 
-  function cardProviders(card) {
-    const data = cardProviderData(card);
-    const labels = [];
-    if (data.broadwaySourceId) labels.push("Broadway");
-    if (data.mclSourceId) labels.push("MCL");
-    if (data.emperorSourceId) labels.push("Emperor");
-    return labels;
-  }
-
-  function setCardProviders(card, labels) {
-    const keys = labels
-      .map(label => String(label || "").toLowerCase())
-      .filter(key => PROVIDER_OPTIONS.some(provider => provider.key === key));
-    card.dataset.providers = Array.from(new Set(keys)).join(",");
-  }
-
   function buildMatchRecord(card) {
-    const data = cardProviderData(card);
-    const components = [];
-
-    if (data.broadwaySourceId) components.push(`broadway:${data.broadwaySourceId}`);
-    if (data.mclSourceId) components.push(`mcl:${data.mclSourceId}`);
-    if (data.emperorSourceId) components.push(`emperor:${data.emperorSourceId}`);
-
-    if (components.length < 2) {
+    const sources = cardProviderSources(card);
+    const activeProviders = PROVIDERS.filter(provider => Boolean(sources[provider.key]));
+    if (activeProviders.length < 2) {
       delete card.dataset.providerMatchId;
       return null;
     }
 
+    const components = activeProviders.map(provider => `${provider.key}:${sources[provider.key]}`);
     const title = card.querySelector("h3")?.textContent?.trim() || "未命名電影";
     const matchId = components.join("|");
+    const direct = directProvider(card);
+    const entries = Object.fromEntries(PROVIDERS.map(provider => {
+      const sourceId = sources[provider.key];
+      if (!sourceId) return [provider.key, null];
+      const extras = provider.key === direct && card.dataset.movieId
+        ? { movieId: card.dataset.movieId }
+        : {};
+      return [provider.key, providerEntry(provider.key, sourceId, card, extras)];
+    }));
     const record = {
       id: matchId,
       title,
       normalizedTitle: normalizeTitle(title),
       matchType: "exact-title",
       confidence: 1,
-      broadway: data.broadwaySourceId
-        ? {
-            provider: "broadway",
-            sourceId: data.broadwaySourceId,
-            movieId: card.dataset.movieId || null,
-            poster: card.querySelector(".movie-poster img")?.src || null
-          }
-        : null,
-      mcl: data.mclSourceId
-        ? {
-            provider: "mcl",
-            sourceId: data.mclSourceId,
-            movie: findMCLMovie(data.mclSourceId)
-          }
-        : null,
-      emperor: data.emperorSourceId
-        ? {
-            provider: "emperor",
-            sourceId: data.emperorSourceId,
-            movie: findEmperorMovie(data.emperorSourceId)
-          }
-        : null
+      ...entries
     };
 
     matchRecords.set(matchId, record);
@@ -348,7 +425,10 @@
   function variantFromCard(card) {
     const title = card.querySelector(".movie-info h3")?.textContent?.trim() || "未命名電影";
     const parsed = parseVariantTitle(title);
-    const providerData = cardProviderData(card);
+    const sourceIds = cardProviderSources(card);
+    const providers = PROVIDERS
+      .filter(provider => Boolean(sourceIds[provider.key]))
+      .map(provider => provider.key);
 
     return {
       card,
@@ -358,12 +438,10 @@
       languages: readCardMetadata(card, "homeLanguages"),
       formats: readCardMetadata(card, "homeFormats"),
       releaseDate: String(card.dataset.homeReleaseDate || ""),
-      providers: cardProviders(card),
-      broadwaySourceId: providerData.broadwaySourceId || null,
-      mclSourceId: providerData.mclSourceId || null,
-      emperorSourceId: providerData.emperorSourceId || null,
+      providers,
+      sourceIds,
       comparisonMclSourceId: null,
-      comparisonProviderCount: cardProviders(card).length,
+      comparisonProviderCount: providers.length,
       sessionCriteria: null,
       broadwayMovieId: card.dataset.movieId || null,
       poster: card.querySelector(".movie-poster img")?.src || null,
@@ -371,48 +449,39 @@
     };
   }
 
-  function buildVariantMatchRecord(groupId, variant, index) {
-    const comparisonMclSourceId = variant.mclSourceId || variant.comparisonMclSourceId;
-    const sources = PROVIDER_OPTIONS
-      .map(provider => [
-        provider.key,
-        provider.key === "mcl"
-          ? comparisonMclSourceId
-          : variant[`${provider.key}SourceId`]
-      ])
-      .filter(([, sourceId]) => Boolean(sourceId));
+  function effectiveVariantSources(variant) {
+    const sources = { ...(variant.sourceIds || {}) };
+    if (variant.comparisonMclSourceId) {
+      sources.mcl = normalizeSourceId("mcl", variant.comparisonMclSourceId);
+    }
+    return sources;
+  }
 
-    if (sources.length < 2) return null;
+  function buildVariantMatchRecord(groupId, variant, index) {
+    const sources = effectiveVariantSources(variant);
+    const activeProviders = PROVIDERS.filter(provider => Boolean(sources[provider.key]));
+    if (activeProviders.length < 2) return null;
 
     const matchId = `${groupId}:variant:${index + 1}`;
+    const entries = Object.fromEntries(PROVIDERS.map(provider => {
+      const sourceId = sources[provider.key];
+      if (!sourceId) return [provider.key, null];
+      const extras = provider.key === baseProvider()
+        ? {
+            movieId: variant.broadwayMovieId || null,
+            poster: variant.poster || null
+          }
+        : {};
+      return [provider.key, providerEntry(provider.key, sourceId, null, extras)];
+    }));
+
     matchRecords.set(matchId, {
       id: matchId,
       title: variant.title,
       normalizedTitle: normalizeTitle(variant.title),
       matchType: "normalized-variant",
       confidence: 0.96,
-      broadway: variant.broadwaySourceId
-        ? {
-            provider: "broadway",
-            sourceId: variant.broadwaySourceId,
-            movieId: variant.broadwayMovieId || null,
-            poster: variant.poster || null
-          }
-        : null,
-      mcl: comparisonMclSourceId
-        ? {
-            provider: "mcl",
-            sourceId: comparisonMclSourceId,
-            movie: findMCLMovie(comparisonMclSourceId)
-          }
-        : null,
-      emperor: variant.emperorSourceId
-        ? {
-            provider: "emperor",
-            sourceId: variant.emperorSourceId,
-            movie: findEmperorMovie(variant.emperorSourceId)
-          }
-        : null,
+      ...entries,
       sessionCriteria: variant.sessionCriteria || null,
       comparisonOnlyProviders: variant.comparisonMclSourceId ? ["mcl"] : []
     });
@@ -433,9 +502,7 @@
           formats: [...variant.formats],
           releaseDate: variant.releaseDate || null,
           providers: [],
-          broadwaySourceId: null,
-          mclSourceId: null,
-          emperorSourceId: null,
+          sourceIds: Object.fromEntries(providerIds().map(provider => [provider, null])),
           comparisonMclSourceId: null,
           comparisonProviderCount: 0,
           sessionCriteria: null,
@@ -447,10 +514,10 @@
 
       const combined = bySignature.get(signature);
 
-      for (const provider of PROVIDER_OPTIONS) {
-        const sourceKey = `${provider.key}SourceId`;
-        if (!combined[sourceKey] && variant[sourceKey]) {
-          combined[sourceKey] = variant[sourceKey];
+      for (const provider of PROVIDERS) {
+        const sourceId = variant.sourceIds?.[provider.key];
+        if (!combined.sourceIds[provider.key] && sourceId) {
+          combined.sourceIds[provider.key] = sourceId;
         }
       }
 
@@ -472,14 +539,14 @@
         combined.releaseDate = variant.releaseDate;
       }
 
-      combined.providers = PROVIDER_OPTIONS
-        .filter(provider => Boolean(combined[`${provider.key}SourceId`]))
-        .map(provider => provider.label);
+      combined.providers = PROVIDERS
+        .filter(provider => Boolean(combined.sourceIds[provider.key]))
+        .map(provider => provider.key);
     }
 
     const combinedVariants = Array.from(bySignature.values());
     const genericMCL = combinedVariants.find(variant => (
-      variant.mclSourceId &&
+      variant.sourceIds.mcl &&
       showtimeMetadata()?.isGenericBridgeSource?.(variant.tags)
     ));
 
@@ -490,11 +557,11 @@
       const criteria = showtimeMetadata()?.criteriaFromVariant?.(variant.tags) || null;
 
       if (
-        !combined.mclSourceId &&
-        genericMCL?.mclSourceId &&
+        !combined.sourceIds.mcl &&
+        genericMCL?.sourceIds?.mcl &&
         criteria?.bridgeEligible
       ) {
-        combined.comparisonMclSourceId = genericMCL.mclSourceId;
+        combined.comparisonMclSourceId = genericMCL.sourceIds.mcl;
         combined.sessionCriteria = {
           languages: [...criteria.languages],
           subtitles: [],
@@ -502,10 +569,10 @@
         };
       }
 
-      combined.comparisonProviderCount = PROVIDER_OPTIONS.filter(provider => (
+      combined.comparisonProviderCount = PROVIDERS.filter(provider => (
         provider.key === "mcl"
-          ? Boolean(combined.mclSourceId || combined.comparisonMclSourceId)
-          : Boolean(combined[`${provider.key}SourceId`])
+          ? Boolean(combined.sourceIds[provider.key] || combined.comparisonMclSourceId)
+          : Boolean(combined.sourceIds[provider.key])
       )).length;
 
       combined.matchId = buildVariantMatchRecord(groupId, combined, index);
@@ -541,8 +608,8 @@
         .filter(Boolean)
         .sort((a, b) => a.length - b.length)[0] || primary.title;
 
-      const providerLabels = PROVIDER_OPTIONS
-        .filter(provider => variants.some(variant => variant.providers.includes(provider.label)))
+      const providerLabels = PROVIDERS
+        .filter(provider => variants.some(variant => variant.providers.includes(provider.key)))
         .map(provider => provider.label);
 
       const groupedVariants = coalesceVariants(groupId, title, variants);
@@ -583,7 +650,7 @@
       primary.card.dataset.homeReleaseDate = getActiveTab() === "coming"
         ? groupedReleaseDates[0] || ""
         : groupedReleaseDates.at(-1) || "";
-      setCardProviders(primary.card, providerLabels);
+      setCardProviders(primary.card, primary.providers || cardProviders(primary.card));
 
       for (const variant of variants.slice(1)) {
         variant.card.classList.add("movie-group-member");
@@ -593,17 +660,19 @@
     }
   }
 
-  function updateMovieCount(matched, tripleMatched) {
+  function updateMovieCount(matched, maxProviderCount) {
     const total = grid.querySelectorAll(".movie-card:not(.movie-group-member)").length;
     count.textContent = `${total} 部`;
-    count.title = `合併版本後 ${total} 部 · 跨院線配對 ${matched} 部 · 三院線配對 ${tripleMatched} 部`;
+    count.title = `合併版本後 ${total} 部 · 跨院線配對 ${matched} 部${
+      maxProviderCount > 1 ? ` · 最高 ${maxProviderCount} 院線同片` : ""
+    }`;
     window.HKCinemaHomeLibrary?.apply?.();
   }
 
-  function renderCombinedEmptyState(broadwayState, alternateFailure = false) {
+  function renderCombinedEmptyState(baseState, alternateFailure = false) {
     const tab = getActiveTab();
-    const partialFailure = broadwayState === "error" || alternateFailure;
-    const marker = `${tab}:${broadwayState}:${partialFailure ? "partial" : "clean"}`;
+    const partialFailure = baseState === "error" || alternateFailure;
+    const marker = `${tab}:${baseState}:${partialFailure ? "partial" : "clean"}`;
     if (grid.dataset.multiProviderEmpty === marker) return;
 
     const coming = tab === "coming";
@@ -628,23 +697,30 @@
   }
 
   function applyCatalogue() {
-    const broadwayState = grid.dataset.broadwayState || (
-      count.textContent.trim() === "—" ? "loading" : "ready"
-    );
-    if (broadwayState === "loading") return;
+    const base = baseProvider();
+    const baseStateKey = base && /^[a-z][a-z0-9]*$/i.test(base) ? `${base}State` : null;
+    const baseState = grid.dataset.homeBaseState ||
+      (baseStateKey ? grid.dataset[baseStateKey] : "") ||
+      (count.textContent.trim() === "—" ? "loading" : "ready");
+    if (baseState === "loading") return;
 
-    const mclSection = mclActiveSectionState();
-    const emperorSection = emperorActiveSectionState();
-    const mclMovies = mclSection.usable ? getMCLMovies() : [];
-    const emperorMovies = emperorSection.usable ? getEmperorMovies() : [];
-    const hasAlternateCatalogue = mclSection.usable || emperorSection.usable;
-    const hasAlternateFailure = mclSection.failed || emperorSection.failed;
-    const hasAlternateMovies = mclMovies.length > 0 || emperorMovies.length > 0;
+    const alternateProviders = PROVIDERS.filter(provider => provider.key !== base);
+    const sectionStates = new Map(alternateProviders.map(provider => [
+      provider.key,
+      providerSectionState(provider.key)
+    ]));
+    const alternateMovies = new Map(alternateProviders.map(provider => [
+      provider.key,
+      providerMovies(provider.key, sectionStates.get(provider.key))
+    ]));
+    const hasAlternateCatalogue = Array.from(sectionStates.values()).some(state => state.usable);
+    const hasAlternateFailure = Array.from(sectionStates.values()).some(state => state.failed);
+    const hasAlternateMovies = Array.from(alternateMovies.values()).some(movies => movies.length > 0);
 
-    if (["error", "empty"].includes(broadwayState)) {
+    if (["error", "empty"].includes(baseState)) {
       if (!hasAlternateCatalogue && !hasAlternateFailure) return;
       if (!hasAlternateMovies) {
-        renderCombinedEmptyState(broadwayState, hasAlternateFailure);
+        renderCombinedEmptyState(baseState, hasAlternateFailure);
         return;
       }
       grid.querySelector(".empty-state")?.remove();
@@ -657,73 +733,61 @@
       matchRecords.clear();
       resetVariantGrouping();
 
-      grid.querySelectorAll(".mcl-only-card, .emperor-only-card").forEach(card => card.remove());
-      grid.querySelectorAll("[data-mcl-source-id]").forEach(card => delete card.dataset.mclSourceId);
-      grid.querySelectorAll("[data-emperor-source-id]").forEach(card => delete card.dataset.emperorSourceId);
+      grid.querySelectorAll(
+        ".provider-only-card, .mcl-only-card[data-provider-only], .emperor-only-card[data-provider-only]"
+      ).forEach(card => card.remove());
       grid.querySelectorAll("[data-provider-match-id]").forEach(card => delete card.dataset.providerMatchId);
 
-      const broadwayCards = Array.from(grid.querySelectorAll(
-        ".movie-card:not(.mcl-only-card):not(.emperor-only-card)"
-      ));
+      const baseCards = Array.from(grid.querySelectorAll(".movie-card:not(.provider-only-card)"));
       const byTitle = new Map();
 
-      for (const card of broadwayCards) {
+      for (const card of baseCards) {
+        resetCardProviderSources(card);
         const key = normalizeTitle(card.querySelector("h3")?.textContent);
         if (key && !byTitle.has(key)) byTitle.set(key, card);
       }
 
-      for (const movie of mclMovies) {
-        const key = normalizeTitle(movieTitle(movie));
-        if (!key) continue;
+      for (const provider of alternateProviders) {
+        for (const movie of alternateMovies.get(provider.key) || []) {
+          const sourceId = normalizeSourceId(provider.key, movie?.sourceId || movie?.id);
+          const key = normalizeTitle(movieTitle(movie));
+          if (!sourceId || !key) continue;
 
-        const matchingCard = byTitle.get(key);
-        if (matchingCard) {
-          matchingCard.dataset.mclSourceId = movie.sourceId;
-          mergeMovieMetadata(matchingCard, movie);
-          continue;
+          const matchingCard = byTitle.get(key);
+          if (matchingCard) {
+            setCardProviderSource(matchingCard, provider.key, sourceId);
+            mergeMovieMetadata(matchingCard, movie);
+            continue;
+          }
+
+          grid.insertAdjacentHTML("beforeend", renderProviderOnlyCard(movie, provider.key));
+          const card = grid.lastElementChild;
+          if (card) {
+            writeProviderSources(card, { [provider.key]: sourceId });
+            byTitle.set(key, card);
+          }
         }
-
-        grid.insertAdjacentHTML("beforeend", renderProviderOnlyCard(movie, "mcl"));
-        const card = grid.lastElementChild;
-        if (card) byTitle.set(key, card);
-      }
-
-      for (const movie of emperorMovies) {
-        const key = normalizeTitle(movieTitle(movie));
-        if (!key) continue;
-
-        const matchingCard = byTitle.get(key);
-        if (matchingCard) {
-          matchingCard.dataset.emperorSourceId = movie.sourceId;
-          mergeMovieMetadata(matchingCard, movie);
-          continue;
-        }
-
-        grid.insertAdjacentHTML("beforeend", renderProviderOnlyCard(movie, "emperor"));
-        const card = grid.lastElementChild;
-        if (card) byTitle.set(key, card);
       }
 
       let matched = 0;
-      let tripleMatched = 0;
+      let maxProviderCount = 0;
 
       for (const card of grid.querySelectorAll(".movie-card")) {
         const record = buildMatchRecord(card);
         if (!record) continue;
         matched += 1;
-        if (record.broadway && record.mcl && record.emperor) {
-          tripleMatched += 1;
-        }
+        const providerCount = PROVIDERS.filter(provider => Boolean(record[provider.key])).length;
+        maxProviderCount = Math.max(maxProviderCount, providerCount);
       }
 
       applyVariantGrouping();
-      updateMovieCount(matched, tripleMatched);
+      updateMovieCount(matched, maxProviderCount);
 
       window.dispatchEvent(new CustomEvent("hkcinema:provider-matches", {
         detail: {
           matches: Array.from(matchRecords.values()),
           count: matchRecords.size,
-          tripleMatched,
+          maxProviderCount,
           movieGroups: Array.from(groupRecords.values()),
           movieGroupCount: groupRecords.size
         }
@@ -734,48 +798,39 @@
   }
 
   let queued = false;
-  const observer = new MutationObserver(() => {
+  function scheduleCatalogue() {
     if (queued) return;
-
     queued = true;
     queueMicrotask(() => {
       queued = false;
       applyCatalogue();
     });
-  });
+  }
 
+  const observer = new MutationObserver(scheduleCatalogue);
   observer.observe(grid, { childList: true, subtree: true });
 
-  window.addEventListener("hkcinema:mcl-catalogue", event => {
-    mclCatalogue = event.detail;
-    applyCatalogue();
-  });
-
-  window.addEventListener("hkcinema:emperor-catalogue", event => {
-    emperorCatalogue = event.detail;
-    applyCatalogue();
+  window.addEventListener("hkcinema:provider-catalogue", event => {
+    if (!sharedCore.registeredProviderId?.(event.detail?.provider)) return;
+    scheduleCatalogue();
   });
 
   window.addEventListener("hkcinema:data-health", event => {
-    if (!["mcl", "emperor"].includes(event.detail?.provider)) return;
-    applyCatalogue();
+    if (!sharedCore.registeredProviderId?.(event.detail?.provider)) return;
+    scheduleCatalogue();
   });
+
+  window.addEventListener("hkcinema:home-tab", scheduleCatalogue);
 
   window.addEventListener("hkcinema:movie-metadata", event => {
     const detail = event.detail || {};
-    const sourceId = String(detail.sourceId || "");
-    if (!sourceId) return;
-
-    const sourceKey = `${detail.provider || ""}SourceId`;
+    const provider = sharedCore.registeredProviderId?.(detail.provider);
+    const sourceId = provider ? normalizeSourceId(provider, detail.sourceId) : "";
+    if (!provider || !sourceId) return;
 
     for (const card of grid.querySelectorAll(".movie-card")) {
-      const directSource = (
-        card.dataset.sourceId === sourceId &&
-        card.dataset.provider === detail.provider
-      );
-      const matchedSource = card.dataset[sourceKey] === sourceId;
-
-      if (!directSource && !matchedSource) continue;
+      const sources = cardProviderSources(card);
+      if (sources[provider] !== sourceId) continue;
 
       mergeMovieMetadata(card, {
         language: detail.languages,
@@ -799,9 +854,12 @@
   });
 
   window.HKCinemaMultiProvider = Object.freeze({
-    version: "m6d-1",
-    refresh: applyCatalogue
+    version: "m7r2-1",
+    refresh: scheduleCatalogue,
+    getProviderSources(card) {
+      return { ...cardProviderSources(card) };
+    }
   });
 
-  if (mclCatalogue || emperorCatalogue) applyCatalogue();
+  scheduleCatalogue();
 })();

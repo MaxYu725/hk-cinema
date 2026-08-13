@@ -33,6 +33,11 @@
 
   function publishCatalogue(catalogue) {
     window.HKCinemaEmperorCatalogue = catalogue;
+    const provider = window.HKCinemaProviders?.emperor;
+    if (provider) provider.catalogue = catalogue;
+    window.HKCinemaProviderSharedCore?.publishCatalogue?.("emperor", catalogue, {
+      publisher: "emperor-status"
+    });
     window.dispatchEvent(new CustomEvent("hkcinema:emperor-catalogue", {
       detail: catalogue
     }));
@@ -85,7 +90,6 @@
     }
 
     const cached = provider.getCachedCatalogue?.() || null;
-
     if (cached) {
       publishCatalogue(cached);
       setCardState(
@@ -142,14 +146,9 @@
         reportHealth("degraded", "cache", cached, `${summary(cached)} · 暫時未能更新`);
       } else {
         const message = error?.name === "AbortError"
-          ? "Emperor 連線逾時；Broadway 與 MCL 功能不受影響。"
+          ? "Emperor 連線逾時；其他院線功能不受影響。"
           : `Worker 讀取失敗：${error instanceof Error ? error.message : String(error)}`;
-        setCardState(
-          card,
-          "error",
-          "Emperor 暫時無法連接",
-          message
-        );
+        setCardState(card, "error", "Emperor 暫時無法連接", message);
         reportHealth("error", "network", null, message);
       }
     } finally {

@@ -3,24 +3,17 @@
 
   function setCardState(card, status, title, text) {
     card.dataset.status = status;
-
     const strong = card.querySelector("strong");
     const paragraph = card.querySelector("p");
-
     if (strong) strong.textContent = title;
     if (paragraph) paragraph.textContent = text;
   }
 
   function ensureCard() {
     let card = document.querySelector("#mclStatus");
+    if (card) return card;
 
-    if (card) {
-      return card;
-    }
-
-    const broadwayStatus =
-      document.querySelector("#systemStatus");
-
+    const broadwayStatus = document.querySelector("#systemStatus");
     card = document.createElement("section");
     card.id = "mclStatus";
     card.className = "status-card";
@@ -32,22 +25,20 @@
         <p>正在由瀏覽器直接取得 MCL 電影資料。</p>
       </div>
     `;
-
-    if (broadwayStatus) {
-      broadwayStatus.insertAdjacentElement("afterend", card);
-    }
-
+    if (broadwayStatus) broadwayStatus.insertAdjacentElement("afterend", card);
     return card;
   }
 
   function publishCatalogue(catalogue) {
     window.HKCinemaMCLCatalogue = catalogue;
-
-    window.dispatchEvent(
-      new CustomEvent("hkcinema:mcl-catalogue", {
-        detail: catalogue
-      })
-    );
+    const provider = window.HKCinemaProviders?.mcl;
+    if (provider) provider.catalogue = catalogue;
+    window.HKCinemaProviderSharedCore?.publishCatalogue?.("mcl", catalogue, {
+      publisher: "mcl-status"
+    });
+    window.dispatchEvent(new CustomEvent("hkcinema:mcl-catalogue", {
+      detail: catalogue
+    }));
   }
 
   function catalogueSummary(catalogue) {
@@ -75,53 +66,30 @@
   }
 
   function formatCacheAge(ageMs) {
-    if (!Number.isFinite(ageMs) || ageMs < 0) {
-      return "上次成功資料";
-    }
-
+    if (!Number.isFinite(ageMs) || ageMs < 0) return "上次成功資料";
     const minutes = Math.floor(ageMs / 60000);
-
-    if (minutes < 1) {
-      return "剛才的資料";
-    }
-
-    if (minutes < 60) {
-      return `${minutes} 分鐘前資料`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    return `${hours} 小時前資料`;
+    if (minutes < 1) return "剛才的資料";
+    if (minutes < 60) return `${minutes} 分鐘前資料`;
+    return `${Math.floor(minutes / 60)} 小時前資料`;
   }
 
   async function loadMCLStatus() {
-    if (refreshInFlight) {
-      return;
-    }
-
+    if (refreshInFlight) return;
     refreshInFlight = true;
 
     const card = ensureCard();
-    const provider =
-      window.HKCinemaProviders?.mcl;
+    const provider = window.HKCinemaProviders?.mcl;
 
     if (!provider) {
       refreshInFlight = false;
-      setCardState(
-        card,
-        "error",
-        "MCL 未連接",
-        "MCL provider 未能載入。"
-      );
+      setCardState(card, "error", "MCL 未連接", "MCL provider 未能載入。");
       reportHealth("error", "network", null, "Provider 未能載入");
       return;
     }
 
-    const cached =
-      provider.getCachedCatalogue?.() || null;
-
+    const cached = provider.getCachedCatalogue?.() || null;
     if (cached) {
       publishCatalogue(cached);
-
       setCardState(
         card,
         "loading",
@@ -140,11 +108,8 @@
     }
 
     try {
-      const catalogue =
-        await provider.refreshCatalogue();
-
+      const catalogue = await provider.refreshCatalogue();
       publishCatalogue(catalogue);
-
       setCardState(
         card,
         "ready",
@@ -154,11 +119,7 @@
       reportHealth("fresh", "network", catalogue, catalogueSummary(catalogue));
     } catch (error) {
       if (cached) {
-        const reason =
-          error?.name === "AbortError"
-            ? "MCL 更新逾時"
-            : "MCL 暫時未能更新";
-
+        const reason = error?.name === "AbortError" ? "MCL 更新逾時" : "MCL 暫時未能更新";
         setCardState(
           card,
           "loading",
@@ -167,17 +128,10 @@
         );
         reportHealth("degraded", "cache", cached, `${catalogueSummary(cached)} · ${reason}`);
       } else {
-        const message =
-          error?.name === "AbortError"
-            ? "MCL 兩次連線均逾時；Broadway 功能不受影響。"
-            : `瀏覽器直連失敗：${error instanceof Error ? error.message : String(error)}`;
-
-        setCardState(
-          card,
-          "error",
-          "MCL 暫時無法連接",
-          message
-        );
+        const message = error?.name === "AbortError"
+          ? "MCL 兩次連線均逾時；其他院線功能不受影響。"
+          : `瀏覽器直連失敗：${error instanceof Error ? error.message : String(error)}`;
+        setCardState(card, "error", "MCL 暫時無法連接", message);
         reportHealth("error", "network", null, message);
       }
     } finally {
@@ -186,16 +140,10 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener(
-      "DOMContentLoaded",
-      loadMCLStatus,
-      { once: true }
-    );
+    document.addEventListener("DOMContentLoaded", loadMCLStatus, { once: true });
   } else {
     loadMCLStatus();
   }
 
-  document
-    .querySelector("#refreshButton")
-    ?.addEventListener("click", loadMCLStatus);
+  document.querySelector("#refreshButton")?.addEventListener("click", loadMCLStatus);
 })();
