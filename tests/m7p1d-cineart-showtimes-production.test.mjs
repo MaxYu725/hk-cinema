@@ -158,7 +158,8 @@ test("M7P1D Worker route is GET-only and exposes no detailed price, seat or book
     source("worker/src/provider-manifest.js")
   ]);
 
-  assert.match(router, /\/api\/cineart\\\/movies\\\/\(\\d\+\)\\\/shows/);
+  assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
+  assert.match(router, /cineArtShowtimeService\.getMovie/);
   assert.match(router, /phase:\s*"M7P1D"/);
   assert.match(router, /mode:\s*"showtimes-only"/);
   assert.match(router, /CineArt showtimes are read-only/);
