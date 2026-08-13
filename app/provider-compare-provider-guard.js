@@ -1,14 +1,15 @@
 (() => {
   let scheduled = false;
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
 
   function providerSet() {
     const timeline = document.querySelector("#providerCompareContent .provider-compare-timeline");
     if (!timeline) return new Set();
     const set = new Set();
     timeline.querySelectorAll(".provider-compare-source").forEach(source => {
-      if (source.classList.contains("emperor")) set.add("emperor");
-      else if (source.classList.contains("mcl")) set.add("mcl");
-      else if (source.classList.contains("broadway")) set.add("broadway");
+      const provider = sharedCore?.providerFromNode?.(source) ||
+        sharedCore?.registeredProviderId?.(source.closest?.("[data-provider]")?.dataset?.provider);
+      if (provider) set.add(provider);
     });
     return set;
   }
@@ -38,19 +39,27 @@
     requestAnimationFrame(sync);
   }
 
+  function relevantMutation(record) {
+    const target = record.target?.nodeType === Node.ELEMENT_NODE
+      ? record.target
+      : record.target?.parentElement;
+    return Boolean(
+      target?.closest?.("#providerCompareContent") ||
+      Array.from(record.addedNodes || []).some(node => (
+        node?.nodeType === Node.ELEMENT_NODE &&
+        (node.matches?.("#providerCompareOverlay, #providerCompareContent") ||
+          node.querySelector?.("#providerCompareContent"))
+      ))
+    );
+  }
+
   function install() {
-    const bodyObserver = new MutationObserver(() => {
-      const content = document.querySelector("#providerCompareContent");
-      if (!content || content.dataset.providerGuardObserved === "true") {
-        schedule();
-        return;
-      }
-      content.dataset.providerGuardObserved = "true";
-      const observer = new MutationObserver(schedule);
-      observer.observe(content, { childList: true, subtree: true });
-      schedule();
+    const observer = new MutationObserver(records => {
+      if (records.some(relevantMutation)) schedule();
     });
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("hkcinema:provider-compare-open", schedule);
+    window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
     schedule();
   }
 
