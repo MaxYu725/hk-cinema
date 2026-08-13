@@ -32,33 +32,24 @@ assert.equal(
   "catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly"
 );
 
-const catalogue = await requestJson("/api/cineart/catalogue");
-assert.equal(catalogue.response.ok, true);
-assert.equal(catalogue.payload?.ok, true);
-const candidates = (catalogue.payload?.data?.now || [])
-  .filter(item => /^\d+$/.test(String(item?.sourceId || "")))
-  .slice(0, 8);
-assert.ok(candidates.length > 0, "CineArt catalogue must expose candidate movies");
+const discovery = await requestJson("/api/providers/cineart/discovery");
+assert.equal(discovery.response.ok, true);
+assert.equal(discovery.payload?.ok, true);
+const sample = discovery.payload?.data?.home?.sampleShow;
+assert.ok(sample, "CineArt discovery must expose a current sample show");
+assert.ok(/^\d+$/.test(String(sample.movieSourceId || "")));
+assert.match(String(sample.date || ""), /^\d{4}-\d{2}-\d{2}$/);
 
-let selected = null;
-for (const movie of candidates) {
-  const result = await requestJson(`/api/cineart/movies/${encodeURIComponent(movie.sourceId)}/shows`);
-  if (!result.response.ok || result.payload?.ok !== true) continue;
-  const sessions = Array.isArray(result.payload?.data?.sessions) ? result.payload.data.sessions : [];
-  const strict = sessions.find(session => session?.seatSummary?.quality === "strict-seat-state");
-  const detailed = sessions.find(session => Array.isArray(session?.price?.ticketTypes) && session.price.ticketTypes.length > 0);
-  if (strict && detailed) {
-    selected = { movie, result, strict, detailed };
-    break;
-  }
-}
-
-assert.ok(selected, "at least one current CineArt selected-date result must expose strict seats and detailed price");
-const { movie, result: first, strict, detailed } = selected;
+const first = await requestJson(
+  `/api/cineart/movies/${encodeURIComponent(sample.movieSourceId)}/shows?date=${encodeURIComponent(sample.date)}`
+);
+assert.equal(first.response.ok, true);
+assert.equal(first.payload?.ok, true);
 assert.equal(first.payload?.meta?.phase, "M7P1F");
 assert.equal(first.payload?.meta?.provider, "cineart");
 assert.equal(first.payload?.meta?.mode, "showtimes-detailed-price-strict-seats-selected-date");
 assert.equal(first.payload?.data?.meta?.detailMode, "selected-date-bounded");
+assert.equal(first.payload?.data?.selectedDate, sample.date);
 assert.ok(first.payload.data.availableDates.length > 0);
 assert.ok(first.payload.data.sessions.length > 0);
 assert.ok(first.payload.data.allSessions.length > 0);
@@ -67,9 +58,18 @@ assert.ok(first.payload.data.meta.detail.attempted <= 6);
 assert.ok(first.payload.data.meta.detail.strictSeats > 0);
 assert.ok(first.payload.data.meta.detail.detailedPrices > 0);
 
+const strict = first.payload.data.sessions.find(
+  session => session?.seatSummary?.quality === "strict-seat-state"
+);
+const detailed = first.payload.data.sessions.find(
+  session => Array.isArray(session?.price?.ticketTypes) && session.price.ticketTypes.length > 0
+);
+assert.ok(strict, "discovery sample date must expose at least one strict CineArt seat summary");
+assert.ok(detailed, "discovery sample date must expose at least one detailed CineArt price");
+
 for (const session of first.payload.data.allSessions) {
   assert.equal(session?.provider, "cineart");
-  assert.equal(String(session?.movieSourceId), String(movie.sourceId));
+  assert.equal(String(session?.movieSourceId), String(sample.movieSourceId));
   assert.equal(session?.bookingUrl, null);
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
@@ -115,18 +115,8 @@ assert.ok(Number.isFinite(strict.seatSummary.available));
 assert.ok(Array.isArray(detailed.price.ticketTypes));
 assert.ok(detailed.price.ticketTypes.length > 0);
 
-const selectedDate = first.payload.data.selectedDate;
-const dated = await requestJson(
-  `/api/cineart/movies/${encodeURIComponent(movie.sourceId)}/shows?date=${encodeURIComponent(selectedDate)}`
-);
-assert.equal(dated.response.ok, true);
-assert.equal(dated.payload?.ok, true);
-assert.equal(dated.payload?.data?.selectedDate, selectedDate);
-assert.equal(dated.payload.data.sessions.every(session => session.date === selectedDate), true);
-assert.ok(dated.payload.data.meta.detail.attempted <= 6);
-
 const denied = await requestJson(
-  `/api/cineart/movies/${encodeURIComponent(movie.sourceId)}/shows`,
+  `/api/cineart/movies/${encodeURIComponent(sample.movieSourceId)}/shows`,
   { method: "POST" }
 );
 assert.equal(denied.response.status, 405);
@@ -139,14 +129,16 @@ console.log(JSON.stringify({
     phase: health.payload.phase,
     cineartService: health.payload.providers.cineart
   },
-  movie: {
-    sourceId: movie.sourceId,
-    title: movie.title
+  discoverySample: {
+    sourceId: sample.sourceId,
+    movieSourceId: sample.movieSourceId,
+    date: sample.date,
+    time: sample.time
   },
   showtimes: {
     phase: first.payload.meta.phase,
     mode: first.payload.meta.mode,
-    selectedDate,
+    selectedDate: first.payload.data.selectedDate,
     selectedSessions: first.payload.data.sessions.length,
     allSessions: first.payload.data.allSessions.length,
     detail: first.payload.data.meta.detail,
