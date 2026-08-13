@@ -1,6 +1,6 @@
 (() => {
-  const PROVIDER_LABELS = { broadway: "Broadway", mcl: "MCL", emperor: "Emperor" };
-  const PROVIDER_ORDER = { broadway: 0, mcl: 1, emperor: 2 };
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
+  const providerOrder = new Map((sharedCore?.providers?.() || []).map((provider, index) => [provider.key, index]));
   const DEFAULT_FILTERS = Object.freeze({
     provider: "all",
     language: "all",
@@ -44,6 +44,20 @@
       .replaceAll("'", "&#039;");
   }
 
+  function providerLabel(provider) {
+    return sharedCore?.label?.(provider) || String(provider || "").trim() || "院線";
+  }
+
+  function providerRank(provider) {
+    return providerOrder.has(provider) ? providerOrder.get(provider) : Number.MAX_SAFE_INTEGER;
+  }
+
+  function normalizeProviderFilter(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw || raw === "all") return "all";
+    return sharedCore?.registeredProviderId?.(raw) || "all";
+  }
+
   function parseMoney(value) {
     const match = String(value || "").match(/\$\s*([\d.]+)/);
     if (!match) return null;
@@ -85,10 +99,18 @@
   }
 
   function detectProvider(card) {
-    const source = card.querySelector(".provider-compare-source");
-    if (source?.classList.contains("emperor")) return "emperor";
-    if (source?.classList.contains("mcl")) return "mcl";
-    return "broadway";
+    const detected = sharedCore?.providerFromNode?.(card);
+    if (detected) return detected;
+    const explicit = String(card?.dataset?.provider || "").trim().toLowerCase();
+    return sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
+  }
+
+  function providerOptions(items) {
+    const ids = Array.from(new Set((items || []).map(item => item?.provider).filter(Boolean)));
+    return ids.map(key => ({ key, label: providerLabel(key) })).sort((a, b) => (
+      providerRank(a.key) - providerRank(b.key) ||
+      a.label.localeCompare(b.label, "zh-HK", { numeric: true, sensitivity: "base" })
+    ));
   }
 
   function cinemaKey(provider, cinemaMeta, cinema) {
@@ -100,13 +122,13 @@
 
   function parseCard(card, index) {
     const provider = detectProvider(card);
-    const providerLabel = PROVIDER_LABELS[provider];
+    const label = providerLabel(provider);
     const time = card.querySelector(".provider-compare-show-time")?.textContent?.trim() || "--:--";
     const cinema = card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "戲院";
     const price = parseMoney(card.querySelector(".provider-compare-show-price")?.textContent);
     const seats = parseSeats(card);
     const registry = window.HKCinemaCinemaRegistry;
-    const cinemaMeta = registry?.resolve?.(provider, cinema) || { canonical: cinema, region: "unknown", district: null };
+    const cinemaMeta = registry?.resolve?.(provider, cinema) || { provider, canonical: cinema, region: "unknown", district: null };
     const key = cinemaKey(provider, cinemaMeta, cinema);
 
     card.dataset.cinemaRegion = cinemaMeta.region || "unknown";
@@ -118,7 +140,7 @@
       card,
       index,
       provider,
-      providerLabel,
+      providerLabel: label,
       time,
       timeValue: timeValue(time),
       cinema,
@@ -219,6 +241,14 @@
     });
   }
 
+  function ensureProviderSelection(items) {
+    if (uiState.provider === "all") return;
+    if (!providerOptions(items).some(option => option.key === uiState.provider)) {
+      uiState.provider = "all";
+      uiState.cinema = "all";
+    }
+  }
+
   function ensureMetadataSelections(items) {
     for (const kind of ["language", "subtitle", "format"]) {
       if (uiState[kind] === "all") continue;
@@ -282,7 +312,7 @@
       });
     }
     return Array.from(map.values()).sort((a, b) =>
-      (PROVIDER_ORDER[a.provider] ?? 99) - (PROVIDER_ORDER[b.provider] ?? 99) ||
+      providerRank(a.provider) - providerRank(b.provider) ||
       a.canonical.localeCompare(b.canonical, "zh-HK", { numeric: true, sensitivity: "base" })
     );
   }
@@ -303,7 +333,7 @@
 
   function activeFilters(items) {
     const filters = [];
-    if (uiState.provider !== "all") filters.push({ key: "provider", label: PROVIDER_LABELS[uiState.provider] || uiState.provider });
+    if (uiState.provider !== "all") filters.push({ key: "provider", label: providerLabel(uiState.provider) });
     for (const kind of ["language", "subtitle", "format"]) {
       if (uiState[kind] !== "all") filters.push({ key: kind, label: selectedMetadataLabel(kind) });
     }
@@ -347,6 +377,17 @@
     `;
   }
 
+  function renderProviderControl(items) {
+    const options = providerOptions(items);
+    return `
+      <div class="provider-compare-control-group">
+        <span>院線</span>
+        <button type="button" data-insight-provider="all" class="${uiState.provider === "all" ? "active" : ""}">全部</button>
+        ${options.map(option => `<button type="button" data-insight-provider="${escapeHtml(option.key)}" class="${uiState.provider === option.key ? "active" : ""}">${escapeHtml(option.label)}</button>`).join("")}
+      </div>
+    `;
+  }
+
   function renderCinemaOptions(items) {
     const options = getCinemaOptions(items);
     return `
@@ -365,13 +406,7 @@
     const hasSeats = items.some(item => item.seats);
     return `
       <div class="provider-compare-controls phase8c-controls" aria-label="場次篩選及排序" ${uiState.expanded ? "" : "hidden"}>
-        <div class="provider-compare-control-group">
-          <span>院線</span>
-          <button type="button" data-insight-provider="all" class="${uiState.provider === "all" ? "active" : ""}">全部</button>
-          <button type="button" data-insight-provider="broadway" class="${uiState.provider === "broadway" ? "active" : ""}">Broadway</button>
-          <button type="button" data-insight-provider="mcl" class="${uiState.provider === "mcl" ? "active" : ""}">MCL</button>
-          <button type="button" data-insight-provider="emperor" class="${uiState.provider === "emperor" ? "active" : ""}">Emperor</button>
-        </div>
+        ${renderProviderControl(items)}
 
         ${renderMetadataControl(items, "language", "語言")}
         ${renderMetadataControl(items, "subtitle", "字幕")}
@@ -507,6 +542,7 @@
     try {
       const cards = Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"));
       const items = cards.map(parseCard);
+      ensureProviderSelection(items);
       ensureMetadataSelections(items);
       ensureDistrictSelection(items);
       ensurePriceSelection(items);
@@ -526,7 +562,7 @@
           subtree: true,
           characterData: true,
           attributes: true,
-          attributeFilter: ["data-seat-available", "data-seat-total"]
+          attributeFilter: ["data-provider", "data-seat-available", "data-seat-total"]
         });
       }
     }
@@ -557,7 +593,7 @@
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ["data-seat-available", "data-seat-total"]
+      attributeFilter: ["data-provider", "data-seat-available", "data-seat-total"]
     });
     enhance();
   }
@@ -569,7 +605,7 @@
   }
 
   window.HKCinemaProviderCompareFilters = {
-    version: "8c1",
+    version: "8c1-m7r4-1",
     setCinema(value) {
       uiState.cinema = String(value || "all");
       enhance();
@@ -577,7 +613,9 @@
     },
     setFilter(key, value) {
       if (!Object.prototype.hasOwnProperty.call(DEFAULT_FILTERS, key) || key === "cinema") return null;
-      uiState[key] = String(value || DEFAULT_FILTERS[key]);
+      uiState[key] = key === "provider"
+        ? normalizeProviderFilter(value)
+        : String(value || DEFAULT_FILTERS[key]);
       if (["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats"].includes(key)) uiState.cinema = "all";
       enhance();
       return uiState[key];
@@ -587,7 +625,10 @@
       enhance();
     },
     getState() { return { ...uiState }; },
-    refresh() { enhance(); }
+    refresh() { enhance(); },
+    providerForCard: detectProvider,
+    providerOptionsFor: providerOptions,
+    parseCardForTest: parseCard
   };
 
   document.addEventListener("click", event => {
@@ -625,7 +666,8 @@
       if (!button) continue;
       event.preventDefault();
       event.stopPropagation();
-      uiState[kind] = button.dataset[datasetKey] || DEFAULT_FILTERS[kind];
+      const nextValue = button.dataset[datasetKey] || DEFAULT_FILTERS[kind];
+      uiState[kind] = kind === "provider" ? normalizeProviderFilter(nextValue) : nextValue;
       if (["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats"].includes(kind)) uiState.cinema = "all";
       enhance();
       return;
