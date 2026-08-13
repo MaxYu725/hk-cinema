@@ -28,6 +28,7 @@ on:
       - "scripts/m7p1e-cineart-price-seat-validation.mjs"
       - "scripts/m7p1f-cineart-strict-detail-validation.mjs"
       - "scripts/m7p1g-cineart-seatmap-validation.mjs"
+      - "scripts/m7p1h-cineart-final-capability-audit.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -85,3 +86,6 @@ jobs:
 
       - name: Validate CineArt production read-only seat map
         run: node scripts/m7p1g-cineart-seatmap-validation.mjs
+
+      - name: Audit current CineArt booking and format evidence
+        run: node scripts/m7p1h-cineart-final-capability-audit.mjs
