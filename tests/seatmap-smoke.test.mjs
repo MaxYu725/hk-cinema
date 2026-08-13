@@ -175,24 +175,29 @@ test("normal halls fit while large and IMAX layouts retain readable seats and sc
   assert.equal(shared.gridMetrics(imax).scrollable, true);
   assert.ok(shared.gridMetrics(imax).size >= 17);
 
-  const wideMcl = models.seatMap("mcl", {
-    sessionId: "3",
-    totalColumns: 32,
+  const mclModel = totalColumns => models.seatMap("mcl", {
+    sessionId: String(totalColumns),
+    totalColumns,
     areas: [{
-      name: "IMAX",
-      cellColumns: 32,
+      name: totalColumns > 20 ? "IMAX" : "Standard",
+      cellColumns: totalColumns,
       ratioLeft: 0,
       ratioTop: 0,
       rows: [
-        { name: "A", cells: Array.from({ length: 32 }, (_, index) => ({ type: "blank", cellIndex: index })) },
-        { name: "B", cells: Array.from({ length: 32 }, (_, index) => ({ type: "blank", cellIndex: index })) }
+        { name: "A", cells: Array.from({ length: totalColumns }, (_, index) => ({ type: "blank", cellIndex: index })) },
+        { name: "B", cells: Array.from({ length: totalColumns }, (_, index) => ({ type: "blank", cellIndex: index })) }
       ]
     }]
-  }, { sourceId: "3" });
-  const metrics = shared.areaGridMetrics(wideMcl);
+  }, { sourceId: String(totalColumns) });
+
+  const normalMclMetrics = shared.areaGridMetrics(mclModel(12));
+  const wideMcl = mclModel(32);
+  const wideMclMetrics = shared.areaGridMetrics(wideMcl);
   const html = shared.renderMap(wideMcl);
-  assert.equal(metrics.scrollable, true);
-  assert.ok(metrics.cellSize >= 17);
+  assert.equal(normalMclMetrics.cellSize, 20);
+  assert.equal(wideMclMetrics.cellSize, 20);
+  assert.equal(normalMclMetrics.scrollable, false);
+  assert.equal(wideMclMetrics.scrollable, true);
   assert.match(html, /大型／闊身影廳/);
   assert.match(html, /shared-seatmap-fixed-rows/);
 
@@ -218,6 +223,7 @@ test("three provider clients delegate fetch results to the shared lifecycle", as
     assert.doesNotMatch(provider, /function render(?:Map|Seat|Section|Legend)/);
   }
   assert.match(shared, /REQUEST_TIMEOUT_MS = 12000/);
+  assert.match(shared, /MCL_AREA_GRID_SEAT_SIZE = 20/);
   assert.match(shared, /AbortController/);
   assert.match(shared, /data-seatmap-retry/);
   assert.match(shared, /aria-modal="true"/);
@@ -225,7 +231,7 @@ test("three provider clients delegate fetch results to the shared lifecycle", as
   assert.match(css, /body\.seatmap-open/);
   assert.match(css, /@media \(max-width: 360px\)/);
 
-  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3-m7r3-1");
+  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3-m8a1-1");
   assert.ok(sharedIndex > index.indexOf("view-models.js?v=7b3-m7r3-1"));
   for (const loader of ["emperor-seatmap.js?v=7b3", "seatmap.js?v=7b3", "mcl-seatmap.js?v=7b3"]) {
     assert.ok(index.indexOf(loader) > sharedIndex, `${loader} must load after the shared renderer`);
@@ -239,5 +245,5 @@ test("provider clients still expose one reliability surface", async () => {
   assert.equal(context.window.HKCinemaBroadwaySeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaMCLSeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaEmperorSeatMap.getStats().requestTimeoutMs, 12000);
-  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3-m7r3-1");
+  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3-m8a1-1");
 });
