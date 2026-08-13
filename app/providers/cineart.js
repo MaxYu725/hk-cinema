@@ -3,6 +3,7 @@
   const CACHE_KEY = "hkcinema:cineart-catalogue:v2";
   const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
   const REQUEST_TIMEOUT_MS = 8000;
+  const SEAT_MAP_DISPLAY_DENSITY = 0.72;
 
   function validCatalogue(value) {
     return Boolean(
@@ -257,6 +258,54 @@
     };
   }
 
+  function sourceBounds(section = {}) {
+    const raw = section?.bounds || {};
+    const minLeft = Number(raw.minLeft || 0);
+    const minTop = Number(raw.minTop || 0);
+    const width = Number(raw.width || 0);
+    const height = Number(raw.height || 0);
+    return {
+      minLeft,
+      maxLeft: Number(raw.maxLeft || (minLeft + width)),
+      minTop,
+      maxTop: Number(raw.maxTop || (minTop + height)),
+      width,
+      height
+    };
+  }
+
+  function displayBounds(section = {}) {
+    const source = sourceBounds(section);
+    const width = source.width * SEAT_MAP_DISPLAY_DENSITY;
+    const height = source.height * SEAT_MAP_DISPLAY_DENSITY;
+    return {
+      minLeft: source.minLeft,
+      maxLeft: source.minLeft + width,
+      minTop: source.minTop,
+      maxTop: source.minTop + height,
+      width,
+      height
+    };
+  }
+
+  function compressSeatPosition(seat, source) {
+    if (!seat?.position) return seat;
+    const left = Number(seat.position.left);
+    const top = Number(seat.position.top);
+    return {
+      ...seat,
+      position: {
+        ...seat.position,
+        left: Number.isFinite(left)
+          ? source.minLeft + ((left - source.minLeft) * SEAT_MAP_DISPLAY_DENSITY)
+          : left,
+        top: Number.isFinite(top)
+          ? source.minTop + ((top - source.minTop) * SEAT_MAP_DISPLAY_DENSITY)
+          : top
+      }
+    };
+  }
+
   function seatMapViewModel(data = {}, session = null) {
     const provider = window.HKCinemaViewModels?.provider?.("cineart") || {
       id: "cineart",
@@ -266,8 +315,11 @@
     };
     const sourceSections = Array.isArray(data.sections) ? data.sections : [];
     const sections = sourceSections.map((section, index) => {
+      const source = sourceBounds(section);
+      const bounds = displayBounds(section);
       const seats = (Array.isArray(section?.seats) ? section.seats : [])
-        .map(normalizeSeat);
+        .map(normalizeSeat)
+        .map(seat => compressSeatPosition(seat, source));
       const grouped = new Map();
       for (const seat of seats) {
         const row = seat.row || "";
@@ -287,14 +339,7 @@
       return {
         id: String(section?.id || index),
         name: section?.name || null,
-        bounds: {
-          minLeft: Number(section?.bounds?.minLeft || 0),
-          maxLeft: Number(section?.bounds?.maxLeft || 0),
-          minTop: Number(section?.bounds?.minTop || 0),
-          maxTop: Number(section?.bounds?.maxTop || 0),
-          width: Number(section?.bounds?.width || 0),
-          height: Number(section?.bounds?.height || 0)
-        },
+        bounds,
         metrics: {},
         areas: [],
         rows,
