@@ -219,3 +219,14 @@ test("adjacent-date prefetch keeps an AbortController and passes its signal into
   assert.doesNotMatch(prefetch, /prefetchEmperor\(context\.emperorId/);
   assert.match(prefetch, /type === "open" \|\| type === "close" \|\| type === "date-change" \|\| type === "reload"/);
 });
+
+test("comparison filters stay presentation-only and changed network helpers are cache-busted", async () => {
+  const [filterUx, index] = await Promise.all([
+    source("app/phase9b3-filter-compact.js"),
+    source("app/index.html")
+  ]);
+
+  assert.doesNotMatch(filterUx, /\bfetch\s*\(/);
+  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d/);
+  assert.match(index, /provider-compare-prefetch\.js\?v=m6d2b/);
+});
