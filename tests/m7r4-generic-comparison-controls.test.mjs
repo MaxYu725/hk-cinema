@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -225,8 +226,10 @@ test("M7R4 source owners no longer enumerate Broadway, MCL and Emperor as the pr
   assert.equal(recommendations.includes('classList.contains("mcl")'), false);
   assert.equal(preferences.includes('provider: new Set(["all", "broadway", "mcl", "emperor"])'), false);
   assert.equal(phase6m.includes('broadway: "Broadway"'), false);
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-m7r4-1/);
-  assert.match(index, /provider-compare-phase6m\.js\?v=7a1-m7r4-1/);
+  for (const asset of [
+    "provider-compare-insights-v4.js",
+    "provider-compare-preferences-v2.js",
+    "provider-compare-recommendations-v4.js",
+    "provider-compare-phase6m.js"
+  ]) assertAsset(index, asset);
 });
