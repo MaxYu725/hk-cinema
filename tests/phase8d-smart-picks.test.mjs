@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import { assertAsset } from './index-assets.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const recommendationsSource = await readFile(new URL('../app/provider-compare-recommendations-v4.js', import.meta.url), 'utf8');
@@ -59,8 +60,8 @@ function entry(overrides = {}) {
 }
 
 test('Phase 8D wires Smart Picks 2 and a mobile 2x2 grid', () => {
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-m7r4-1/);
-  assert.match(index, /phase8d-smart-picks\.css\?v=8d1/);
+  assertAsset(index, 'provider-compare-recommendations-v4.js');
+  assertAsset(index, 'phase8d-smart-picks.css');
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-recommendations-v3\.js/);
   assert.match(css, /grid-template-columns:\s*repeat\(4/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*grid-template-columns:\s*repeat\(2/);
