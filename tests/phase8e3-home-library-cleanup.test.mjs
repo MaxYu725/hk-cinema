@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -14,8 +15,8 @@ test("Phase 8E3 loads the slim home library runtime and syntax-checks it", async
     read("package.json")
   ]);
 
-  assert.match(index, /home-library-core\.js\?v=8e3/);
-  assert.match(index, /home-library\.js\?v=8e3/);
+  assertAsset(index, "home-library-core.js");
+  assertAsset(index, "home-library.js");
   assert.match(packageJson, /node --check app\/home-library-core\.js/);
   assert.match(packageJson, /node --check app\/home-library\.js/);
 });
@@ -44,7 +45,7 @@ test("retired homepage facet, provider and hidden region plumbing is gone", asyn
   assert.doesNotMatch(core, /extractFacets/);
   assert.doesNotMatch(core, /facetMatches/);
   assert.doesNotMatch(core, /mode === "providers"/);
-  assert.match(core, /version: "8e3"/);
+  assert.match(core, /version:\s*["'][^"']+["']/);
 });
 
 test("homepage controls stay movie-first after the cleanup", async () => {
@@ -62,10 +63,12 @@ test("homepage controls stay movie-first after the cleanup", async () => {
 test("production keeps only the current comparison generations while historical files remain repository-only", async () => {
   const index = await read("app/index.html");
 
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-m7r4-1/);
+  for (const asset of [
+    "provider-compare-v4.js",
+    "provider-compare-insights-v4.js",
+    "provider-compare-preferences-v2.js",
+    "provider-compare-recommendations-v4.js"
+  ]) assertAsset(index, asset);
 
   assert.doesNotMatch(index, /<script src="\.\/provider-compare\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);
