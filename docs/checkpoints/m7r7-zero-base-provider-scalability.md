@@ -31,7 +31,7 @@ No change was made to these unrelated feature constraints.
 
 ### 2. Provider-name dispatch in shared runtime
 
-Three real decoupling risks remained.
+Three real decoupling risks remained in the initial scan, followed by one additional seat-map adapter gap found while exercising the new gates.
 
 #### Comparison engine
 
@@ -47,7 +47,17 @@ Provider-specific normalizers remain because their upstream semantics genuinely 
 
 Request builders are now stored in `SEAT_MAP_REQUEST_BUILDERS`. A future seat-map capable provider can supply its own `HKCinemaProviders[provider].seatMapRequest` hook; an unsupported or missing adapter still fails closed instead of inheriting another provider's request schema.
 
-The existing Broadway/MCL/Emperor seat geometry adapters remain provider-specific by design.
+#### Raw seat-map ViewModel adapter
+
+The first pass made request construction extensible, but further review found that a future seat-map provider would still need the shared ViewModel owner edited to translate its raw layout.
+
+`view-models.js` now combines the built-in adapter lookup with an optional provider-owned runtime hook:
+
+```text
+HKCinemaProviders[provider].viewModels
+```
+
+A future provider can therefore own both its request builder and its raw seat-map-to-ViewModel adapter without adding another provider-name branch to the shared owner. Existing Broadway/MCL/Emperor seat geometry adapters remain provider-specific by design.
 
 #### Comparison cache
 
@@ -76,6 +86,8 @@ A new `worker/src/provider-manifest.js` is now the Worker-side provider universe
 
 A manifest provider without a probe adapter fails explicitly during runner construction rather than disappearing silently.
 
+CI also caught an unrelated backward-compatibility regression introduced during this refactor: `/health.phase` had temporarily changed from its established `6G` telemetry value. That change was unnecessary and has been reverted; the provider map is dynamic while the existing health telemetry contract remains intact.
+
 The current Worker route stack remains provider-specific (`index-emperor-seat.js -> index-emperor.js -> index.js`). This is classified as adapter composition rather than a provider-count boundary. Replacing the entire route stack with a generic router would be a much larger production-risk change and is not required to prove eight-provider shared-runtime scalability.
 
 ### 4. Eight-provider scalability gate
@@ -91,6 +103,10 @@ The current Worker route stack remains provider-specific (`index-emperor-seat.js
 - a future seat-map capable provider can supply its own request builder;
 - Worker manifest and health-map generation handle eight providers and reject duplicate IDs;
 - static guards reject reintroduction of the removed shared three-provider conditional patterns.
+
+`tests/m7r7-future-seatmap-viewmodel-adapter.test.mjs` separately proves that a future provider can own both `seatMapRequest` and `viewModels.seatMap` hooks, including raw seat-map ViewModel conversion, without editing the shared provider dispatch.
+
+The existing M6D presentation/cache guard was also retained; M7R7 does not reduce historical regression coverage in order to pass the new scalability gate.
 
 ## Complexity / performance assessment for 7–8 providers
 
@@ -129,7 +145,7 @@ These components translate external schemas. They may be registered in lookup ta
 
 Merge only after the exact PR head passes:
 
-1. full Node regression suite including the eight-provider gate;
+1. full Node regression suite including the eight-provider gate and retained historical guards;
 2. Chromium installation;
 3. mobile browser smoke.
 
