@@ -106,29 +106,11 @@
     return await refreshCatalogue();
   }
 
-  const catalogueOnlyComparisonGuard = Object.freeze({
-    async fetchShows(_provider, _sourceId, date) {
-      return {
-        availableDates: [],
-        selectedDate: date || null,
-        sessions: [],
-        allSessions: [],
-        metadataComplete: true,
-        _catalogueOnly: true,
-        _health: {
-          updatedAt: new Date().toISOString(),
-          source: "catalogue-only"
-        }
-      };
-    }
-  });
-
   const adapter = {
     catalogue: getCachedCatalogue(),
     getCatalogue,
     refreshCatalogue,
     getCachedCatalogue,
-    comparison: catalogueOnlyComparisonGuard,
     apiBase: API_BASE,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };
