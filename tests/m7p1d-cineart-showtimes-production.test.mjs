@@ -31,13 +31,14 @@ function localStorageStub() {
   };
 }
 
-test("M7P1D Worker showtime service remains home-snapshot backed and cacheable after later capability stages", async () => {
+test("M7P1D historical showtime mode remains home-snapshot backed and cacheable beneath later detail stages", async () => {
   const home = await fixture("cineart-home-flight.html");
   const cache = memoryCache();
   let fetchCalls = 0;
   const service = createCineArtShowtimeService({
     cache,
     now: () => NOW_MS,
+    detailEnrichment: false,
     fetchImpl: async () => {
       fetchCalls += 1;
       return new Response(home, {
@@ -147,11 +148,12 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
   assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
 });
 
-test("M7P1D Worker route stays GET-only and never adds CineArt per-show detail fan-out", async () => {
-  const [router, showtimes, manifest] = await Promise.all([
+test("M7P1D public showtime route remains GET-only while later Worker stages may enrich selected-date detail internally", async () => {
+  const [router, showtimes, manifest, checkpoint] = await Promise.all([
     source("worker/src/index-emperor-seat.js"),
     source("worker/src/providers/cineart-showtimes.js"),
-    source("worker/src/provider-manifest.js")
+    source("worker/src/provider-manifest.js"),
+    source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
   ]);
 
   assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
@@ -159,9 +161,9 @@ test("M7P1D Worker route stays GET-only and never adds CineArt per-show detail f
   assert.match(router, /CineArt showtimes are read-only/);
   assert.match(showtimes, /getCineArtWorkerSnapshot/);
   assert.match(showtimes, /bookingUrl:\s*null/);
-  assert.doesNotMatch(showtimes, /getCineArtShowDetail|fetchCineArtShowDetail|showDetailUrl/);
-  assert.doesNotMatch(showtimes, /ticketTypes\s*:|seatStates\s*:|seatPlan\s*:/);
   assert.match(manifest, /catalogue-showtimes/);
+  assert.match(checkpoint, /M7P1D/);
+  assert.match(checkpoint, /did not request individual `\/hk\/show\/<showId>` detail pages/i);
 });
 
 test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnostic", async () => {
