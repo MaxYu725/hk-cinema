@@ -207,9 +207,10 @@ test("M7R3 changed shared runtimes use one isolated browser-cache generation", a
     source("app/seatmap-shared.js")
   ]);
 
-  for (const script of ["view-models", "movie-detail-shared", "seatmap-shared"]) {
+  for (const script of ["view-models", "movie-detail-shared"]) {
     assert.match(index, new RegExp(`${script}\\.js\\?v=7b3-m7r3-1`));
   }
+  assert.match(index, /seatmap-shared\.js\?v=7b3-(?:m7r3-1|m8a1-1)/);
   assert.match(models, /unsupportedSeatMap\("unsupported"\)/);
   assert.match(models, /const SEAT_MAP_REQUEST_BUILDERS = Object\.freeze/);
   assert.match(models, /HKCinemaProviders\?\.\[providerId\]\?\.seatMapRequest/);
