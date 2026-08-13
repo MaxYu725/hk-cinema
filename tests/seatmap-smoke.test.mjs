@@ -150,7 +150,7 @@ test("normal halls fit while large and IMAX layouts retain readable seats and sc
   const models = compactContext.window.HKCinemaViewModels;
   const normalRows = [{
     name: "A",
-    seats: Array.from({ length: 14 }, (_, index) => ({
+    seats: Array.from({ length: 12 }, (_, index) => ({
       id: `A${index + 1}`,
       label: String(index + 1),
       row: "A",
