@@ -16,9 +16,7 @@ function memoryCache() {
       const response = store.get(request.url);
       return response ? response.clone() : null;
     },
-    async put(request, response) {
-      store.set(request.url, response.clone());
-    }
+    async put(request, response) { store.set(request.url, response.clone()); }
   };
 }
 
@@ -41,13 +39,9 @@ test("M7P1D historical showtime mode remains home-snapshot backed and cacheable 
     detailEnrichment: false,
     fetchImpl: async () => {
       fetchCalls += 1;
-      return new Response(home, {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" }
-      });
+      return new Response(home, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
     }
   });
-
   const first = await service.getMovie("799");
   assert.equal(first.meta.cacheState, "network");
   assert.ok(first.availableDates.length > 0);
@@ -60,83 +54,48 @@ test("M7P1D historical showtime mode remains home-snapshot backed and cacheable 
   assert.equal("seatStates" in first.sessions[0], false);
   assert.equal("seatPlan" in first.sessions[0], false);
   assert.equal("ticketTypes" in first.sessions[0], false);
-
   const selectedDate = first.availableDates[0];
   const cached = await service.getMovie("799", selectedDate);
   assert.equal(cached.meta.cacheState, "fresh-edge");
   assert.equal(cached.selectedDate, selectedDate);
   assert.equal(cached.sessions.every(session => session.date === selectedDate), true);
   assert.equal(fetchCalls, 1);
-
-  await assert.rejects(
-    () => service.getMovie("not-a-movie"),
-    error => error?.code === "CINEART_SHOWTIMES_INVALID_MOVIE" && error?.status === 400
-  );
-  await assert.rejects(
-    () => service.getMovie("799", "13-08-2026"),
-    error => error?.code === "CINEART_SHOWTIMES_INVALID_DATE" && error?.status === 400
-  );
+  await assert.rejects(() => service.getMovie("not-a-movie"), error => error?.code === "CINEART_SHOWTIMES_INVALID_MOVIE" && error?.status === 400);
+  await assert.rejects(() => service.getMovie("799", "13-08-2026"), error => error?.code === "CINEART_SHOWTIMES_INVALID_DATE" && error?.status === 400);
 });
 
-test("M7P1D browser capability remains enabled while later optional capabilities may advance independently", async () => {
+test("M7P1D catalogue/showtimes remain enabled while later optional capabilities may advance independently", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
-  const registry = window.HKCinemaProviderRegistry;
-  const cineart = registry.get("cineart");
-
+  const cineart = window.HKCinemaProviderRegistry.get("cineart");
   assert.equal(cineart.capabilities.catalogue, true);
   assert.equal(cineart.capabilities.showtimes, true);
-  assert.equal(cineart.capabilities.seatMap, false);
   assert.equal(cineart.capabilities.booking, false);
 });
 
 test("M7P1D shared showtime transport remains the network owner after later CineArt normalizers", async () => {
   const [adapterSource, compareSource, index] = await Promise.all([
-    source("app/providers/cineart.js"),
-    source("app/provider-compare-v4.js"),
-    source("app/index.html")
+    source("app/providers/cineart.js"), source("app/provider-compare-v4.js"), source("app/index.html")
   ]);
   const calls = [];
   const window = {};
   const context = vm.createContext({
-    AbortController,
-    Date,
-    Error,
-    JSON,
-    Map,
-    Math,
-    Object,
-    String,
-    clearTimeout,
-    localStorage: localStorageStub(),
-    setTimeout,
-    window,
+    AbortController, Date, Error, JSON, Map, Math, Object, Set, String, clearTimeout,
+    localStorage: localStorageStub(), setTimeout, window,
     fetch: async (url, options = {}) => {
       calls.push({ url: String(url), options });
       return new Response(JSON.stringify({
         ok: true,
-        data: {
-          now: [{ provider: "cineart", sourceId: "799", title: { zh: "測試電影" } }],
-          coming: [],
-          festival: [],
-          meta: { updatedAt: "2026-08-13T00:00:00.000Z" }
-        },
-        meta: {
-          phase: "M7P1C",
-          cacheState: "network",
-          stale: false,
-          updatedAt: "2026-08-13T00:00:00.000Z"
-        }
+        data: { now: [{ provider: "cineart", sourceId: "799", title: { zh: "測試電影" } }], coming: [], festival: [], meta: { updatedAt: "2026-08-13T00:00:00.000Z" } },
+        meta: { phase: "M7P1C", cacheState: "network", stale: false, updatedAt: "2026-08-13T00:00:00.000Z" }
       }), { status: 200, headers: { "content-type": "application/json" } });
     },
     Response
   });
-
   vm.runInContext(adapterSource, context, { filename: "app/providers/cineart.js" });
   const adapter = window.HKCinemaProviders.cineart;
   await adapter.refreshCatalogue();
-
   assert.equal(adapter.comparison?.fetchShows, undefined);
   assert.equal(typeof adapter.comparison?.normalizeSession, "function");
   assert.equal(calls.length, 1);
@@ -150,12 +109,9 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
 
 test("M7P1D public showtime route remains GET-only while later Worker stages may enrich selected-date detail internally", async () => {
   const [router, showtimes, manifest, checkpoint] = await Promise.all([
-    source("worker/src/index-emperor-seat.js"),
-    source("worker/src/providers/cineart-showtimes.js"),
-    source("worker/src/provider-manifest.js"),
-    source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
+    source("worker/src/index-emperor-seat.js"), source("worker/src/providers/cineart-showtimes.js"),
+    source("worker/src/provider-manifest.js"), source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
   ]);
-
   assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
   assert.match(router, /cineArtShowtimeService\.getMovie/);
   assert.match(router, /CineArt showtimes are read-only/);
@@ -169,7 +125,6 @@ test("M7P1D public showtime route remains GET-only while later Worker stages may
 test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnostic", async () => {
   const validation = await source("scripts/m7p1b-cineart-preview-validation.mjs");
   const requiredBlock = validation.match(/const requiredCapabilities = \[([\s\S]*?)\];/)?.[1] || "";
-
   assert.doesNotMatch(requiredBlock, /seatMapReadOnly/);
   assert.match(validation, /seatMapCapabilityKnown = typeof result\?\.capabilities\?\.seatMapReadOnly === "boolean"/);
   assert.match(validation, /!seatMapCapabilityKnown/);
@@ -177,7 +132,6 @@ test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnost
 
 test("M7P1D checkpoint records its original capability boundary and Android installed-PWA acceptance", async () => {
   const checkpoint = await source("docs/checkpoints/m7p1d-cineart-showtimes-production.md");
-
   assert.match(checkpoint, /Status: \*\*COMPLETE/i);
   assert.match(checkpoint, /Android installed-PWA.*PASS/i);
   assert.match(checkpoint, /showtimes:\s*true/);

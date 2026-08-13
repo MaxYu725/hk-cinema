@@ -61,7 +61,7 @@ test("M7P1C production catalogue reuses the Worker snapshot, returns catalogue o
   assert.equal(fetchCalls, 1);
 });
 
-test("M7P1C catalogue capability remains registered while later capabilities advance independently", async () => {
+test("M7P1C catalogue capability remains registered while later optional capabilities advance independently", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
@@ -75,7 +75,6 @@ test("M7P1C catalogue capability remains registered while later capabilities adv
     "cineart"
   ]);
   assert.equal(cineart.capabilities.catalogue, true);
-  assert.equal(cineart.capabilities.seatMap, false);
   assert.equal(cineart.capabilities.booking, false);
 });
 
@@ -97,6 +96,7 @@ test("M7P1C browser adapter continues to keep catalogue refresh on the catalogue
     Map,
     Math,
     Object,
+    Set,
     String,
     clearTimeout,
     localStorage: localStorageStub(),
@@ -133,12 +133,13 @@ test("M7P1C browser adapter continues to keep catalogue refresh on the catalogue
   assert.equal(typeof adapter.comparison?.normalizeSession, "function");
 });
 
-test("M7P1C shared catalogue publication remains observer-free after staged showtime enablement", async () => {
-  const [index, status, adapter, router] = await Promise.all([
+test("M7P1C shared catalogue publication remains observer-free after later CineArt capabilities", async () => {
+  const [index, status, adapter, router, checkpoint] = await Promise.all([
     source("app/index.html"),
     source("app/cineart-status.js"),
     source("app/providers/cineart.js"),
-    source("worker/src/index-emperor-seat.js")
+    source("worker/src/index-emperor-seat.js"),
+    source("docs/checkpoints/m7p1c-cineart-catalogue-production.md")
   ]);
 
   const registryIndex = index.indexOf("provider-registry.js?v=");
@@ -154,5 +155,7 @@ test("M7P1C shared catalogue publication remains observer-free after staged show
   assert.doesNotMatch(status, /MutationObserver|IntersectionObserver|hkcinema:cineart-catalogue/);
   assert.doesNotMatch(adapter, /cinearthouse\.com\.hk/);
   assert.match(router, /\/api\/cineart\/catalogue/);
-  assert.doesNotMatch(router, /\/api\/cineart\/.*seats/);
+  assert.match(checkpoint, /catalogue:\s*true/);
+  assert.match(checkpoint, /seatMap:\s*false/);
+  assert.match(checkpoint, /booking:\s*false/);
 });

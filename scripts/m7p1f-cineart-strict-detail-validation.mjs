@@ -9,17 +9,11 @@ async function requestJson(path, options = {}) {
     redirect: "follow",
     cache: "no-store",
     ...options,
-    headers: {
-      Accept: "application/json",
-      ...(options.headers || {})
-    }
+    headers: { Accept: "application/json", ...(options.headers || {}) }
   });
   let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error(`${path} returned non-JSON HTTP ${response.status}`);
-  }
+  try { payload = await response.json(); }
+  catch { throw new Error(`${path} returned non-JSON HTTP ${response.status}`); }
   return { response, payload };
 }
 
@@ -27,10 +21,11 @@ const health = await requestJson("/health");
 assert.equal(health.response.ok, true);
 assert.equal(health.payload?.ok, true);
 assert.equal(health.payload?.phase, "6G");
-assert.equal(
-  health.payload?.providers?.cineart,
-  "catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly"
-);
+const cineartService = String(health.payload?.providers?.cineart || "");
+assert.match(cineartService, /detailed-price/);
+assert.match(cineartService, /strict-seats/);
+assert.match(cineartService, /production/);
+assert.match(cineartService, /readonly/);
 
 const discovery = await requestJson("/api/providers/cineart/discovery");
 assert.equal(discovery.response.ok, true);
@@ -58,12 +53,8 @@ assert.ok(first.payload.data.meta.detail.attempted <= 6);
 assert.ok(first.payload.data.meta.detail.strictSeats > 0);
 assert.ok(first.payload.data.meta.detail.detailedPrices > 0);
 
-const strict = first.payload.data.sessions.find(
-  session => session?.seatSummary?.quality === "strict-seat-state"
-);
-const detailed = first.payload.data.sessions.find(
-  session => Array.isArray(session?.price?.ticketTypes) && session.price.ticketTypes.length > 0
-);
+const strict = first.payload.data.sessions.find(session => session?.seatSummary?.quality === "strict-seat-state");
+const detailed = first.payload.data.sessions.find(session => Array.isArray(session?.price?.ticketTypes) && session.price.ticketTypes.length > 0);
 assert.ok(strict, "discovery sample date must expose at least one strict CineArt seat summary");
 assert.ok(detailed, "discovery sample date must expose at least one detailed CineArt price");
 
@@ -98,10 +89,7 @@ for (const session of first.payload.data.sessions) {
     assert.ok(Number.isFinite(summary.unavailable));
     assert.equal(summary.unavailable, summary.held + summary.sold + summary.blocked);
     if (Number.isFinite(summary.unknown)) {
-      assert.equal(
-        summary.total,
-        summary.available + summary.held + summary.sold + summary.blocked + summary.unknown
-      );
+      assert.equal(summary.total, summary.available + summary.held + summary.sold + summary.blocked + summary.unknown);
     }
   }
   if (Array.isArray(session?.price?.ticketTypes)) {
@@ -115,26 +103,15 @@ assert.ok(Number.isFinite(strict.seatSummary.available));
 assert.ok(Array.isArray(detailed.price.ticketTypes));
 assert.ok(detailed.price.ticketTypes.length > 0);
 
-const denied = await requestJson(
-  `/api/cineart/movies/${encodeURIComponent(sample.movieSourceId)}/shows`,
-  { method: "POST" }
-);
+const denied = await requestJson(`/api/cineart/movies/${encodeURIComponent(sample.movieSourceId)}/shows`, { method: "POST" });
 assert.equal(denied.response.status, 405);
 assert.equal(denied.payload?.error?.code, "METHOD_NOT_ALLOWED");
 
 console.log(JSON.stringify({
   ok: true,
   baseUrl: BASE_URL,
-  health: {
-    phase: health.payload.phase,
-    cineartService: health.payload.providers.cineart
-  },
-  discoverySample: {
-    sourceId: sample.sourceId,
-    movieSourceId: sample.movieSourceId,
-    date: sample.date,
-    time: sample.time
-  },
+  health: { phase: health.payload.phase, cineartService },
+  discoverySample: { sourceId: sample.sourceId, movieSourceId: sample.movieSourceId, date: sample.date, time: sample.time },
   showtimes: {
     phase: first.payload.meta.phase,
     mode: first.payload.meta.mode,
@@ -145,23 +122,8 @@ console.log(JSON.stringify({
     cacheState: first.payload.meta.cacheState,
     stale: first.payload.meta.stale
   },
-  strictSample: {
-    sourceId: strict.sourceId,
-    time: strict.time,
-    cinema: strict.cinema,
-    seatSummary: strict.seatSummary
-  },
-  detailedPriceSample: {
-    sourceId: detailed.sourceId,
-    time: detailed.time,
-    price: detailed.price
-  },
-  persistentBoundaries: {
-    allSessionsCoarse: true,
-    seatStates: false,
-    seatPlan: false,
-    seatMap: false,
-    booking: false
-  },
+  strictSample: { sourceId: strict.sourceId, time: strict.time, cinema: strict.cinema, seatSummary: strict.seatSummary },
+  detailedPriceSample: { sourceId: detailed.sourceId, time: detailed.time, price: detailed.price },
+  persistentShowtimeBoundaries: { allSessionsCoarse: true, seatStates: false, seatPlan: false, booking: false },
   methodGuard: denied.response.status
 }, null, 2));

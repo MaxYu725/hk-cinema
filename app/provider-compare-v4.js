@@ -435,6 +435,7 @@
     const fallbackCinema = `${providerLabel} 戲院`;
     return {
       id: `${provider}:${session?.sourceId || session?.id || Math.random()}`,
+      sourceId: String(session?.sourceId || session?.id || "") || null,
       provider,
       providerLabel,
       movieSourceId: session?._phase8cMovieSourceId || null,
@@ -589,9 +590,13 @@
     const priceText = capabilities.price.availability === "unsupported"
       ? "不提供"
       : Number.isFinite(item.price) ? `$${escapeHtml(item.price)}` : "—";
+    const cineArtSeatMap = item.provider === "cineart" &&
+      Boolean(item.sourceId) &&
+      window.HKCinemaProviderRegistry?.hasCapability?.("cineart", "seatMap");
     const cardAttrs = [
       Number.isFinite(item.seatAvailable) ? `data-seat-available="${item.seatAvailable}"` : "",
       Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : "",
+      item.sourceId ? `data-showtime-id="${escapeHtml(item.sourceId)}"` : "",
       item.movieSourceId ? `data-movie-source-id="${escapeHtml(item.movieSourceId)}"` : "",
       `data-provider="${escapeHtml(item.provider)}"`,
       `data-price-capability="${escapeHtml(capabilities.price.availability)}"`,
@@ -605,6 +610,12 @@
     const bookingAction = capabilities.booking.availability === "available" && item.bookingUrl
       ? `<a class="provider-compare-booking" href="${escapeHtml(item.bookingUrl)}" target="_blank" rel="noopener noreferrer" aria-label="前往 ${escapeHtml(item.providerLabel)} 官方購票：${escapeHtml(item.cinemaName)} ${escapeHtml(item.time)}">購票</a>`
       : "";
+    const seatAttrs = cineArtSeatMap
+      ? ` role="button" tabindex="0" aria-label="查看 ${escapeHtml(item.cinemaName)} ${escapeHtml(item.time)} CineArt 座位圖"`
+      : "";
+    const seatClassName = capabilities.seatSummary.availability === "unsupported"
+      ? "unknown"
+      : `${item.seatClass}${cineArtSeatMap ? " seatmap-launch cineart-seatmap-launch" : ""}`;
     return `
       <article class="provider-compare-show phase6m-show-card phase6o-native-show" ${cardAttrs}>
         <div class="provider-compare-show-time">${escapeHtml(item.time)}</div>
@@ -614,7 +625,7 @@
             <strong>${escapeHtml(item.cinemaName)}</strong>
           </div>
           ${item.secondary ? `<p>${escapeHtml(item.secondary)}</p>` : ""}
-          <span class="provider-compare-seat ${escapeHtml(capabilities.seatSummary.availability === "unsupported" ? "unknown" : item.seatClass)}">${escapeHtml(seatText)}</span>
+          <span class="provider-compare-seat ${escapeHtml(seatClassName)}"${seatAttrs}>${escapeHtml(seatText)}</span>
         </div>
         <div class="provider-compare-show-actions">
           <div class="provider-compare-show-price">${priceText}</div>
@@ -785,7 +796,7 @@
   }
 
   window.HKCinemaProviderCompare = {
-    version: "m7r7-1",
+    version: "m7p1g-1",
     open,
     close,
     getState() {

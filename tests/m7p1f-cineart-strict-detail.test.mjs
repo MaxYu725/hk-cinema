@@ -139,6 +139,7 @@ test("M7P1F browser normalizer renders strict CineArt seats as selectable while 
     Map,
     Math,
     Object,
+    Set,
     String,
     clearTimeout,
     localStorage: localStorageStub(),
@@ -192,14 +193,15 @@ test("M7P1F browser normalizer renders strict CineArt seats as selectable while 
   assert.equal(coarse.seatClass, "unknown");
 });
 
-test("M7P1F keeps seat-map and booking boundaries closed and does not restore CineArt observer ownership", async () => {
-  const [registrySource, adapterSource, showtimesSource, router, manifest, index] = await Promise.all([
+test("M7P1F public showtime boundary remains seat-map-free after M7P1G enables a separate read-only seat-map capability", async () => {
+  const [registrySource, adapterSource, showtimesSource, router, manifest, index, checkpoint] = await Promise.all([
     source("app/provider-registry.js"),
     source("app/providers/cineart.js"),
     source("worker/src/providers/cineart-showtimes.js"),
     source("worker/src/index-emperor-seat.js"),
     source("worker/src/provider-manifest.js"),
-    source("app/index.html")
+    source("app/index.html"),
+    source("docs/checkpoints/m7p1f-cineart-strict-detail.md")
   ]);
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
@@ -207,7 +209,6 @@ test("M7P1F keeps seat-map and booking boundaries closed and does not restore Ci
 
   assert.equal(cineart.capabilities.prices, true);
   assert.equal(cineart.capabilities.seatSummary, true);
-  assert.equal(cineart.capabilities.seatMap, false);
   assert.equal(cineart.capabilities.booking, false);
   assert.match(router, /phase:\s*"M7P1F"/);
   assert.match(router, /showtimes-detailed-price-strict-seats-selected-date/);
@@ -217,8 +218,10 @@ test("M7P1F keeps seat-map and booking boundaries closed and does not restore Ci
   assert.doesNotMatch(showtimesSource, /seatStates\s*:/);
   assert.doesNotMatch(showtimesSource, /seatPlan\s*:/);
   assert.doesNotMatch(adapterSource, /MutationObserver|IntersectionObserver|cinearthouse\.com\.hk/);
-  assert.match(manifest, /catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly/);
-  assert.ok(index.includes("providers/cineart.js?v=m7p1f-1"));
+  assert.match(manifest, /catalogue-showtimes-detailed-price-strict-seats-seatmap-production-readonly/);
+  assert.ok(index.includes("providers/cineart.js?v=m7p1g-1"));
+  assert.match(checkpoint, /seatMap:\s*false/);
+  assert.match(checkpoint, /booking:\s*false/);
 });
 
 test("M7P1F begins only after M7P1E Android installed-PWA acceptance passed", async () => {

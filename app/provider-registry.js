@@ -72,7 +72,7 @@
         showtimes: true,
         prices: true,
         seatSummary: true,
-        seatMap: false,
+        seatMap: true,
         booking: false
       }
     })
@@ -90,7 +90,7 @@
   }
 
   window.HKCinemaProviderRegistry = Object.freeze({
-    version: "m7p1e-1",
+    version: "m7p1g-1",
     capabilityKeys: CAPABILITY_KEYS,
     providers,
     get,
