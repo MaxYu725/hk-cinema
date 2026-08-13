@@ -328,52 +328,62 @@
     };
   }
 
+  function broadwaySeatMapRequest(providerId, session) {
+    const sessionSourceId = sourceId(providerId, session);
+    return {
+      supported: Boolean(sessionSourceId),
+      layoutMode: "grid",
+      request: { showId: sessionSourceId },
+      reason: sessionSourceId ? null : "missing-request-data"
+    };
+  }
+
+  function mclSeatMapRequest(providerId, session) {
+    const sessionSourceId = sourceId(providerId, session);
+    const cinemaCode = firstText(session?.cinema?.sourceId, session?.cinema?.id);
+    const supported = Boolean(sessionSourceId && cinemaCode);
+    return {
+      supported,
+      layoutMode: "area-grid",
+      request: {
+        cinemaCode: cinemaCode ? cinemaCode.replace(new RegExp(`^${providerId}:`), "") : null,
+        sessionId: sessionSourceId
+      },
+      reason: supported ? null : "missing-request-data"
+    };
+  }
+
+  function emperorSeatMapRequest(providerId, session) {
+    const sessionSourceId = sourceId(providerId, session);
+    const scheduleKey = text(session?.purchase?.scheduleKey);
+    const cinemaLinkId = firstText(session?.cinema?.sourceId, session?.cinema?.id);
+    const hallId = firstText(session?.house?.sourceId, session?.house?.id);
+    const supported = Boolean(sessionSourceId && scheduleKey && cinemaLinkId && hallId);
+    return {
+      supported,
+      layoutMode: "positioned",
+      request: {
+        scheduleId: sessionSourceId,
+        scheduleKey,
+        cinemaLinkId,
+        hallId
+      },
+      reason: supported ? null : "missing-request-data"
+    };
+  }
+
+  const SEAT_MAP_REQUEST_BUILDERS = Object.freeze({
+    broadway: broadwaySeatMapRequest,
+    mcl: mclSeatMapRequest,
+    emperor: emperorSeatMapRequest
+  });
+
   function seatMapRequest(providerId, session) {
     if (!hasCapability(providerId, "seatMap")) return unsupportedSeatMap("unsupported");
-
-    const sessionSourceId = sourceId(providerId, session);
-    if (providerId === "broadway") {
-      return {
-        supported: Boolean(sessionSourceId),
-        layoutMode: "grid",
-        request: { showId: sessionSourceId },
-        reason: sessionSourceId ? null : "missing-request-data"
-      };
-    }
-
-    if (providerId === "mcl") {
-      const cinemaCode = firstText(session?.cinema?.sourceId, session?.cinema?.id);
-      const supported = Boolean(sessionSourceId && cinemaCode);
-      return {
-        supported,
-        layoutMode: "area-grid",
-        request: {
-          cinemaCode: cinemaCode ? cinemaCode.replace(/^mcl:/, "") : null,
-          sessionId: sessionSourceId
-        },
-        reason: supported ? null : "missing-request-data"
-      };
-    }
-
-    if (providerId === "emperor") {
-      const scheduleKey = text(session?.purchase?.scheduleKey);
-      const cinemaLinkId = firstText(session?.cinema?.sourceId, session?.cinema?.id);
-      const hallId = firstText(session?.house?.sourceId, session?.house?.id);
-      const supported = Boolean(sessionSourceId && scheduleKey && cinemaLinkId && hallId);
-      return {
-        supported,
-        layoutMode: "positioned",
-        request: {
-          scheduleId: sessionSourceId,
-          scheduleKey,
-          cinemaLinkId,
-          hallId
-        },
-        reason: supported ? null : "missing-request-data"
-      };
-    }
-
-    return unsupportedSeatMap("adapter-missing");
+    const builder = SEAT_MAP_REQUEST_BUILDERS[providerId] || window.HKCinemaProviders?.[providerId]?.seatMapRequest;
+    return typeof builder === "function"
+      ? builder(providerId, session)
+      : unsupportedSeatMap("adapter-missing");
   }
 
   function showtimeMetadata(session) {
@@ -840,7 +850,7 @@
   }
 
   window.HKCinemaViewModels = Object.freeze({
-    version: "7b3-m7r3-1",
+    version: "7b3-m7r7-1",
     schemaVersion: SCHEMA_VERSION,
     providers: PROVIDERS,
     seatStatuses: SEAT_STATUSES,
