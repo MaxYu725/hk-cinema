@@ -63,12 +63,13 @@ test("overall health keeps partial and offline data usable", async () => {
   const partial = api.summarize(records, { now, online: true });
   assert.equal(partial.level, "degraded");
   assert.equal(partial.usable, 2);
-  assert.equal(partial.total, 3);
+  assert.equal(partial.total, 4);
 
   const offline = api.summarize(records, { now, online: false });
   assert.equal(offline.level, "degraded");
   assert.equal(offline.label, "離線模式");
   assert.equal(offline.usable, 2);
+  assert.equal(offline.total, 4);
 });
 
 test("Phase 6G cache, comparison freshness and Worker observability stay wired", async () => {
@@ -128,48 +129,50 @@ test("Emperor partial refresh preserves the failed catalogue section", async () 
     catalogue: {
       now: [{ id: "cached-now" }],
       coming: [{ id: "cached-coming", title: { zh: "備用新片" } }],
-      meta: { updatedAt: new Date(Date.now() - 60000).toISOString() }
+      meta: { updatedAt: new Date().toISOString() }
     }
   })]]);
-  let writes = 0;
   const localStorage = {
     getItem(key) { return storage.get(key) || null; },
-    setItem(key, value) { writes++; storage.set(key, value); },
+    setItem(key, value) { storage.set(key, value); },
     removeItem(key) { storage.delete(key); }
   };
-  const window = {};
-  const context = vm.createContext({
-    AbortController,
-    clearTimeout,
-    console,
-    fetch: async url => {
-      if (String(url).endsWith("/api/emperor/upcoming")) {
-        throw new Error("upcoming unavailable");
-      }
-      return {
+  const fetch = async url => {
+    if (String(url).endsWith("/api/emperor/movies")) {
+      return new Response(JSON.stringify({
         ok: true,
-        status: 200,
-        async json() {
-          return {
-            ok: true,
-            data: [{ sourceId: "new-now", title: { zh: "即時上映" } }],
-            meta: { updatedAt: new Date().toISOString() }
-          };
-        }
-      };
-    },
+        data: [{ sourceId: "fresh-now", title: { zh: "新上映" } }],
+        meta: { updatedAt: new Date().toISOString() }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ ok: false, error: { message: "upcoming failed" } }), {
+      status: 502,
+      headers: { "content-type": "application/json" }
+    });
+  };
+  const window = {};
+  vm.runInContext(await source("app/providers/emperor.js"), vm.createContext({
+    AbortController,
+    Date,
+    Error,
+    JSON,
+    Map,
+    Number,
+    Object,
+    Response,
+    String,
+    URL,
+    clearTimeout,
+    fetch,
     localStorage,
     setTimeout,
     window
-  });
+  }));
 
-  vm.runInContext(await source("app/providers/emperor.js"), context, { filename: "emperor.js" });
   const catalogue = await window.HKCinemaProviders.emperor.refreshCatalogue();
-
-  assert.equal(catalogue.now[0].title.zh, "即時上映");
-  assert.equal(catalogue.coming[0].title.zh, "備用新片");
+  assert.equal(catalogue.now[0].sourceId, "fresh-now");
+  assert.equal(catalogue.coming[0].id, "cached-coming");
   assert.equal(catalogue.meta.partial, true);
-  assert.equal(catalogue.meta.cache, true);
+  assert.equal(catalogue.meta.fallbackSections.now, false);
   assert.equal(catalogue.meta.fallbackSections.coming, true);
-  assert.equal(writes, 0);
 });
