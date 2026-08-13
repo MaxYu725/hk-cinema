@@ -1,4 +1,6 @@
 (() => {
+  const catalogueSnapshots = new Map();
+
   function registry() {
     return window.HKCinemaProviderRegistry || null;
   }
@@ -69,6 +71,40 @@
     return null;
   }
 
+  function validCatalogue(value) {
+    return Boolean(value && typeof value === "object" && ["now", "coming", "festival"].some(
+      section => Array.isArray(value?.[section])
+    ));
+  }
+
+  function publishCatalogue(providerOrId, value, meta = {}) {
+    const provider = registeredProviderId(
+      typeof providerOrId === "object" ? providerOrId?.id : providerOrId
+    );
+    if (!provider || !validCatalogue(value)) return false;
+    catalogueSnapshots.set(provider, value);
+    if (typeof window?.dispatchEvent === "function" && typeof CustomEvent === "function") {
+      window.dispatchEvent(new CustomEvent("hkcinema:provider-catalogue", {
+        detail: { provider, catalogue: value, meta: { ...meta } }
+      }));
+    }
+    return true;
+  }
+
+  function catalogue(providerOrId) {
+    const provider = registeredProviderId(
+      typeof providerOrId === "object" ? providerOrId?.id : providerOrId
+    );
+    return provider ? catalogueSnapshots.get(provider) || null : null;
+  }
+
+  function catalogueMap() {
+    return Object.fromEntries(providers().map(provider => [
+      provider.key,
+      catalogueSnapshots.get(provider.key) || null
+    ]));
+  }
+
   function normalizeSourceId(provider, value) {
     return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
   }
@@ -126,6 +162,9 @@
     label,
     registeredProviderId,
     providerFromNode,
+    publishCatalogue,
+    catalogue,
+    catalogueMap,
     normalizeSourceId,
     aggregateSourceIds,
     activeProvidersForAggregate,
