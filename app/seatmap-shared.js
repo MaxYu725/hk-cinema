@@ -2,6 +2,7 @@
   const OPEN_EVENT = "hkcinema:seatmap-opening";
   const CACHE_TTL_MS = 30 * 1000;
   const REQUEST_TIMEOUT_MS = 12000;
+  const BROADWAY_GRID_SEAT_SIZE = 20;
   const MCL_AREA_GRID_SEAT_SIZE = 20;
   const PROVIDER_COPY_OVERRIDES = Object.freeze({
     broadway: Object.freeze({
@@ -274,7 +275,9 @@
     const gap = columns > 22 ? 2 : 4;
     const fitted = Math.floor((availableWidth() - 34 - (gap * Math.max(0, columns - 1))) / columns);
     const minimum = columns > 24 ? 17 : 18;
-    const size = Math.max(minimum, Math.min(28, fitted));
+    const size = model?.provider?.id === "broadway"
+      ? BROADWAY_GRID_SEAT_SIZE
+      : Math.max(minimum, Math.min(28, fitted));
     const contentWidth = 34 + (columns * size) + (Math.max(0, columns - 1) * gap);
     return { columns, gap, size, contentWidth, scrollable: contentWidth > availableWidth() + 4 };
   }
@@ -634,7 +637,7 @@
   window.addEventListener("hkcinema:movie-detail-close", () => close({ restoreFocus: false }));
 
   window.HKCinemaSeatMapShared = Object.freeze({
-    version: "7b3-m8a1-1",
+    version: "7b3-m8a2-1",
     openEvent: OPEN_EVENT,
     prepareTrigger,
     isActivationKey,
