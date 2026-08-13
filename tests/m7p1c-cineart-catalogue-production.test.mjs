@@ -61,31 +61,27 @@ test("M7P1C production catalogue reuses the Worker snapshot, returns catalogue o
   assert.equal(fetchCalls, 1);
 });
 
-test("M7P1C browser Registry exposes CineArt catalogue only", async () => {
+test("M7P1C catalogue capability remains registered when the next staged capability is enabled", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
   const registry = window.HKCinemaProviderRegistry;
   const cineart = registry.get("cineart");
 
-  assert.equal(registry.version, "m7p1c-1");
   assert.deepEqual(Array.from(registry.providers, provider => provider.id), [
     "broadway",
     "mcl",
     "emperor",
     "cineart"
   ]);
-  assert.deepEqual({ ...cineart.capabilities }, {
-    catalogue: true,
-    showtimes: false,
-    prices: false,
-    seatSummary: false,
-    seatMap: false,
-    booking: false
-  });
+  assert.equal(cineart.capabilities.catalogue, true);
+  assert.equal(cineart.capabilities.prices, false);
+  assert.equal(cineart.capabilities.seatSummary, false);
+  assert.equal(cineart.capabilities.seatMap, false);
+  assert.equal(cineart.capabilities.booking, false);
 });
 
-test("M7P1C browser adapter calls only the catalogue Worker route and its comparison guard performs no network IO", async () => {
+test("M7P1C browser adapter continues to call only the catalogue Worker route", async () => {
   const adapterSource = await source("app/providers/cineart.js");
   const calls = [];
   const catalogue = {
@@ -134,15 +130,10 @@ test("M7P1C browser adapter calls only the catalogue Worker route and its compar
   assert.match(calls[0].url, /\/api\/cineart\/catalogue$/);
   assert.equal(calls[0].options.method, "GET");
   assert.doesNotMatch(calls[0].url, /\/movies\/|\/shows\/|\/seats/);
-
-  const emptyShows = await adapter.comparison.fetchShows("cineart", "799", "2026-08-13");
-  assert.deepEqual(Array.from(emptyShows.sessions), []);
-  assert.deepEqual(Array.from(emptyShows.availableDates), []);
-  assert.equal(emptyShows._catalogueOnly, true);
-  assert.equal(calls.length, 1, "catalogue-only guard must not start hidden showtime IO");
+  assert.equal(adapter.comparison, undefined);
 });
 
-test("M7P1C loads CineArt through the shared catalogue bus without restoring the old observer enrichment", async () => {
+test("M7P1C shared catalogue publication remains observer-free after staged showtime enablement", async () => {
   const [index, status, adapter, router] = await Promise.all([
     source("app/index.html"),
     source("app/cineart-status.js"),
@@ -150,9 +141,9 @@ test("M7P1C loads CineArt through the shared catalogue bus without restoring the
     source("worker/src/index-emperor-seat.js")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=m7p1c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=");
   const healthIndex = index.indexOf("data-health.js?v=m6c-1");
-  const providerIndex = index.indexOf("providers/cineart.js?v=m7p1c-1");
+  const providerIndex = index.indexOf("providers/cineart.js?v=");
   const multiIndex = index.indexOf("multi-provider.js?v=8e2-m7r2-1");
   const statusIndex = index.indexOf("cineart-status.js?v=m7p1c-1");
 
@@ -163,5 +154,5 @@ test("M7P1C loads CineArt through the shared catalogue bus without restoring the
   assert.doesNotMatch(status, /MutationObserver|IntersectionObserver|hkcinema:cineart-catalogue/);
   assert.doesNotMatch(adapter, /cinearthouse\.com\.hk/);
   assert.match(router, /\/api\/cineart\/catalogue/);
-  assert.doesNotMatch(router, /\/api\/cineart\/movies\/|\/api\/cineart\/shows\/|\/api\/cineart\/.*seats/);
+  assert.doesNotMatch(router, /\/api\/cineart\/.*seats/);
 });
