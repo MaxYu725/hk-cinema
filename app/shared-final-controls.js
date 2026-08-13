@@ -1,5 +1,7 @@
 (() => {
   const TAB_KEYS = ["now", "coming"];
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
+  const PROVIDERS = Object.freeze(sharedCore?.providers?.() || []);
   const tabCounts = new Map();
   let observer = null;
 
@@ -7,18 +9,27 @@
     return movie?.title?.zh || movie?.title?.en || movie?.title || "";
   }
 
+  function providerCatalogue(provider) {
+    const published = sharedCore?.catalogue?.(provider) || null;
+    if (published) return published;
+
+    const adapterSnapshot = window.HKCinemaProviders?.[provider]?.catalogue || null;
+    if (adapterSnapshot) return adapterSnapshot;
+
+    if (provider === PROVIDERS[0]?.key) {
+      return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
+    }
+    return null;
+  }
+
   function catalogueMovies(tab) {
-    const broadway = window.HKCinemaBroadwayApp?.getCatalogue?.() || {};
-    const mcl = window.HKCinemaMCLCatalogue || {};
-    const emperor = window.HKCinemaEmperorCatalogue || {};
-    const broadwayMovies = tab === "now"
-      ? (broadway.now || []).filter(movie => !movie?.status || movie.status === "now-showing")
-      : (broadway.coming || []);
-    return [
-      ...broadwayMovies,
-      ...(mcl?.[tab] || []),
-      ...(emperor?.[tab] || [])
-    ];
+    return PROVIDERS.flatMap(provider => {
+      const catalogue = providerCatalogue(provider.key);
+      const movies = Array.isArray(catalogue?.[tab]) ? catalogue[tab] : [];
+      return tab === "now"
+        ? movies.filter(movie => !movie?.status || movie.status === "now-showing")
+        : movies;
+    });
   }
 
   function combinedMovieCount(tab) {
@@ -146,8 +157,7 @@
     syncComparison();
 
     window.addEventListener("hkcinema:home-tab", scheduleSync);
-    window.addEventListener("hkcinema:mcl-catalogue", scheduleSync);
-    window.addEventListener("hkcinema:emperor-catalogue", scheduleSync);
+    window.addEventListener("hkcinema:provider-catalogue", scheduleSync);
     window.addEventListener("hkcinema:provider-matches", scheduleSync);
     window.addEventListener("hkcinema:data-health", scheduleSync);
     window.addEventListener("hkcinema:provider-compare-open", scheduleSync);
