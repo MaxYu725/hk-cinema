@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -18,10 +19,12 @@ test("Phase 6M separates seat-map and official booking actions", async () => {
     source("app/emperor-seatmap.js")
   ]);
 
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
-  assert.match(index, /provider-compare-phase6m\.js\?v=7a1-m7r4-1/);
-  assert.match(index, /provider-compare-seats\.js\?v=6o1/);
-  assert.match(index, /emperor-seatmap\.js\?v=7b3/);
+  for (const asset of [
+    "provider-compare-v4.js",
+    "provider-compare-phase6m.js",
+    "provider-compare-seats.js",
+    "emperor-seatmap.js"
+  ]) assertAsset(index, asset);
   assert.match(compare, /<article class="provider-compare-show phase6m-show-card phase6o-native-show"/);
   assert.match(compare, /data-booking-url=/);
   assert.match(compare, /provider-compare-booking/);
