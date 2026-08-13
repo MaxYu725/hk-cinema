@@ -81,11 +81,11 @@ async function validateDiscovery() {
       "detailedPrices",
       "coarseSeatSummary",
       "strictSeatSummary",
-      "seatMapReadOnly",
       "languageMetadata",
       "subtitleMetadata"
     ];
     const missing = requiredCapabilities.filter(key => result?.capabilities?.[key] !== true);
+    const seatMapCapabilityKnown = typeof result?.capabilities?.seatMapReadOnly === "boolean";
     const correlation = result?.correlation || {};
     const correlationFailed = [
       "showIdMatches",
@@ -103,12 +103,14 @@ async function validateDiscovery() {
       Number(result?.home?.cinemaCount) < 3 ||
       result?.detail?.readOnly !== true ||
       result?.capabilities?.booking !== false ||
+      !seatMapCapabilityKnown ||
       missing.length ||
       correlationFailed.length
     ) {
       throw new Error(JSON.stringify({
         reason: "invalid CineArt discovery",
         missingCapabilities: missing,
+        seatMapCapabilityKnown,
         failedCorrelation: correlationFailed,
         result
       }));
