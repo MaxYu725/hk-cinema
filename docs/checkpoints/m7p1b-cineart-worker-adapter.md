@@ -1,6 +1,6 @@
 # M7P1B checkpoint — CineArt Worker adapter only
 
-Status: **implementation complete — live branch-preview gate required before merge**
+Status: **implementation + live Worker evidence complete; final exact-head merge gate required**
 
 Baseline: `e821036a07b4e290249f8b47465d850e1eff3cee` (M7P1A)
 
@@ -171,7 +171,57 @@ The live discovery gate must report:
 
 `formatMetadata` is intentionally not required because M7P1A found the old adapter had no reliable explicit format field. M7P1B records whether explicit format/version evidence is present on the current live source without inventing it from movie categories.
 
-## Live branch-preview gate
+## Live branch-preview validation evidence
+
+CineArt Candidate Validation Run #25 / `31670986057` passed on the first attempt against the M7P1B Cloudflare branch preview.
+
+Observed live source at validation time:
+
+- `/health phase`: `6G`
+- Worker CineArt service: `candidate-catalogue-shows-readonly`
+- probe latency: 1491 ms
+- probe cinemas: 5
+- bounded probe bytes read before early stop: 12,288 bytes
+- source movies: 20
+- source shows: 565
+- normalized shows: 565
+- schedule range: 2026-08-13 through 2026-08-28
+- explicit format metadata observed: **false**
+- booking capability: **false**
+
+The sampled live show was `80981`, movie `778`, cinema `23`, house `66`, at 13:40 on 2026-08-13. It proved:
+
+- base price: HK$50
+- home total seats: 110
+- home sold: 31
+- home coarse `notSold`: 79
+- home `seatsHold`: 4, retained only as upstream diagnostic evidence
+- strict detail available: 77
+- strict detail held: 0
+- strict detail sold: 31
+- strict detail locked/blocked: 2
+- ticket types: 12
+- seat-plan seats: 110
+- seat-plan blocks: 4
+- seat-plan dimensions: 650 × 650
+
+The cross-source correlations all passed:
+
+- show ID matched
+- movie ID matched
+- strict seat total matched home seat total
+- strict `U`/sold matched home sold count
+- `77 available + 0 held + 2 locked = 79 notSold`
+
+This independently re-proves the critical M7P1A conclusion that CineArt `avaliable` is not strict selectable availability.
+
+## CI correction found during M7P1B
+
+The first normal Deploy HK Cinema run (#605 / `31670986025`) executed 295 regression tests: 294 passed and one historical Phase 10R2B test failed because it still asserted that the Worker provider manifest must contain exactly Broadway/MCL/Emperor.
+
+The runtime adapter and all new M7P1B tests passed in that run. The stale historical assertion was updated to follow the manifest-driven provider universe and to preserve the synthetic additional-provider extensibility test. No CineArt runtime workaround, timeout increase or provider allow-list was added.
+
+## Final branch-preview gate
 
 `.github/workflows/cineart-candidate-validation.yml` validates the Cloudflare branch preview rather than the existing production Worker.
 
@@ -185,7 +235,7 @@ It requires:
 6. ticket prices, strict seats and read-only seat-plan geometry are available from the GET-only detail path;
 7. booking remains false.
 
-The normal PR gate must separately pass Node regression, Chromium installation and mobile browser smoke.
+The normal PR gate must separately pass Node regression, Chromium installation and mobile browser smoke on the same final PR head before merge.
 
 ## Production boundary after M7P1B
 
