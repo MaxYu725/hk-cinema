@@ -33,6 +33,7 @@
       try {
         applySkin(new URLSearchParams(window.location.search).get("skin"));
       } catch {
+        // Metro is now the production default; Classic remains available as an explicit fallback.
         applySkin("metro");
       }
     })();
@@ -77,27 +78,53 @@
 
 <body>
   <div class="app-shell">
+
     <header class="topbar">
       <div class="topbar-brand">
         <p class="eyebrow">HONG KONG CINEMA</p>
         <h1>HK Cinema</h1>
       </div>
+
       <div class="topbar-actions" id="topbarActions">
-        <button class="icon-button" type="button" id="refreshButton" aria-label="重新整理戲院資料" title="重新整理">↻</button>
+        <button
+          class="icon-button"
+          type="button"
+          id="refreshButton"
+          aria-label="重新整理戲院資料"
+          title="重新整理"
+        >
+          ↻
+        </button>
       </div>
     </header>
 
     <main>
       <nav class="tabs" aria-label="電影分類">
-        <button class="tab active" type="button" data-tab="now">現正上映</button>
-        <button class="tab" type="button" data-tab="coming">即將上映</button>
+        <button
+          class="tab active"
+          type="button"
+          data-tab="now"
+        >
+          現正上映
+        </button>
+
+        <button
+          class="tab"
+          type="button"
+          data-tab="coming"
+        >
+          即將上映
+        </button>
       </nav>
 
       <section class="status-card" id="systemStatus">
         <div class="status-dot"></div>
+
         <div>
           <strong>正在載入戲院資料</strong>
-          <p>正在同步各院線最新電影資料。</p>
+          <p>
+            正在同步各院線最新電影資料。
+          </p>
         </div>
       </section>
 
@@ -106,13 +133,27 @@
           <p class="eyebrow">MOVIES</p>
           <h2 id="sectionTitle">現正上映</h2>
         </div>
-        <span class="movie-count" id="movieCount">0 部</span>
+
+        <span class="movie-count" id="movieCount">
+          0 部
+        </span>
       </section>
 
-      <section class="movie-grid" id="movieGrid" aria-live="polite"></section>
+      <section
+        class="movie-grid"
+        id="movieGrid"
+        aria-live="polite"
+      >
+      </section>
+
     </main>
 
-    <footer><p>HK Cinema · 香港戲院場次比較</p></footer>
+    <footer>
+      <p>
+        HK Cinema · 香港戲院場次比較
+      </p>
+    </footer>
+
   </div>
 
   <script src="./provider-registry.js?v=m7p1g-1"></script>
