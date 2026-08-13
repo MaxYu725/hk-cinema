@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -97,7 +98,7 @@ test("home discovery grouping stays wired after retiring provider-first controls
     source("app/data-health.js")
   ]);
 
-  assert.ok(index.indexOf("home-discovery-core.js?v=6i3") < index.indexOf("multi-provider.js?v=8e2"));
+  assertAssetOrder(index, "home-discovery-core.js", "multi-provider.js");
   assert.match(multiProvider, /applyVariantGrouping/);
   assert.match(multiProvider, /coalesceVariants/);
   assert.match(multiProvider, /window\.HKCinemaMovieGroups/);
