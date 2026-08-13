@@ -170,6 +170,15 @@ test("M7P1D Worker route is GET-only and exposes no detailed price, seat or book
   assert.match(manifest, /catalogue-showtimes-production-detail-candidate-readonly/);
 });
 
+test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnostic", async () => {
+  const validation = await source("scripts/m7p1b-cineart-preview-validation.mjs");
+  const requiredBlock = validation.match(/const requiredCapabilities = \[([\s\S]*?)\];/)?.[1] || "";
+
+  assert.doesNotMatch(requiredBlock, /seatMapReadOnly/);
+  assert.match(validation, /seatMapCapabilityKnown = typeof result\?\.capabilities\?\.seatMapReadOnly === "boolean"/);
+  assert.match(validation, /!seatMapCapabilityKnown/);
+});
+
 test("M7P1D starts only after the M7P1C Android installed-PWA freeze gate passed", async () => {
   const [previous, checkpoint] = await Promise.all([
     source("docs/checkpoints/m7p1c-cineart-catalogue-production.md"),
