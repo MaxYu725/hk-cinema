@@ -1,6 +1,6 @@
 # M7P1C checkpoint — CineArt catalogue-only production registration
 
-Status: **implementation complete — PR/live/mobile gates pending**
+Status: **implementation and pre-final automated gates complete — final exact-head rerun / merge / Android PWA gate pending**
 
 Baseline: `aa17b4f6025040856fc7e272a6fc7023d0a7b693` (M7P1B)
 
@@ -93,6 +93,21 @@ Before merge, the exact PR head must pass:
 7. browser Registry has exactly one CineArt descriptor and only `catalogue:true`;
 8. browser adapter never calls a CineArt movie/show/seat route;
 9. no PWA or Service Worker file changes.
+
+## Pre-final automated evidence
+
+Code head `85994c3c539d7017edaf6b17e3273f06c8e4e8d0` passed both automated suites before this documentation-only checkpoint update:
+
+- CineArt Candidate Validation #35 / run `31672472274`: PASS.
+- Deploy HK Cinema #616 / run `31672472287`: Node regression PASS, Chromium install PASS, mobile browser smoke PASS.
+- M7P1B discovery remained healthy on the same branch preview: 20 source movies, 551 normalized shows, 5 cinemas, schedule range `2026-08-13` through `2026-08-28`.
+- M7P1C production catalogue returned 16 now-showing movies, 4 coming-soon movies, 0 festival entries.
+- Catalogue response was fresh network data (`stale:false`).
+- Catalogue payload contained no session/cinema/seat summary collections.
+- `POST /api/cineart/catalogue` returned `405 METHOD_NOT_ALLOWED`.
+- Worker health retained `phase: "6G"` and reported CineArt as `catalogue-production-shows-candidate-readonly`.
+
+This checkpoint document update intentionally creates one final PR head; both automated suites must pass again on that exact head before merge.
 
 ## Real-device gate
 
