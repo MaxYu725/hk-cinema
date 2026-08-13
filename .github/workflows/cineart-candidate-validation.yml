@@ -16,8 +16,10 @@ on:
       - "tests/fixtures/cineart-*.html"
       - "tests/m7p1b-cineart-worker-adapter.test.mjs"
       - "tests/m7p1c-cineart-catalogue-production.test.mjs"
+      - "tests/m7p1d-cineart-showtimes-production.test.mjs"
       - "scripts/m7p1b-cineart-preview-validation.mjs"
       - "scripts/m7p1c-cineart-catalogue-validation.mjs"
+      - "scripts/m7p1d-cineart-showtimes-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -63,3 +65,6 @@ jobs:
 
       - name: Validate CineArt production catalogue boundary
         run: node scripts/m7p1c-cineart-catalogue-validation.mjs
+
+      - name: Validate CineArt production showtime boundary
+        run: node scripts/m7p1d-cineart-showtimes-validation.mjs

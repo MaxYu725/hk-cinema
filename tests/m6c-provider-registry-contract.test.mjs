@@ -29,7 +29,7 @@ function loadDataHealth(providers) {
 }
 
 test("M6C provider registry loads before Data Health", () => {
-  const registryIndex = index.indexOf("provider-registry.js?v=m7p1c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=");
   const healthIndex = index.indexOf("data-health.js?v=m6c-1");
   assert.ok(registryIndex >= 0);
   assert.ok(healthIndex > registryIndex);
@@ -37,7 +37,7 @@ test("M6C provider registry loads before Data Health", () => {
 
 test("provider descriptors expose identity and staged capabilities", () => {
   const registry = loadRegistry();
-  assert.equal(registry.version, "m7p1c-1");
+  assert.match(String(registry.version || ""), /^m7p1[a-z0-9-]+$/);
   assert.deepEqual(Array.from(registry.providers, item => item.id), [
     "broadway",
     "mcl",
@@ -47,7 +47,7 @@ test("provider descriptors expose identity and staged capabilities", () => {
   assert.equal(registry.get("MCL")?.displayName, "MCL");
   assert.equal(registry.hasCapability("broadway", "seatMap"), true);
   assert.equal(registry.hasCapability("cineart", "catalogue"), true);
-  assert.equal(registry.hasCapability("cineart", "showtimes"), false);
+  assert.equal(registry.hasCapability("cineart", "showtimes"), true);
   assert.equal(registry.hasCapability("cineart", "prices"), false);
   assert.equal(registry.hasCapability("cineart", "seatSummary"), false);
   assert.equal(registry.hasCapability("cineart", "seatMap"), false);

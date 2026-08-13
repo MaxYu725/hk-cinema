@@ -2,6 +2,7 @@ import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 import { discoverCineArt } from "./providers/cineart.js";
 import { cineArtCatalogueService } from "./providers/cineart-catalogue.js";
+import { cineArtShowtimeService } from "./providers/cineart-showtimes.js";
 import {
   providerProbeRunner,
   SUPPORTED_PROVIDERS
@@ -66,6 +67,40 @@ async function routeRequest(request, env, ctx) {
       }, 200, { "cache-control": "no-store" });
     } catch (error) {
       return errorResponse(error, "CINEART_CATALOGUE_ERROR");
+    }
+  }
+
+  const cineArtShowsMatch = url.pathname.match(
+    /^\/api\/cineart\/movies\/(\d+)\/shows$/
+  );
+
+  if (cineArtShowsMatch) {
+    if (request.method !== "GET") {
+      return readOnlyMethodError("CineArt showtimes are read-only");
+    }
+
+    try {
+      const movieSourceId = cineArtShowsMatch[1];
+      const result = await cineArtShowtimeService.getMovie(
+        movieSourceId,
+        url.searchParams.get("date"),
+        { ctx }
+      );
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "M7P1D",
+          provider: "cineart",
+          mode: "showtimes-only",
+          movieSourceId,
+          cacheState: result?.meta?.cacheState || "network",
+          stale: result?.meta?.stale === true,
+          updatedAt: result?.meta?.updatedAt || new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    } catch (error) {
+      return errorResponse(error, "CINEART_SHOWTIMES_ERROR");
     }
   }
 
