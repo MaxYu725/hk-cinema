@@ -28,102 +28,102 @@ function errorResponse(error, fallbackCode) {
 }
 
 async function routeRequest(request, env, ctx) {
-    const url = new URL(request.url);
+  const url = new URL(request.url);
 
-    if (url.pathname === "/api/providers/probe") {
-      const result = await providerProbeRunner.probeAll();
-      return json({
-        ok: true,
-        data: result,
-        meta: {
-          phase: "10R2B",
-          mode: "live-provider-probe",
-          updatedAt: new Date().toISOString()
-        }
-      }, 200, { "cache-control": "no-store" });
-    }
-
-    const providerProbeMatch = url.pathname.match(
-      /^\/api\/providers\/probe\/([^/]+)$/
-    );
-
-    if (providerProbeMatch) {
-      const provider = decodeURIComponent(providerProbeMatch[1]).toLowerCase();
-
-      if (!SUPPORTED_PROVIDERS.includes(provider)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_PROVIDER",
-            message: "provider must be broadway, mcl or emperor"
-          }
-        }, 400, { "cache-control": "no-store" });
+  if (url.pathname === "/api/providers/probe") {
+    const result = await providerProbeRunner.probeAll();
+    return json({
+      ok: true,
+      data: result,
+      meta: {
+        phase: "M7R1",
+        mode: "live-provider-probe",
+        updatedAt: new Date().toISOString()
       }
+    }, 200, { "cache-control": "no-store" });
+  }
 
-      const result = await providerProbeRunner.probeProvider(provider);
+  const providerProbeMatch = url.pathname.match(
+    /^\/api\/providers\/probe\/([^/]+)$/
+  );
+
+  if (providerProbeMatch) {
+    const provider = decodeURIComponent(providerProbeMatch[1]).toLowerCase();
+
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      return json({
+        ok: false,
+        error: {
+          code: "INVALID_PROVIDER",
+          message: `provider is not registered; available providers: ${SUPPORTED_PROVIDERS.join(", ")}`
+        }
+      }, 400, { "cache-control": "no-store" });
+    }
+
+    const result = await providerProbeRunner.probeProvider(provider);
+    return json({
+      ok: true,
+      data: result,
+      meta: {
+        phase: "M7R1",
+        mode: "live-provider-probe",
+        updatedAt: new Date().toISOString()
+      }
+    }, 200, { "cache-control": "no-store" });
+  }
+
+  if (url.pathname === "/api/emperor/seatmap-health") {
+    return json({
+      ok: true,
+      data: {
+        provider: "emperor",
+        phase: "6G",
+        geometryVersion: GEOMETRY_VERSION
+      },
+      meta: {
+        updatedAt: new Date().toISOString()
+      }
+    }, 200, { "cache-control": "no-store" });
+  }
+
+  const seatMatch = url.pathname.match(
+    /^\/api\/emperor\/shows\/(\d+)\/seats$/
+  );
+
+  if (seatMatch) {
+    const scheduleId = seatMatch[1];
+    const scheduleKey = url.searchParams.get("scheduleKey") || "";
+    const cinemaLinkId = url.searchParams.get("cinemaLinkId") || "";
+    const hallId = url.searchParams.get("hallId") || "";
+
+    try {
+      const result = await getEmperorSeatMap({
+        scheduleId,
+        scheduleKey,
+        cinemaLinkId,
+        hallId
+      });
+
       return json({
         ok: true,
         data: result,
         meta: {
-          phase: "10R2B",
-          mode: "live-provider-probe",
-          updatedAt: new Date().toISOString()
-        }
-      }, 200, { "cache-control": "no-store" });
-    }
-
-    if (url.pathname === "/api/emperor/seatmap-health") {
-      return json({
-        ok: true,
-        data: {
-          provider: "emperor",
           phase: "6G",
-          geometryVersion: GEOMETRY_VERSION
-        },
-        meta: {
+          provider: "emperor",
+          scheduleId,
+          geometryVersion: result.geometryVersion || GEOMETRY_VERSION,
+          source: result.source,
           updatedAt: new Date().toISOString()
         }
-      }, 200, { "cache-control": "no-store" });
+      }, 200, {
+        "cache-control": "public, max-age=30"
+      });
+    } catch (error) {
+      return errorResponse(error, "EMPEROR_SEATMAP_ERROR");
     }
+  }
 
-    const seatMatch = url.pathname.match(
-      /^\/api\/emperor\/shows\/(\d+)\/seats$/
-    );
-
-    if (seatMatch) {
-      const scheduleId = seatMatch[1];
-      const scheduleKey = url.searchParams.get("scheduleKey") || "";
-      const cinemaLinkId = url.searchParams.get("cinemaLinkId") || "";
-      const hallId = url.searchParams.get("hallId") || "";
-
-      try {
-        const result = await getEmperorSeatMap({
-          scheduleId,
-          scheduleKey,
-          cinemaLinkId,
-          hallId
-        });
-
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            phase: "6G",
-            provider: "emperor",
-            scheduleId,
-            geometryVersion: result.geometryVersion || GEOMETRY_VERSION,
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, {
-          "cache-control": "public, max-age=30"
-        });
-      } catch (error) {
-        return errorResponse(error, "EMPEROR_SEATMAP_ERROR");
-      }
-    }
-
-    return emperorWorker.fetch(request, env, ctx);
+  return emperorWorker.fetch(request, env, ctx);
 }
 
 function requestId(request) {

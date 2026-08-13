@@ -1,11 +1,5 @@
 import { probeEmperor } from "./providers/emperor.js";
 
-export const SUPPORTED_PROVIDERS = Object.freeze([
-  "broadway",
-  "mcl",
-  "emperor"
-]);
-
 const DEFAULT_TIMEOUT_MS = 4500;
 const BROADWAY_PROBE_URL = "https://www.cinema.com.hk/hk/movie/ticketing";
 const MCL_PROBE_URL = "https://www.mclcinema.com/MCLWebAPI2/GetCinemaDetails.aspx?l=1";
@@ -80,7 +74,7 @@ async function probeBroadway(fetchImpl, timeoutMs) {
       headers: {
         Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
-        "User-Agent": "Mozilla/5.0 (compatible; HKCinemaProviderProbe/10R2B)"
+        "User-Agent": "Mozilla/5.0 (compatible; HKCinemaProviderProbe/M7R1)"
       }
     },
     timeoutMs
@@ -121,7 +115,7 @@ async function probeMCL(fetchImpl, timeoutMs) {
         Accept: "application/json,text/javascript,text/plain,*/*;q=0.8",
         "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.7",
         Referer: "https://www.mclcinema.com/",
-        "User-Agent": "Mozilla/5.0 (compatible; HKCinemaProviderProbe/10R2B)",
+        "User-Agent": "Mozilla/5.0 (compatible; HKCinemaProviderProbe/M7R1)",
         "X-Requested-With": "XMLHttpRequest"
       }
     },
@@ -181,42 +175,61 @@ function classifyProbeFailure(error) {
   return { category: "upstream_error", code, status };
 }
 
+const DEFAULT_PROBE_BUILDERS = Object.freeze({
+  broadway: ({ fetchImpl, timeoutMs }) => () => probeBroadway(fetchImpl, timeoutMs),
+  mcl: ({ fetchImpl, timeoutMs }) => () => probeMCL(fetchImpl, timeoutMs),
+  emperor: ({ emperorProbe, timeoutMs }) => async () => {
+    const result = await runWithDeadline(() => emperorProbe(), timeoutMs);
+    if (!result?.ok || !Number.isFinite(Number(result?.count))) {
+      throw probeError(
+        "PROBE_INVALID_PAYLOAD",
+        "Emperor probe response did not contain a valid catalogue result"
+      );
+    }
+    return {
+      evidence: "showing-catalogue",
+      source: result.source || "emperor-sync-film-showing",
+      count: Number(result.count)
+    };
+  }
+});
+
+export const SUPPORTED_PROVIDERS = Object.freeze(Object.keys(DEFAULT_PROBE_BUILDERS));
+
 export function createProviderProbeRunner({
   fetchImpl = globalThis.fetch,
   emperorProbe = probeEmperor,
   clock = () => Date.now(),
-  timeoutMs = DEFAULT_TIMEOUT_MS
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  additionalProbes = {}
 } = {}) {
   const lastSuccess = new Map();
   const boundedTimeout = safeTimeout(timeoutMs);
+  const dependencies = { fetchImpl, emperorProbe, timeoutMs: boundedTimeout };
+  const handlers = new Map(
+    Object.entries(DEFAULT_PROBE_BUILDERS).map(([provider, build]) => [
+      provider,
+      build(dependencies)
+    ])
+  );
+
+  for (const [provider, handler] of Object.entries(additionalProbes || {})) {
+    const key = String(provider || "").trim().toLowerCase();
+    if (!key || typeof handler !== "function") continue;
+    handlers.set(key, () => runWithDeadline(() => handler(dependencies), boundedTimeout));
+  }
+
+  const supportedProviders = Object.freeze(Array.from(handlers.keys()));
 
   async function execute(provider) {
-    if (provider === "broadway") {
-      return probeBroadway(fetchImpl, boundedTimeout);
-    }
-    if (provider === "mcl") {
-      return probeMCL(fetchImpl, boundedTimeout);
-    }
-    if (provider === "emperor") {
-      const result = await runWithDeadline(() => emperorProbe(), boundedTimeout);
-      if (!result?.ok || !Number.isFinite(Number(result?.count))) {
-        throw probeError(
-          "PROBE_INVALID_PAYLOAD",
-          "Emperor probe response did not contain a valid catalogue result"
-        );
-      }
-      return {
-        evidence: "showing-catalogue",
-        source: result.source || "emperor-sync-film-showing",
-        count: Number(result.count)
-      };
-    }
-    throw probeError("INVALID_PROVIDER", `Unsupported provider: ${provider}`, 400);
+    const handler = handlers.get(provider);
+    if (!handler) throw probeError("INVALID_PROVIDER", `Unsupported provider: ${provider}`, 400);
+    return await handler();
   }
 
   async function probeProvider(provider) {
     const key = String(provider || "").toLowerCase();
-    if (!SUPPORTED_PROVIDERS.includes(key)) {
+    if (!handlers.has(key)) {
       throw probeError("INVALID_PROVIDER", `Unsupported provider: ${provider}`, 400);
     }
 
@@ -254,7 +267,7 @@ export function createProviderProbeRunner({
 
   async function probeAll() {
     const results = await Promise.all(
-      SUPPORTED_PROVIDERS.map(provider => probeProvider(provider))
+      supportedProviders.map(provider => probeProvider(provider))
     );
     const healthyCount = results.filter(result => result.healthy).length;
 
@@ -268,7 +281,7 @@ export function createProviderProbeRunner({
     };
   }
 
-  return { probeProvider, probeAll };
+  return { probeProvider, probeAll, supportedProviders };
 }
 
 export const providerProbeRunner = createProviderProbeRunner();
