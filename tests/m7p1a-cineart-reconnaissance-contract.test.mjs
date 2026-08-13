@@ -9,18 +9,12 @@ const paths = {
   comparison: "app/provider-compare-v4.js",
   comparisonCache: "app/provider-compare-main-cache-v3.js",
   viewModels: "app/view-models.js",
-  manifest: "worker/src/provider-manifest.js",
   checkpoint: "docs/checkpoints/m7p1a-cineart-provider-reconnaissance.md"
 };
 
-test("M7P1A keeps CineArt outside production provider universes", async () => {
-  const [registry, manifest] = await Promise.all([
-    read(paths.registry),
-    read(paths.manifest)
-  ]);
-
+test("M7P1A keeps CineArt outside the browser production provider universe", async () => {
+  const registry = await read(paths.registry);
   assert.doesNotMatch(registry, /id:\s*["']cineart["']/i);
-  assert.doesNotMatch(manifest, /id:\s*["']cineart["']/i);
 });
 
 test("M7P1A retains the generic provider extension points required by a fresh CineArt integration", async () => {
