@@ -12,8 +12,8 @@ Carry the accepted M8A1 viewing policy to Broadway without changing Broadway sea
 
 - keep Broadway grid seats at a fixed **20 px** viewing size;
 - do not shrink seats merely because a hall is wider;
-- allow wide / IMAX-style halls to grow horizontally and use the existing horizontal scroller;
-- retain the existing post-render horizontal centering so wide halls open near the middle;
+- allow any Broadway hall that no longer fits at 20 px to grow horizontally and use the existing horizontal scroller;
+- retain the existing post-render horizontal centering so scrollable halls open near the middle;
 - preserve Broadway row labels, gaps, seat ordering and the existing Metro sticky row-label gutter.
 
 ## Implementation boundary
@@ -39,11 +39,13 @@ No changes to:
 
 Deterministic tests must prove:
 
-1. 14-column Broadway hall = 20 px seats and fits without horizontal scrolling on a 390 px viewport;
-2. 32-column Broadway hall = 20 px seats and requires horizontal scrolling;
+1. 12-column Broadway hall = 20 px seats and fits without horizontal scrolling on a 390 px viewport;
+2. 14-column and 32-column Broadway halls remain 20 px and scroll when the full grid no longer fits;
 3. a non-Broadway future `grid` provider still uses the generic responsive sizing path;
 4. shared horizontal centering remains active;
 5. the shared runtime asset remains versioned without historical tests pinning the exact cache token.
+
+The initial M8A2 CI correctly exposed that the old 14-column/no-scroll assertion was incompatible with fixed 20 px seats once Broadway's existing row-label gutter and gaps are counted. The runtime policy was kept; the regression contract was corrected rather than shrinking seats to satisfy the historical assumption.
 
 ## Release gates
 
@@ -63,11 +65,11 @@ After squash merge:
 
 ## Manual gate
 
-After deployment, Android installed-PWA verification is mandatory before starting the next seat-map provider round. Verify one ordinary Broadway hall and one wide hall if available:
+After deployment, Android installed-PWA verification is mandatory before starting the next seat-map provider round. Verify one narrower Broadway hall and one wider hall if available:
 
 - seats remain readable and visually consistent in size;
-- wide halls scroll horizontally rather than shrinking;
-- opening position is centered sensibly;
+- halls that exceed the viewport scroll horizontally rather than shrinking;
+- opening position is centered sensibly when scrolling is required;
 - row labels and seat gaps remain aligned;
 - closing/reopening the seat map remains responsive.
 
