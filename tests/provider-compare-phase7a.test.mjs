@@ -182,6 +182,12 @@ test("Phase 7A moves to the next valid date after MCL enrichment rejects the sel
   const window = {
     addEventListener() {},
     dispatchEvent() {},
+    HKCinemaProviderRegistry: {
+      providers: [
+        { id: "broadway", displayName: "Broadway Circuit" },
+        { id: "mcl", displayName: "MCL Cinemas" }
+      ]
+    },
     HKCinemaProviderMatches: new Map(),
     HKCinemaProviders: {
       mcl: {
@@ -343,7 +349,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   ]);
 
   assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("multi-provider.js?v=8e2"));
-  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=m6c-3"));
+  assert.ok(index.indexOf("showtime-metadata.js?v=7a5") < index.indexOf("provider-compare-v4.js?v=m6c-3-m7r5-1"));
   assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
   assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
   assert.match(index, /mcl-ticketing-worker\.js\?v=7a1/);
@@ -358,7 +364,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   assert.match(compare, /criteriaDateDecisions/);
   assert.match(compare, /rememberCriteriaDateDecision/);
   assert.match(compare, /!combinedDates\(\)\.includes\(state\.selectedDate\)/);
-  assert.match(compare, /const lifecycle = childController\(signal, TIMEOUTS\.mcl\)/);
+  assert.match(compare, /const lifecycle = childController\(signal, timeoutForProvider\("mcl"\)\)/);
   assert.match(compare, /signal: lifecycle\.controller\.signal/);
   assert.match(compare, /key !== "mcl" \|\| state\.data\[key\]\?\.metadataComplete === true/);
   assert.match(compare, /data-show-language/);
