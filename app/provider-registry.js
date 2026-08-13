@@ -62,6 +62,19 @@
         seatMap: true,
         booking: true
       }
+    }),
+    descriptor({
+      id: "cineart",
+      displayName: "CineArt",
+      healthLabel: "CineArt",
+      capabilities: {
+        catalogue: true,
+        showtimes: false,
+        prices: false,
+        seatSummary: false,
+        seatMap: false,
+        booking: false
+      }
     })
   ]);
 
@@ -77,7 +90,7 @@
   }
 
   window.HKCinemaProviderRegistry = Object.freeze({
-    version: "m6c-1",
+    version: "m7p1c-1",
     capabilityKeys: CAPABILITY_KEYS,
     providers,
     get,
