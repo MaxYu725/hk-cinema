@@ -28,6 +28,10 @@ export const PROVIDER_MANIFEST = createProviderManifest([
   {
     id: "emperor",
     service: "catalogue-shows-seats"
+  },
+  {
+    id: "cineart",
+    service: "candidate-catalogue-shows-readonly"
   }
 ]);
 

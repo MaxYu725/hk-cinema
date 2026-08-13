@@ -1,5 +1,6 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
+import { discoverCineArt } from "./providers/cineart.js";
 import {
   providerProbeRunner,
   SUPPORTED_PROVIDERS
@@ -29,6 +30,37 @@ function errorResponse(error, fallbackCode) {
 
 async function routeRequest(request, env, ctx) {
   const url = new URL(request.url);
+
+  if (url.pathname === "/api/providers/cineart/discovery") {
+    if (request.method !== "GET") {
+      return json({
+        ok: false,
+        error: {
+          code: "METHOD_NOT_ALLOWED",
+          message: "CineArt discovery is read-only"
+        }
+      }, 405, {
+        "cache-control": "no-store",
+        allow: "GET"
+      });
+    }
+
+    try {
+      const result = await discoverCineArt();
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "M7P1B",
+          mode: "worker-adapter-discovery",
+          readOnly: true,
+          updatedAt: new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    } catch (error) {
+      return errorResponse(error, "CINEART_DISCOVERY_ERROR");
+    }
+  }
 
   if (url.pathname === "/api/providers/probe") {
     const result = await providerProbeRunner.probeAll();
