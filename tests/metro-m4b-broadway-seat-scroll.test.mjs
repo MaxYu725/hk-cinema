@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [index, css] = await Promise.all([
@@ -9,7 +10,7 @@ const [index, css] = await Promise.all([
 ]);
 
 test("M4B Broadway guard is folded into the single Metro seat-map layer", () => {
-  assert.match(index, /metro-m4-seat-view\.css\?v=m6gate-1/);
+  assertAsset(index, "metro-m4-seat-view.css");
   assert.doesNotMatch(index, /metro-m4b-seat-scroll-fix\.css/);
 });
 
