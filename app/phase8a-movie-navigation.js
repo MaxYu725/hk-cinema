@@ -1,6 +1,9 @@
 (() => {
   const sharedCore = window.HKCinemaProviderSharedCore || null;
-  const PROVIDERS = sharedCore?.providerIds?.() || ["broadway", "mcl", "emperor"];
+  const PROVIDERS = sharedCore?.providerIds?.() || (window.HKCinemaProviderRegistry?.providers || [])
+    .map(provider => String(provider?.id || "").trim().toLowerCase())
+    .filter(Boolean);
+  const HOME_BASE_PROVIDER = PROVIDERS[0] || null;
 
   const baseRegistry = window.HKCinemaProviderMatches || {
     get() { return null; },
@@ -43,20 +46,19 @@
   }
 
   function providerSourceIdsFromCard(card) {
-    const isMCLOnly = card?.classList?.contains("mcl-only-card");
-    const isEmperorOnly = card?.classList?.contains("emperor-only-card");
     const directSourceId = String(card?.dataset?.sourceId || "").trim();
-    const directProvider = String(card?.dataset?.provider || "").trim().toLowerCase();
+    const explicitProvider = String(card?.dataset?.provider || "").trim().toLowerCase();
+    const directProvider = sharedCore?.registeredProviderId?.(explicitProvider) || explicitProvider || null;
     const explicit = providerSourcesAttribute(card);
+    const inferredProvider = directProvider || (
+      directSourceId && !Object.values(explicit).some(Boolean) ? HOME_BASE_PROVIDER : null
+    );
 
     return Object.fromEntries(PROVIDERS.map(provider => {
       const datasetKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}SourceId` : null;
       let value = explicit?.[provider] || (datasetKey ? card?.dataset?.[datasetKey] : "") || "";
 
-      if (!value && directSourceId && directProvider === provider) value = directSourceId;
-      if (!value && provider === "mcl" && isMCLOnly) value = directSourceId;
-      if (!value && provider === "emperor" && isEmperorOnly) value = directSourceId;
-      if (!value && provider === "broadway" && !directProvider && !isMCLOnly && !isEmperorOnly) value = directSourceId;
+      if (!value && directSourceId && inferredProvider === provider) value = directSourceId;
 
       return [provider, normalizeSourceId(provider, value)];
     }));
@@ -73,20 +75,22 @@
   }
 
   function providerCatalogue(provider) {
+    const published = sharedCore?.catalogue?.(provider);
+    if (published) return published;
+
     const adapter = window.HKCinemaProviders?.[provider];
     const cached = adapter?.catalogue || adapter?.getCachedCatalogue?.() || null;
     if (cached) return cached;
-    if (provider === "broadway") {
+
+    if (provider === HOME_BASE_PROVIDER) {
       return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
     }
-    if (provider === "mcl") return window.HKCinemaMCLCatalogue || null;
-    if (provider === "emperor") return window.HKCinemaEmperorCatalogue || null;
 
     // Aggregate decoration is synchronous and may run once per card. Never invoke a
     // generic getCatalogue() here: future adapters may implement it asynchronously,
     // which would start hidden duplicate network requests whose Promise is discarded.
-    // Generic providers should publish a synchronous snapshot through `catalogue` or
-    // `getCachedCatalogue()` before asking the shared home layer to consume movie facts.
+    // Generic providers should publish a synchronous snapshot through Shared Core,
+    // `catalogue`, or `getCachedCatalogue()` before this layer consumes movie facts.
     return null;
   }
 
@@ -178,10 +182,10 @@
     const poster = posterFor(card);
     const providerEntries = Object.fromEntries(PROVIDERS.map(provider => {
       if (!sourceIds[provider]) return [provider, null];
-      const extras = provider === "broadway"
+      const extras = provider === HOME_BASE_PROVIDER
         ? {
-            movieId: card.dataset.movieId || baseMatch?.broadway?.movieId || null,
-            poster: poster || baseMatch?.broadway?.poster || null
+            movieId: card.dataset.movieId || baseMatch?.[provider]?.movieId || null,
+            poster: poster || baseMatch?.[provider]?.poster || null
           }
         : {};
       return [provider, providerEntry(provider, sourceIds[provider], extras)];
@@ -251,9 +255,10 @@
       const matchId = `${aggregateId}:variant:${index + 1}`;
       const providerEntries = Object.fromEntries(PROVIDERS.map(provider => {
         if (!sourceIds[provider]) return [provider, null];
-        const extras = provider === "broadway"
+        const dynamicMovieIdKey = /^[a-z][a-z0-9]*$/i.test(provider) ? `${provider}MovieId` : null;
+        const extras = provider === HOME_BASE_PROVIDER
           ? {
-              movieId: variant.broadwayMovieId || null,
+              movieId: dynamicMovieIdKey ? variant?.[dynamicMovieIdKey] || null : null,
               poster: variant.poster || poster
             }
           : {};
@@ -381,7 +386,7 @@
   };
 
   window.HKCinemaMovieAggregates = Object.freeze({
-    version: "m6c-3",
+    version: "m7r5-1",
     get(id) {
       return aggregates.get(String(id)) || null;
     },
