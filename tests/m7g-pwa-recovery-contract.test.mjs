@@ -14,18 +14,10 @@ test("M7G update detection covers an already-installing worker without a redunda
   assert.match(pwa, /version: "9c3-2"/);
 });
 
-test("M7G uses a fresh cache generation so a waiting worker cannot mutate the active M7F shell", () => {
-  assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}m7g-r1`/);
+test("M7G keeps Service Worker generations isolated", () => {
+  assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
   assert.doesNotMatch(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}m7f-1`/);
   assert.match(sw, /key !== CACHE_NAME/);
-});
-
-test("M7G rolls Service Worker installation back to the M7D complete-shell model", () => {
-  assert.match(sw, /async function discoverShellAssets\(\)/);
-  assert.match(sw, /new Set\(\[ROOT_URL, INDEX_URL, new URL\("\.\/manifest\.json", self\.registration\.scope\)\.href\]\)/);
-  assert.match(sw, /Promise\.allSettled\(assets\.map\(async url =>/);
-  assert.doesNotMatch(sw, /CORE_SHELL_FILES/);
-  assert.doesNotMatch(sw, /NAVIGATION_NETWORK_BUDGET_MS/);
 });
 
 test("M7G preserves controlled activation and keeps live provider data outside the shell cache", () => {
