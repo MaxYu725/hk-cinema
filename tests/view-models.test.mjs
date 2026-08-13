@@ -233,7 +233,7 @@ test("Phase 7B model loads before the shared detail and seat renderers", async (
     "app.js?v=7b2",
     "mcl-detail.js?v=7b2",
     "emperor-detail.js?v=7b2",
-    "seatmap-shared.js?v=7b3-m7r3-1",
+    "seatmap-shared.js?v=7b3-m8a1-1",
     "seatmap.js?v=7b3",
     "mcl-seatmap.js?v=7b3",
     "emperor-seatmap.js?v=7b3"
