@@ -1,4 +1,5 @@
 (() => {
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
   const DEFAULT_FILTERS = Object.freeze({
     provider: "all",
     language: "all",
@@ -11,11 +12,6 @@
   });
 
   const FILTER_LABELS = Object.freeze({
-    provider: {
-      broadway: "Broadway",
-      mcl: "MCL",
-      emperor: "Emperor"
-    },
     region: {
       hk: "港島",
       kln: "九龍",
@@ -48,6 +44,10 @@
 
   function compareState() {
     return window.HKCinemaProviderCompare?.getState?.() || null;
+  }
+
+  function providerLabel(value) {
+    return sharedCore?.label?.(value) || String(value || "").trim() || "院線";
   }
 
   function schedule() {
@@ -89,7 +89,7 @@
     const filters = [];
 
     if (state.provider !== DEFAULT_FILTERS.provider) {
-      filters.push({ key: "provider", label: FILTER_LABELS.provider[state.provider] || state.provider });
+      filters.push({ key: "provider", label: providerLabel(state.provider) });
     }
     for (const kind of ["language", "subtitle", "format"]) {
       if (state[kind] !== DEFAULT_FILTERS[kind]) {
@@ -313,7 +313,7 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["hidden", "data-seat-available", "data-seat-total"]
+      attributeFilter: ["hidden", "data-provider", "data-seat-available", "data-seat-total"]
     });
     schedule();
   }
@@ -342,6 +342,7 @@
   }
 
   window.HKCinemaProviderComparePhase6M = Object.freeze({
+    version: "6m1-m7r4-1",
     refresh: schedule,
     getActiveFilters: activeFilters
   });

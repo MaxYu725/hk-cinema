@@ -1,4 +1,5 @@
 (() => {
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
   let scheduled = false;
   let recommendationKey = 0;
   let jumpTimer = null;
@@ -54,10 +55,10 @@
   }
 
   function providerOf(card) {
-    const source = card.querySelector(".provider-compare-source");
-    if (source?.classList.contains("emperor")) return { key: "emperor", label: "Emperor" };
-    if (source?.classList.contains("mcl")) return { key: "mcl", label: "MCL" };
-    return { key: "broadway", label: "Broadway" };
+    const detected = sharedCore?.providerFromNode?.(card);
+    const explicit = String(card?.dataset?.provider || "").trim().toLowerCase();
+    const key = detected || sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
+    return { key, label: sharedCore?.label?.(key) || key || "院線" };
   }
 
   function ensureRecommendationKey(card) {
@@ -421,7 +422,7 @@
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ["hidden", "data-seat-available", "data-seat-total"]
+      attributeFilter: ["hidden", "data-provider", "data-seat-available", "data-seat-total"]
     });
 
     window.addEventListener("hkcinema:compare-seat-summary", schedule);
@@ -438,12 +439,15 @@
   }
 
   window.HKCinemaSmartPicks2 = Object.freeze({
+    version: "8d2-m7r4-1",
     buildRecommendations,
     balanced,
     cheapest,
     earliest,
     roomiest,
     hongKongClock,
+    providerOf,
+    itemForCard: item,
     refresh: schedule
   });
 
