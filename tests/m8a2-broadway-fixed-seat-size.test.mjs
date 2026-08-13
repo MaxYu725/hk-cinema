@@ -83,6 +83,28 @@ test("M8A2 preserves the shared horizontal-centering lifecycle for wide Broadway
   assert.equal(scroller.scrollLeft, 213);
 });
 
+test("M8A2 hotfix keeps the Broadway screen inside the same horizontal scroll owner as seats", async () => {
+  const shared = await source("app/seatmap-shared.js");
+  const renderGridStart = shared.indexOf("function renderGrid(model)");
+  const renderAreaStart = shared.indexOf("function areaGridMetrics(model)", renderGridStart);
+  const renderGrid = shared.slice(renderGridStart, renderAreaStart);
+
+  const viewportIndex = renderGrid.indexOf('class="shared-seatmap-viewport"');
+  const scrollIndex = renderGrid.indexOf('class="shared-seatmap-scroll');
+  const gridIndex = renderGrid.indexOf('class="shared-seatmap-grid"');
+  const screenOwnerIndex = renderGrid.indexOf('class="shared-seatmap-grid-screen"');
+  const screenIndex = renderGrid.indexOf("renderScreen(model.screenLabel, screenWidth)");
+
+  assert.ok(renderGridStart >= 0 && renderAreaStart > renderGridStart);
+  assert.ok(viewportIndex >= 0);
+  assert.ok(scrollIndex > viewportIndex);
+  assert.ok(gridIndex > scrollIndex);
+  assert.ok(screenOwnerIndex > gridIndex);
+  assert.ok(screenIndex > screenOwnerIndex);
+  assert.doesNotMatch(renderGrid.slice(0, viewportIndex), /renderScreen\(/);
+  assert.match(renderGrid, /padding-left:34px/);
+});
+
 test("M8A2 rotates only the shared seat-map runtime asset contract", async () => {
   const [index, shared] = await Promise.all([
     source("app/index.html"),
