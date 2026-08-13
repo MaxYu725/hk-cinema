@@ -1,4 +1,5 @@
 import { probeEmperor } from "./providers/emperor.js";
+import { probeCineArt } from "./providers/cineart.js";
 import { WORKER_PROVIDER_IDS } from "./provider-manifest.js";
 
 const DEFAULT_TIMEOUT_MS = 4500;
@@ -161,6 +162,9 @@ function classifyProbeFailure(error) {
   if (code.includes("RATE_LIMITED") || status === 429) {
     return { category: "rate_limited", code, status };
   }
+  if (code.includes("PAYLOAD_TOO_LARGE")) {
+    return { category: "payload_too_large", code, status };
+  }
   if (code.includes("INVALID_JSON") || code.includes("INVALID_PAYLOAD")) {
     return { category: "invalid_payload", code, status };
   }
@@ -192,7 +196,11 @@ const DEFAULT_PROBE_BUILDERS = Object.freeze({
       source: result.source || "emperor-sync-film-showing",
       count: Number(result.count)
     };
-  }
+  },
+  cineart: ({ fetchImpl, timeoutMs }) => () => probeCineArt({
+    fetchImpl,
+    timeoutMs
+  })
 });
 
 export const SUPPORTED_PROVIDERS = WORKER_PROVIDER_IDS;
