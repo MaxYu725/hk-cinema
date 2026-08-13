@@ -2,7 +2,7 @@ import { getCineArtWorkerSnapshot } from "./cineart.js";
 
 const FRESH_TTL_SECONDS = 60;
 const STALE_TTL_SECONDS = 10 * 60;
-const CACHE_KEY_BASE = "https://hk-cinema.internal/cache/m7p1d/cineart/showtimes";
+const CACHE_KEY_BASE = "https://hk-cinema.internal/cache/m7p1e/cineart/showtimes";
 
 function serviceError(code, message, status = null) {
   const error = new Error(message);
@@ -43,6 +43,47 @@ function cleanArray(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
+function finiteNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function publicPrice(price) {
+  if (!price || typeof price !== "object") return null;
+  const display = finiteNumber(price.display);
+  const face = finiteNumber(price.face);
+  if (display === null && face === null) return null;
+  return {
+    currency: price.currency || "HKD",
+    display: display ?? face,
+    face: face ?? display,
+    updatedAt: price.updatedAt || null
+  };
+}
+
+function publicSeatSummary(summary) {
+  if (!summary || typeof summary !== "object") return null;
+  const total = finiteNumber(summary.total);
+  const sold = finiteNumber(summary.sold);
+  const notSold = finiteNumber(summary.notSold);
+  const upstreamSeatsHold = finiteNumber(summary.upstreamSeatsHold);
+  if ([total, sold, notSold, upstreamSeatsHold].every(value => value === null)) return null;
+
+  return {
+    quality: "coarse-not-sold",
+    total,
+    available: null,
+    held: null,
+    sold,
+    blocked: null,
+    unavailable: sold,
+    notSold,
+    upstreamSeatsHold,
+    updatedAt: summary.updatedAt || null
+  };
+}
+
 function publicSession(session) {
   return {
     sourceId: String(session?.sourceId || ""),
@@ -56,9 +97,10 @@ function publicSession(session) {
     languages: cleanArray(session?.languages),
     subtitles: cleanArray(session?.subtitles),
     formats: cleanArray(session?.formats),
-    // M7P1D publishes scheduling only. These remain deliberately hidden until later gates.
-    price: null,
-    seatSummary: null,
+    // M7P1E publishes only the home Flight base/face price and coarse not-sold summary.
+    // Per-show detail remains outside this service; strict A/H/U/L states are not exposed.
+    price: publicPrice(session?.price),
+    seatSummary: publicSeatSummary(session?.seatSummary),
     bookingUrl: null
   };
 }

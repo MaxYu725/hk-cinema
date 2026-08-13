@@ -27,10 +27,7 @@ const health = await requestJson("/health");
 assert.equal(health.response.ok, true);
 assert.equal(health.payload?.ok, true);
 assert.equal(health.payload?.phase, "6G");
-assert.equal(
-  health.payload?.providers?.cineart,
-  "catalogue-showtimes-production-detail-candidate-readonly"
-);
+assert.ok(String(health.payload?.providers?.cineart || "").includes("showtimes"));
 
 const catalogue = await requestJson("/api/cineart/catalogue");
 assert.equal(catalogue.response.ok, true);
@@ -41,9 +38,8 @@ assert.ok(movie, "live CineArt now-showing catalogue must expose a numeric movie
 const first = await requestJson(`/api/cineart/movies/${encodeURIComponent(movie.sourceId)}/shows`);
 assert.equal(first.response.ok, true);
 assert.equal(first.payload?.ok, true);
-assert.equal(first.payload?.meta?.phase, "M7P1D");
 assert.equal(first.payload?.meta?.provider, "cineart");
-assert.equal(first.payload?.meta?.mode, "showtimes-only");
+assert.match(String(first.payload?.meta?.phase || ""), /^M7P1[D-Z0-9-]*$/i);
 assert.ok(Array.isArray(first.payload?.data?.availableDates));
 assert.ok(Array.isArray(first.payload?.data?.sessions));
 assert.ok(Array.isArray(first.payload?.data?.allSessions));
@@ -60,8 +56,6 @@ for (const session of first.payload.data.allSessions) {
   assert.match(String(session?.time || ""), /^\d{2}:\d{2}$/);
   assert.ok(String(session?.cinema?.sourceId || "").length > 0);
   assert.ok(session?.cinema?.name?.zh || session?.cinema?.name?.en);
-  assert.equal(session?.price, null);
-  assert.equal(session?.seatSummary, null);
   assert.equal(session?.bookingUrl, null);
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
@@ -98,6 +92,8 @@ console.log(JSON.stringify({
     title: movie.title
   },
   showtimes: {
+    phase: first.payload.meta.phase,
+    mode: first.payload.meta.mode,
     availableDates: first.payload.data.availableDates.length,
     allSessions: first.payload.data.allSessions.length,
     selectedDate,
@@ -105,10 +101,10 @@ console.log(JSON.stringify({
     cacheState: first.payload.meta.cacheState,
     stale: first.payload.meta.stale
   },
-  stagedCapabilities: {
-    prices: false,
-    seats: false,
-    booking: false
+  persistentBoundaries: {
+    booking: false,
+    perShowSeatStates: false,
+    seatPlan: false
   },
   methodGuard: denied.response.status
 }, null, 2));

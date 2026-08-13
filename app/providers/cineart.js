@@ -106,11 +106,79 @@
     return await refreshCatalogue();
   }
 
+  function fallbackMetadata(session) {
+    const languages = Array.isArray(session?.languages) && session.languages.length
+      ? session.languages
+      : ["unknown"];
+    const subtitles = Array.isArray(session?.subtitles) && session.subtitles.length
+      ? session.subtitles
+      : ["unknown"];
+    const formats = Array.isArray(session?.formats) && session.formats.length
+      ? session.formats
+      : ["unknown"];
+    return {
+      languages,
+      subtitles,
+      formats,
+      languageLabels: languages.includes("unknown") ? ["語言未提供"] : languages,
+      subtitleLabels: subtitles.includes("unknown") ? ["字幕未提供"] : subtitles,
+      formatLabels: formats.includes("unknown") ? [] : formats
+    };
+  }
+
+  function normalizeComparisonSession(session) {
+    const metadata = window.HKCinemaShowtimeMetadata?.normalizeSession?.(session) || fallbackMetadata(session);
+    const summary = session?.seatSummary || {};
+    const total = Number.isFinite(summary.total) ? summary.total : null;
+    const notSold = Number.isFinite(summary.notSold) ? summary.notSold : null;
+    const price = Number.isFinite(session?.price?.display)
+      ? session.price.display
+      : Number.isFinite(session?.price?.face) ? session.price.face : null;
+    const subtitleText = metadata.subtitles?.includes("unknown")
+      ? "字幕未提供"
+      : `字幕：${metadata.subtitleLabels.join("、")}`;
+    const secondary = [
+      session?.house?.name,
+      ...metadata.formatLabels,
+      ...metadata.languageLabels,
+      subtitleText
+    ].filter(Boolean).join(" · ");
+    const cinemaName = session?.cinema?.name?.zh || session?.cinema?.name?.en || "CineArt 戲院";
+    const seatText = Number.isFinite(notSold)
+      ? Number.isFinite(total)
+        ? `${notSold}/${total} 未售（非可選數）`
+        : `${notSold} 未售（非可選數）`
+      : "座位資料暫缺";
+
+    return {
+      id: `cineart:${session?.sourceId || session?.id || Math.random()}`,
+      provider: "cineart",
+      providerLabel: "CineArt",
+      movieSourceId: session?._phase8cMovieSourceId || session?.movieSourceId || null,
+      time: String(session?.time || "--:--"),
+      cinemaName,
+      secondary,
+      metadata,
+      price,
+      pricePayload: session?.price || (Number.isFinite(price) ? { display: price } : null),
+      seatSummary: session?.seatSummary || null,
+      seatText,
+      // Coarse not-sold data is intentionally neutral: it is not selectable availability.
+      seatClass: "unknown",
+      seatAvailable: null,
+      seatTotal: total,
+      bookingUrl: null
+    };
+  }
+
   const adapter = {
     catalogue: getCachedCatalogue(),
     getCatalogue,
     refreshCatalogue,
     getCachedCatalogue,
+    comparison: Object.freeze({
+      normalizeSession: normalizeComparisonSession
+    }),
     apiBase: API_BASE,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };

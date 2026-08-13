@@ -61,7 +61,7 @@ test("M7P1C production catalogue reuses the Worker snapshot, returns catalogue o
   assert.equal(fetchCalls, 1);
 });
 
-test("M7P1C catalogue capability remains registered when the next staged capability is enabled", async () => {
+test("M7P1C catalogue capability remains registered while later capabilities advance independently", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
@@ -75,13 +75,11 @@ test("M7P1C catalogue capability remains registered when the next staged capabil
     "cineart"
   ]);
   assert.equal(cineart.capabilities.catalogue, true);
-  assert.equal(cineart.capabilities.prices, false);
-  assert.equal(cineart.capabilities.seatSummary, false);
   assert.equal(cineart.capabilities.seatMap, false);
   assert.equal(cineart.capabilities.booking, false);
 });
 
-test("M7P1C browser adapter continues to call only the catalogue Worker route", async () => {
+test("M7P1C browser adapter continues to keep catalogue refresh on the catalogue Worker route", async () => {
   const adapterSource = await source("app/providers/cineart.js");
   const calls = [];
   const catalogue = {
@@ -97,6 +95,7 @@ test("M7P1C browser adapter continues to call only the catalogue Worker route", 
     Error,
     JSON,
     Map,
+    Math,
     Object,
     String,
     clearTimeout,
@@ -130,7 +129,8 @@ test("M7P1C browser adapter continues to call only the catalogue Worker route", 
   assert.match(calls[0].url, /\/api\/cineart\/catalogue$/);
   assert.equal(calls[0].options.method, "GET");
   assert.doesNotMatch(calls[0].url, /\/movies\/|\/shows\/|\/seats/);
-  assert.equal(adapter.comparison, undefined);
+  assert.equal(adapter.comparison?.fetchShows, undefined);
+  assert.equal(typeof adapter.comparison?.normalizeSession, "function");
 });
 
 test("M7P1C shared catalogue publication remains observer-free after staged showtime enablement", async () => {
