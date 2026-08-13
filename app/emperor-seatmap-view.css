@@ -20,7 +20,7 @@ html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"]
 }
 
 html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type .shared-seatmap-positioned-canvas::after {
-  content: "SCREEN";
+  content: "銀幕";
   position: absolute;
   left: 42px;
   right: 34px;
