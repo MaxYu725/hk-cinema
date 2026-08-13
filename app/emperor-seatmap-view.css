@@ -1,0 +1,43 @@
+/* M8A3: Emperor keeps official positioned geometry while using fixed-size seat visuals. */
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-layout > .shared-seatmap-screen {
+  display: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type .shared-seatmap-positioned-canvas {
+  margin-top: 52px;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type .shared-seatmap-positioned-canvas::before {
+  content: "";
+  position: absolute;
+  left: 42px;
+  right: 34px;
+  top: -52px;
+  height: 20px;
+  border-top: 3px solid var(--metro-accent);
+  pointer-events: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type .shared-seatmap-positioned-canvas::after {
+  content: "SCREEN";
+  position: absolute;
+  left: 42px;
+  right: 34px;
+  top: -39px;
+  color: var(--metro-subtext);
+  font-size: .63rem;
+  font-weight: 400;
+  letter-spacing: .24em;
+  text-align: center;
+  pointer-events: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type .shared-seatmap-positioned-rows {
+  top: 52px;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="emperor"][data-layout-mode="positioned"] .shared-seatmap-positioned-canvas > .shared-seat {
+  width: 20px !important;
+  height: 20px !important;
+}
