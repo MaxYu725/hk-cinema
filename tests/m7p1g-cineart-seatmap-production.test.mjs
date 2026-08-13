@@ -122,6 +122,32 @@ test("M7P1G browser adapter owns request/view-model adaptation but never direct 
   assert.doesNotMatch(adapterSource, /comparison:\s*Object\.freeze\(\{[^}]*fetchShows/s);
 });
 
+test("M7P1G orientation hotfix keeps official coordinates and moves only the CineArt screen below positioned seats", async () => {
+  const [css, shared, index] = await Promise.all([
+    source("app/seatmap-shared.css"),
+    source("app/seatmap-shared.js"),
+    source("app/index.html")
+  ]);
+  assert.match(
+    css,
+    /\[data-seatmap-provider="cineart"\]\[data-layout-mode="positioned"\][\s\S]*?\.shared-seatmap-layout\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column;/
+  );
+  assert.match(
+    css,
+    /\[data-seatmap-provider="cineart"\]\[data-layout-mode="positioned"\][\s\S]*?\.shared-seatmap-screen\s*\{[\s\S]*?order:\s*2;/
+  );
+  assert.match(
+    css,
+    /\[data-seatmap-provider="cineart"\]\[data-layout-mode="positioned"\][\s\S]*?\.shared-seatmap-section\s*\{[\s\S]*?order:\s*1;/
+  );
+  assert.match(
+    shared,
+    /const top = \(\(Number\(position\.top \|\| 0\) - Number\(section\.bounds\?\.minTop \|\| 0\)\) \* metrics\.scale\) \+ 24;/
+  );
+  assert.doesNotMatch(shared, /scaleY\(-1\)|rotateX\(180deg\)|geometryHeight\s*-\s*Number\(position\.top/);
+  assert.match(index, /seatmap-shared\.css\?v=7b3-m7p1g1/);
+});
+
 test("M7P1G comparison renders authoritative CineArt show id directly into the seat-map trigger", async () => {
   const compare = await source("app/provider-compare-v4.js");
   assert.match(compare, /data-showtime-id/);
