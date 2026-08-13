@@ -1,6 +1,6 @@
 # M7P1E checkpoint — CineArt price and seat-summary capability
 
-Status: **implementation in progress — automated/live/merge/device gates pending**
+Status: **implementation + pre-final automated/live gates complete — final exact-head rerun / merge / Android PWA gate pending**
 
 Baseline: `bc08f5744d752f13039614254db1f516dcd79a32` (accepted M7P1D)
 
@@ -36,7 +36,7 @@ M7P1E exposes only the price already present on the home show record:
 - `face`
 - `updatedAt`
 
-It does not expose or infer adult/student/child/senior ticket categories, detailed ticket types, concessions or service fees.
+It does not expose or infer adult/student/child/senior ticket categories, detailed ticket types, concessions or service fees. Missing price values remain `null`; they are never coerced to zero.
 
 ### Seat summary
 
@@ -51,6 +51,8 @@ M7P1E exposes the home show record as a deliberately coarse summary:
 - `held = null`
 - `blocked = null`
 - `unavailable = sold`
+
+Missing upstream inventory values remain `null`; they are never coerced to zero.
 
 Critical semantic boundary: CineArt home `avaliable` means **not sold**, not selectable availability. It may include held/locked states. Production UI must never relabel this value as `available` or `可選`.
 
@@ -88,6 +90,38 @@ CineArt service descriptor becomes:
 `catalogue-showtimes-price-coarse-seats-production-detail-candidate-readonly`
 
 The global `/health` phase remains `"6G"`.
+
+## Pre-final automated/live evidence
+
+Code head `7fb4b1cafa7325b4112c6efe3c38386e6c2d217c` passed:
+
+- CineArt Candidate Validation #50 / run `31675834254`: PASS;
+- Deploy HK Cinema #633 / run `31675834313`: Node regression PASS, Chromium install PASS, mobile browser smoke PASS;
+- M7P1B discovery revalidation: PASS;
+- M7P1C catalogue revalidation: PASS;
+- M7P1D showtime revalidation: PASS;
+- M7P1E base-price/coarse-seat live validation: PASS.
+
+Live evidence on that head:
+
+- 20 CineArt source movies;
+- 544 normalized shows;
+- 5 cinemas;
+- schedule range `2026-08-13` through `2026-08-28`;
+- validation movie `733` had 4 available dates and 13 sessions;
+- all 13 sessions exposed a base/face price and coarse not-sold summary;
+- sample show `80818` at CineArt MegaBox exposed HKD 160 base/face price;
+- sample coarse summary: total 271, sold 113, notSold 158, upstream hold 7;
+- sample retained `available:null`, `held:null`, `blocked:null`, and `unavailable:113`;
+- `271 === 113 + 158` and `unavailable === sold`;
+- public sessions exposed no `ticketTypes`, `seatStates` or `seatPlan`;
+- booking remained `null`;
+- POST remained 405;
+- Worker health retained global `phase: "6G"`.
+
+The regression suite also verifies that missing price/inventory evidence is preserved as `null` rather than being converted to zero.
+
+This documentation update intentionally creates one final PR head. Both automated suites must pass again on that exact head before merge.
 
 ## Required gates before merge
 
