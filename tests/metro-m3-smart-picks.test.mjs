@@ -47,6 +47,8 @@ test("Metro Smart Pick jump highlights the target showtime card border", () => {
 
 test("Metro Smart Picks remain compatible with the current controlled shell cache", () => {
   assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
-  assert.doesNotMatch(sw, /install[\s\S]{0,260}skipWaiting\s*\(/);
+  const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
+  assert.ok(installBlock);
+  assert.doesNotMatch(installBlock, /skipWaiting\s*\(/);
   assert.match(sw, /event\.data\?\.type\s*===\s*"SKIP_WAITING"/);
 });
