@@ -157,8 +157,10 @@ test("M7P1D Worker route stays GET-only and never adds CineArt per-show detail f
   assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
   assert.match(router, /cineArtShowtimeService\.getMovie/);
   assert.match(router, /CineArt showtimes are read-only/);
+  assert.match(showtimes, /getCineArtWorkerSnapshot/);
   assert.match(showtimes, /bookingUrl:\s*null/);
-  assert.doesNotMatch(showtimes, /\/show\/|ticketPrice|seatStatus|seatPlan/);
+  assert.doesNotMatch(showtimes, /getCineArtShowDetail|fetchCineArtShowDetail|showDetailUrl/);
+  assert.doesNotMatch(showtimes, /ticketTypes\s*:|seatStates\s*:|seatPlan\s*:/);
   assert.match(manifest, /catalogue-showtimes/);
 });
 
