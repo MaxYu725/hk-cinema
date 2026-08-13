@@ -436,3 +436,42 @@ html[data-skin="metro"]
   background: #060606;
   box-shadow: 8px 0 0 #060606;
 }
+
+/* M8A4: keep CineArt's official front-row-down geometry, but make its screen scroll with the plan. */
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-layout > .shared-seatmap-screen {
+  display: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-section:last-of-type .shared-seatmap-positioned-canvas {
+  padding-bottom: 52px;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-section:last-of-type .shared-seatmap-positioned-canvas::before {
+  content: "";
+  position: absolute;
+  left: 42px;
+  right: 34px;
+  bottom: 20px;
+  height: 20px;
+  border-top: 3px solid var(--metro-accent);
+  pointer-events: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-section:last-of-type .shared-seatmap-positioned-canvas::after {
+  content: "銀幕";
+  position: absolute;
+  left: 42px;
+  right: 34px;
+  bottom: 3px;
+  color: var(--metro-subtext);
+  font-size: .63rem;
+  font-weight: 400;
+  letter-spacing: .16em;
+  text-align: center;
+  pointer-events: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-positioned-canvas > .shared-seat {
+  width: 20px !important;
+  height: 20px !important;
+}
