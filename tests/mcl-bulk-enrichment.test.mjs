@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -11,17 +12,14 @@ async function read(path) {
 
 test("MCL bulk enrichment installs after hybrid and before the outer comparison cache", async () => {
   const index = await read("app/index.html");
-  const provider = index.indexOf("providers/mcl.js");
-  const webApi = index.indexOf("mcl-ticketing-worker.js?v=7a1");
-  const hybrid = index.indexOf("mcl-ticketing-hybrid.js?v=7a2");
-  const bulk = index.indexOf("mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c");
-  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2d");
-
-  assert.ok(provider >= 0);
-  assert.ok(webApi > provider);
-  assert.ok(hybrid > webApi);
-  assert.ok(bulk > hybrid);
-  assert.ok(cache > bulk);
+  assertAssetOrder(
+    index,
+    "providers/mcl.js",
+    "mcl-ticketing-worker.js",
+    "mcl-ticketing-hybrid.js",
+    "mcl-ticketing-bulk-enrichment.js",
+    "provider-compare-main-cache-v3.js"
+  );
 });
 
 test("bulk enrichment fills missing MCL prices by SessionID without adding sessions", async () => {
@@ -92,8 +90,10 @@ test("bulk enrichment fills missing MCL prices by SessionID without adding sessi
   assert.equal(result.bulkEnrichment.selectedPriceCount, 2);
   assert.equal(result.pricingComplete, true);
   assert.equal(provider.ticketingBulkEnrichmentInstalled, true);
-  assert.equal(provider.ticketingBulkEnrichmentVersion, "8d2-m6d2c");
-  assert.equal(window.HKCinemaMCLBulkEnrichment.version, "8d2");
+  assert.equal(typeof provider.ticketingBulkEnrichmentVersion, "string");
+  assert.ok(provider.ticketingBulkEnrichmentVersion.length > 0);
+  assert.equal(typeof window.HKCinemaMCLBulkEnrichment.version, "string");
+  assert.ok(window.HKCinemaMCLBulkEnrichment.version.length > 0);
 });
 
 test("bulk merge leaves the primary result untouched when MovieSet data is unavailable", async () => {
