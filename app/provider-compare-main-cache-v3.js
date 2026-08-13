@@ -114,7 +114,9 @@
     mcl: Object.freeze({
       workerShows: false,
       install: installMCLCache,
-      prefetch: prefetchMCL
+      prefetch(provider, movieId, selectedDate, signal) {
+        return prefetchMCL(movieId, selectedDate, signal);
+      }
     })
   });
 
