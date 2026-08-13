@@ -40,30 +40,6 @@ function encodedRouterState(movieId) {
   ]));
 }
 
-function brief(value, depth = 4) {
-  if (depth <= 0) return Array.isArray(value) ? `[array:${value.length}]` : typeof value;
-  if (value === null) return null;
-  if (["string", "number", "boolean"].includes(typeof value)) {
-    return typeof value === "string" && value.length > 120 ? `${value.slice(0, 117)}...` : value;
-  }
-  if (Array.isArray(value)) {
-    return {
-      type: "array",
-      length: value.length,
-      sample: value.slice(0, 4).map(item => brief(item, depth - 1))
-    };
-  }
-  if (typeof value === "object") {
-    const keys = Object.keys(value);
-    return {
-      type: "object",
-      keys: keys.slice(0, 40),
-      sample: Object.fromEntries(keys.slice(0, 20).map(key => [key, brief(value[key], depth - 1)]))
-    };
-  }
-  return typeof value;
-}
-
 async function requestJson(path) {
   const response = await fetch(`${BASE_URL}${path}`, {
     cache: "no-store",
@@ -88,8 +64,7 @@ async function fetchShow(showId, movieId) {
   try {
     return { transport: "document", parsed: parseCineArtShowPayload(directText) };
   } catch {
-    const rscUrl = `${url}?_rsc=hkcinema-m7p1g-shape`;
-    const rsc = await fetch(rscUrl, {
+    const rsc = await fetch(`${url}?_rsc=hkcinema-m7p1g-shape`, {
       cache: "no-store",
       redirect: "follow",
       headers: {
@@ -104,6 +79,35 @@ async function fetchShow(showId, movieId) {
     assert.equal(rsc.ok, true, `CineArt detail RSC HTTP ${rsc.status}`);
     return { transport: "rsc", parsed: parseCineArtShowPayload(await rsc.text()) };
   }
+}
+
+function seatKeyParts(key) {
+  const match = String(key || "").match(/^(.+?)(\d+)$/);
+  return match ? { row: match[1], column: Number(match[2]) } : null;
+}
+
+function rowAggregate(statuses) {
+  const rows = new Map();
+  for (const [key, state] of Object.entries(statuses)) {
+    const parsed = seatKeyParts(key);
+    if (!parsed) continue;
+    if (!rows.has(parsed.row)) {
+      rows.set(parsed.row, {
+        row: parsed.row,
+        count: 0,
+        minColumn: parsed.column,
+        maxColumn: parsed.column,
+        states: { A: 0, H: 0, U: 0, L: 0, other: 0 }
+      });
+    }
+    const row = rows.get(parsed.row);
+    row.count += 1;
+    row.minColumn = Math.min(row.minColumn, parsed.column);
+    row.maxColumn = Math.max(row.maxColumn, parsed.column);
+    if (Object.hasOwn(row.states, state)) row.states[state] += 1;
+    else row.states.other += 1;
+  }
+  return Array.from(rows.values());
 }
 
 const discovery = await requestJson("/api/providers/cineart/discovery");
@@ -123,7 +127,7 @@ assert.ok(plan && typeof plan === "object", "sample show must resolve an officia
 assert.ok(Object.keys(statuses).length > 0, "sample show must expose seat status keys");
 
 const blocks = Array.isArray(plan.blocks) ? plan.blocks : [];
-const focusedBlocks = blocks.slice(0, 6).map((block, index) => ({
+const blockSummary = blocks.map((block, index) => ({
   index,
   x: block?.x,
   y: block?.y,
@@ -131,17 +135,24 @@ const focusedBlocks = blocks.slice(0, 6).map((block, index) => ({
   cols: block?.cols,
   row: block?.row,
   ccol: block?.ccol,
-  col: brief(block?.col, 3),
+  col: Array.isArray(block?.col) ? block.col : block?.col,
   rowDir: block?.rowDir,
   colDir: block?.colDir,
   align: block?.align,
   display: block?.display,
   rowDisplay: block?.rowDisplay,
-  rpad: brief(block?.rpad, 4),
-  removed: brief(block?.removed, 4),
-  classes: brief(block?.classes, 5),
-  seats: brief(block?.seats, 6)
+  rpad: block?.rpad,
+  removed: Array.isArray(block?.removed) ? block.removed : block?.removed,
+  classKeys: block?.classes && typeof block.classes === "object" ? Object.keys(block.classes) : [],
+  seatKeys: block?.seats && typeof block.seats === "object" ? Object.keys(block.seats) : []
 }));
+const rows = rowAggregate(statuses);
+
+assert.equal(
+  rows.reduce((sum, row) => sum + row.count, 0),
+  Object.keys(statuses).length,
+  "row aggregate must cover every seat-status key"
+);
 
 console.log(JSON.stringify({
   ok: true,
@@ -166,11 +177,19 @@ console.log(JSON.stringify({
     gy: plan.gy,
     numSeats: plan.numSeats,
     blockCount: blocks.length,
-    blocks: focusedBlocks,
-    components: brief(plan.comps, 5)
+    blocks: blockSummary,
+    components: Array.isArray(plan.comps) ? plan.comps.map(comp => ({
+      id: comp?.id,
+      x: comp?.x,
+      y: comp?.y,
+      w: comp?.w,
+      h: comp?.h
+    })) : []
   },
   seatStatus: {
     count: Object.keys(statuses).length,
-    sample: Object.fromEntries(Object.entries(statuses).slice(0, 24))
+    rows,
+    firstKeys: Object.keys(statuses).slice(0, 40),
+    lastKeys: Object.keys(statuses).slice(-40)
   }
 }, null, 2));
