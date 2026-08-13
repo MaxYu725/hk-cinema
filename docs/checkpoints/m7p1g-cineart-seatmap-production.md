@@ -1,6 +1,6 @@
 # M7P1G checkpoint — CineArt read-only seat map
 
-Status: **implementation in progress — final automated/live/merge/device gates pending**
+Status: **implementation and pre-final automated/live gates complete — final exact-head rerun / merge / Android PWA gate pending**
 
 Baseline: `c15a374730aa1c3477096e14313a1418a3fb210f` (accepted M7P1F)
 
@@ -33,7 +33,7 @@ Before changing production runtime, the draft PR used a branch-preview-only shap
 
 A 146-seat current Maritime Square hall independently correlated all 146 `seatStatus` keys with the official block structure. Removed cells explained the missing A1/A2/A18/A19 and H10/H13 gaps, and explicit H11/H12/H14/H15 overrides were wheelchair positions.
 
-No aisle or row geometry is inferred from seat labels.
+No aisle or row geometry is inferred from seat labels. The temporary reconnaissance probe was removed before production validation.
 
 ## Geometry safety boundary
 
@@ -56,7 +56,7 @@ State mapping remains:
 - Browser uses only the HK Cinema Worker.
 - Shared `HKCinemaSeatMapShared` remains the seat-map overlay/render/cache owner.
 - CineArt comparison cards render their authoritative show id directly into the seat-status trigger.
-- `app/cineart-seatmap.js` uses delegated click/keyboard handling only.
+- `app/cineart-seatmap.js` uses delegated click/auxclick/keyboard handling only.
 - No CineArt MutationObserver or IntersectionObserver lifecycle is introduced.
 
 ## Explicit boundaries
@@ -91,6 +91,40 @@ Global Worker `/health` remains `phase: "6G"`.
 Seat-map projections use a 15-second edge cache and no stale fallback. Volatile seat state must not be served from a long stale window.
 
 The shared browser seat-map cache remains 30 seconds.
+
+## Pre-final automated/live evidence
+
+Code head `e103233403331b89134c5a7db22bc2869e718c62` passed the full pre-final gate set:
+
+- Deploy HK Cinema #661 / run `31680901799`: Node regression **324/324 PASS**, Chromium install PASS, mobile browser smoke PASS;
+- CineArt Candidate Validation #83 / run `31680901800`: M7P1B discovery, M7P1C catalogue, M7P1D showtimes, M7P1E coarse price/seat, M7P1F strict detail, and M7P1G production seat map all PASS on the successful rerun;
+- the first Candidate attempt encountered a one-off non-2xx response at the historical M7P1D showtime GET after M7P1B/M7P1C had already passed; the same unchanged exact head was rerun and M7P1B–M7P1G all passed, so no production or validation logic was changed for that transient;
+- Worker health remained `phase: "6G"` with CineArt service `catalogue-showtimes-detailed-price-strict-seats-seatmap-production-readonly`;
+- current source exposed 20 movies, 531 normalized future shows and 5 CineArt cinemas, date range `2026-08-13` through `2026-08-28`;
+- live discovery sample: show `80841`, movie `799`, Maritime Square site `17`, house `30`, `2026-08-13 16:15`;
+- discovery detail correlated the official plan at 170 seats, 6 blocks, 860×650 canvas;
+- current strict summary on that sample: total 170, available 154, held 0, sold 16, blocked 0, unknown 0;
+- M7P1F selected-date revalidation retained bounded detail: 20 selected-date sessions / 137 movie sessions overall, attempted 6, detailed prices 6, strict seats 6, fallback 0, limited 14;
+- M7P1G live seat map: 170 normalized unique seats, 154 available, 16 sold, 0 held, 0 blocked, 0 unknown, 4 wheelchair positions, 11 rows;
+- M7P1G official canvas: 860×650, seat cell 36×33, gaps 3×10, 6 blocks and 3 components;
+- first seat-map request was network and the second was `fresh-edge`, confirming the 15-second edge cache;
+- every normalized position was finite and inside the official canvas;
+- public seat-map payload exposed no raw `seatStatus`, raw `plan`, `seatStates`, or ticket types;
+- booking remained null/read-only and seat-map POST returned 405.
+
+## Diff audit
+
+Production diff was reduced before the pre-final rerun:
+
+- `app/index.html` keeps accepted formatting and changes only required M7P1G script/cachebuster lines;
+- `app/provider-compare-v4.js` was restored to the accepted baseline and now carries only the authoritative CineArt show-id/seat-map-trigger additions plus version bump;
+- `app/providers/cineart.js` was restored to accepted catalogue/strict-detail formatting and adds only seat-map request/view-model extensions and authoritative session identifiers;
+- no PWA or Service Worker file changed;
+- no temporary reconnaissance probe remains;
+- no CineArt browser upstream URL, MutationObserver or IntersectionObserver was introduced;
+- booking capability remains false.
+
+The next checkpoint update intentionally creates one final documentation-only PR head. Both automated suites must pass again on that exact head before review/merge.
 
 ## Required pre-merge gates
 
