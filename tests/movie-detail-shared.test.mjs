@@ -29,6 +29,7 @@ async function loadRenderer() {
     }
   };
   const context = vm.createContext({ console, document, Intl, window });
+  vm.runInContext(await source("app/provider-registry.js"), context, { filename: "provider-registry.js" });
   vm.runInContext(await source("app/showtime-metadata.js"), context, { filename: "showtime-metadata.js" });
   vm.runInContext(await source("app/view-models.js"), context, { filename: "view-models.js" });
   vm.runInContext(await source("app/movie-detail-shared.js"), context, { filename: "movie-detail-shared.js" });
@@ -157,8 +158,8 @@ test("all provider loaders delegate markup to the shared renderer", async () => 
     assert.doesNotMatch(loader, /function renderSession/);
     assert.doesNotMatch(loader, /<div class="detail-hero/);
   }
-  const modelIndex = index.indexOf("view-models.js?v=7b3");
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3");
+  const modelIndex = index.indexOf("view-models.js?v=7b3-m7r3-1");
+  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3-m7r3-1");
   assert.ok(modelIndex > -1 && rendererIndex > modelIndex);
   for (const loader of ["app.js?v=7b2", "mcl-detail.js?v=7b2", "emperor-detail.js?v=7b2"]) {
     assert.ok(rendererIndex < index.indexOf(loader), `${loader} must load after the shared renderer`);
