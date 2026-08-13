@@ -172,6 +172,25 @@ body.seatmap-open {
   margin-top: 20px;
 }
 
+/* CineArt's official plan is authored with the front row at the bottom of the canvas. */
+.shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-section {
+  order: 1;
+}
+
+.shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-section:first-of-type {
+  margin-top: 0;
+}
+
+.shared-seatmap-content[data-seatmap-provider="cineart"][data-layout-mode="positioned"] .shared-seatmap-screen {
+  order: 2;
+  margin: 16px auto 0;
+}
+
 .shared-seatmap-screen {
   position: relative;
   box-sizing: border-box;
