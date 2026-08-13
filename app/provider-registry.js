@@ -69,7 +69,7 @@
       healthLabel: "CineArt",
       capabilities: {
         catalogue: true,
-        showtimes: false,
+        showtimes: true,
         prices: false,
         seatSummary: false,
         seatMap: false,
@@ -90,7 +90,7 @@
   }
 
   window.HKCinemaProviderRegistry = Object.freeze({
-    version: "m7p1c-1",
+    version: "m7p1d-1",
     capabilityKeys: CAPABILITY_KEYS,
     providers,
     get,
