@@ -4,7 +4,7 @@ import test from "node:test";
 
 const TEST_DIR = new URL("./", import.meta.url);
 const SELF = "asset-version-contract.test.mjs";
-const ASSET_VERSION_LITERAL = /(?:[A-Za-z0-9_./-]+\.(?:js|css))\?v=([A-Za-z0-9._-]+)/g;
+const ASSET_VERSION_LITERAL = /(?:[A-Za-z0-9_./${}-]+)\.(?:js|css)\?v=([A-Za-z0-9._-]+)/g;
 const INTENTIONAL_MARKER = "asset-version-contract: intentional";
 
 async function testFiles() {
@@ -14,18 +14,32 @@ async function testFiles() {
     .sort();
 }
 
-function lineNumber(source, offset) {
-  return source.slice(0, offset).split("\n").length;
+function normalizeRegexEscapes(line) {
+  return String(line || "")
+    .replace(/\\+\./g, ".")
+    .replace(/\\+\?/g, "?");
 }
 
-test("asset-version scanner recognizes versioned JS and CSS literals", () => {
-  const sample = [
+function versionPins(line) {
+  const normalized = normalizeRegexEscapes(line);
+  return Array.from(normalized.matchAll(ASSET_VERSION_LITERAL), match => match[0]);
+}
+
+test("asset-version scanner recognizes literal, regex-escaped and template cachebuster pins", () => {
+  const samples = [
     "seatmap-shared.js?v=7b3-m8a1-1",
+    String.raw`/provider-compare-v4\.js\?v=m6c-3-m7r5-1/`,
+    String.raw`new RegExp(\`${"${script}"}\\.js\\?v=7b3-m7r3-1\`)`,
     "metro-theme.css?v=m6b-5"
-  ].join("\n");
+  ];
   assert.deepEqual(
-    Array.from(sample.matchAll(ASSET_VERSION_LITERAL), match => match[0]),
-    ["seatmap-shared.js?v=7b3-m8a1-1", "metro-theme.css?v=m6b-5"]
+    samples.flatMap(versionPins),
+    [
+      "seatmap-shared.js?v=7b3-m8a1-1",
+      "provider-compare-v4.js?v=m6c-3-m7r5-1",
+      "${script}.js?v=7b3-m7r3-1",
+      "metro-theme.css?v=m6b-5"
+    ]
   );
 });
 
@@ -34,12 +48,12 @@ test("historical regression tests do not pin mutable browser asset cachebusters"
   for (const file of await testFiles()) {
     const source = await readFile(new URL(file, TEST_DIR), "utf8");
     const lines = source.split("\n");
-    for (const match of source.matchAll(ASSET_VERSION_LITERAL)) {
-      const line = lineNumber(source, match.index ?? 0);
-      const lineText = lines[line - 1] || "";
-      if (lineText.includes(INTENTIONAL_MARKER)) continue;
-      findings.push(`${file}:${line}: ${match[0]}`);
-    }
+    lines.forEach((lineText, index) => {
+      if (lineText.includes(INTENTIONAL_MARKER)) return;
+      for (const pin of versionPins(lineText)) {
+        findings.push(`${file}:${index + 1}: ${pin}`);
+      }
+    });
   }
 
   assert.deepEqual(
