@@ -31,7 +31,7 @@ function localStorageStub() {
   };
 }
 
-test("M7P1D Worker showtime service publishes scheduling only and reuses its bounded home snapshot cache", async () => {
+test("M7P1D Worker showtime service remains home-snapshot backed and cacheable after later capability stages", async () => {
   const home = await fixture("cineart-home-flight.html");
   const cache = memoryCache();
   let fetchCalls = 0;
@@ -55,11 +55,10 @@ test("M7P1D Worker showtime service publishes scheduling only and reuses its bou
   assert.equal(first.sessions[0].provider, "cineart");
   assert.equal(first.sessions[0].movieSourceId, "799");
   assert.equal(first.sessions[0].sourceId, "9001");
-  assert.equal(first.sessions[0].price, null);
-  assert.equal(first.sessions[0].seatSummary, null);
   assert.equal(first.sessions[0].bookingUrl, null);
   assert.equal("seatStates" in first.sessions[0], false);
   assert.equal("seatPlan" in first.sessions[0], false);
+  assert.equal("ticketTypes" in first.sessions[0], false);
 
   const selectedDate = first.availableDates[0];
   const cached = await service.getMovie("799", selectedDate);
@@ -78,25 +77,20 @@ test("M7P1D Worker showtime service publishes scheduling only and reuses its bou
   );
 });
 
-test("M7P1D Browser Registry enables CineArt showtimes while price, seat and booking capabilities remain off", async () => {
+test("M7P1D browser capability remains enabled while later optional capabilities may advance independently", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
   const registry = window.HKCinemaProviderRegistry;
   const cineart = registry.get("cineart");
 
-  assert.equal(registry.version, "m7p1d-1");
-  assert.deepEqual({ ...cineart.capabilities }, {
-    catalogue: true,
-    showtimes: true,
-    prices: false,
-    seatSummary: false,
-    seatMap: false,
-    booking: false
-  });
+  assert.equal(cineart.capabilities.catalogue, true);
+  assert.equal(cineart.capabilities.showtimes, true);
+  assert.equal(cineart.capabilities.seatMap, false);
+  assert.equal(cineart.capabilities.booking, false);
 });
 
-test("M7P1D CineArt browser adapter keeps catalogue ownership only and delegates showtimes to the shared generic transport", async () => {
+test("M7P1D shared showtime transport remains the network owner after later CineArt normalizers", async () => {
   const [adapterSource, compareSource, index] = await Promise.all([
     source("app/providers/cineart.js"),
     source("app/provider-compare-v4.js"),
@@ -110,6 +104,7 @@ test("M7P1D CineArt browser adapter keeps catalogue ownership only and delegates
     Error,
     JSON,
     Map,
+    Math,
     Object,
     String,
     clearTimeout,
@@ -141,17 +136,18 @@ test("M7P1D CineArt browser adapter keeps catalogue ownership only and delegates
   const adapter = window.HKCinemaProviders.cineart;
   await adapter.refreshCatalogue();
 
-  assert.equal(adapter.comparison, undefined);
+  assert.equal(adapter.comparison?.fetchShows, undefined);
+  assert.equal(typeof adapter.comparison?.normalizeSession, "function");
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/api\/cineart\/catalogue$/);
   assert.doesNotMatch(adapterSource, /cinearthouse\.com\.hk|MutationObserver|IntersectionObserver/);
   assert.match(compareSource, /\/api\/\$\{provider\}\/movies\/\$\{encodeURIComponent\(sourceId\)\}\/shows/);
   assert.match(compareSource, /comparisonAdapter\(provider\)\?\.fetchShows \|\| fetchWorkerShows/);
-  assert.ok(index.indexOf("provider-registry.js?v=m7p1d-1") >= 0);
-  assert.ok(index.indexOf("providers/cineart.js?v=m7p1d-1") >= 0);
+  assert.ok(index.indexOf("provider-registry.js?v=") >= 0);
+  assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
 });
 
-test("M7P1D Worker route is GET-only and exposes no detailed price, seat or booking implementation", async () => {
+test("M7P1D Worker route stays GET-only and never adds CineArt per-show detail fan-out", async () => {
   const [router, showtimes, manifest] = await Promise.all([
     source("worker/src/index-emperor-seat.js"),
     source("worker/src/providers/cineart-showtimes.js"),
@@ -160,14 +156,10 @@ test("M7P1D Worker route is GET-only and exposes no detailed price, seat or book
 
   assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
   assert.match(router, /cineArtShowtimeService\.getMovie/);
-  assert.match(router, /phase:\s*"M7P1D"/);
-  assert.match(router, /mode:\s*"showtimes-only"/);
   assert.match(router, /CineArt showtimes are read-only/);
-  assert.match(showtimes, /price:\s*null/);
-  assert.match(showtimes, /seatSummary:\s*null/);
   assert.match(showtimes, /bookingUrl:\s*null/);
   assert.doesNotMatch(showtimes, /\/show\/|ticketPrice|seatStatus|seatPlan/);
-  assert.match(manifest, /catalogue-showtimes-production-detail-candidate-readonly/);
+  assert.match(manifest, /catalogue-showtimes/);
 });
 
 test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnostic", async () => {
@@ -179,15 +171,11 @@ test("M7P1D discovery revalidation treats per-show seat-map geometry as diagnost
   assert.match(validation, /!seatMapCapabilityKnown/);
 });
 
-test("M7P1D starts only after the M7P1C Android installed-PWA freeze gate passed", async () => {
-  const [previous, checkpoint] = await Promise.all([
-    source("docs/checkpoints/m7p1c-cineart-catalogue-production.md"),
-    source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
-  ]);
+test("M7P1D checkpoint records its original capability boundary and Android installed-PWA acceptance", async () => {
+  const checkpoint = await source("docs/checkpoints/m7p1d-cineart-showtimes-production.md");
 
-  assert.match(previous, /Android installed-PWA.*PASS/i);
-  assert.match(previous, /cold launch.*normal|cold launch.*正常/i);
-  assert.match(previous, /reopen.*normal|reopen.*正常/i);
+  assert.match(checkpoint, /Status: \*\*COMPLETE/i);
+  assert.match(checkpoint, /Android installed-PWA.*PASS/i);
   assert.match(checkpoint, /showtimes:\s*true/);
   assert.match(checkpoint, /prices:\s*false/);
   assert.match(checkpoint, /seatSummary:\s*false/);
