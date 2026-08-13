@@ -2,25 +2,22 @@
   const OPEN_EVENT = "hkcinema:seatmap-opening";
   const CACHE_TTL_MS = 30 * 1000;
   const REQUEST_TIMEOUT_MS = 12000;
-  const PROVIDERS = Object.freeze({
-    broadway: {
-      label: "Broadway",
+  const PROVIDER_COPY_OVERRIDES = Object.freeze({
+    broadway: Object.freeze({
       eyebrow: "BROADWAY",
       bookingLabel: "前往 Broadway 官方購票",
       note: "座位狀態只供即時參考；實際選座、鎖位、付款及最終庫存以 Broadway 官方網站為準。"
-    },
-    mcl: {
-      label: "MCL",
+    }),
+    mcl: Object.freeze({
       eyebrow: "MCL CINEMAS",
       bookingLabel: "前往 MCL 官方購票",
       note: "座位狀態只供即時參考；實際選座、鎖位、付款及最終庫存以 MCL 官方網站為準。"
-    },
-    emperor: {
-      label: "Emperor Cinemas",
+    }),
+    emperor: Object.freeze({
       eyebrow: "EMPEROR CINEMAS",
       bookingLabel: "前往 Emperor 官方購票",
       note: "Emperor 的「不可選」不會被推測為已售；實際選座、鎖位、付款及最終庫存以官方網站為準。"
-    }
+    })
   });
   const STATUS_COPY = Object.freeze({
     available: "可選",
@@ -56,14 +53,24 @@
 
   function providerCopy(providerId) {
     const normalized = String(providerId || "").trim().toLowerCase();
-    const copy = PROVIDERS[normalized];
-    if (!copy) throw new Error(`Unsupported seat-map provider: ${providerId}`);
-    return { id: normalized, ...copy };
+    const info = window.HKCinemaViewModels?.provider?.(normalized);
+    if (!info) throw new Error(`Unregistered seat-map provider: ${providerId}`);
+    const override = PROVIDER_COPY_OVERRIDES[normalized] || {};
+    const label = info.label || normalized;
+    return {
+      id: normalized,
+      label,
+      eyebrow: override.eyebrow || String(label).toUpperCase(),
+      bookingLabel: override.bookingLabel || `前往 ${label} 官方購票`,
+      note: override.note || `座位狀態只供即時參考；實際選座、鎖位、付款及最終庫存以 ${label} 官方資料為準。`,
+      capabilities: { ...(info.capabilities || {}) }
+    };
   }
 
   function prepareTrigger(node, { provider, label } = {}) {
     if (!node) return null;
     const normalizedProvider = String(provider || "").trim().toLowerCase();
+    if (normalizedProvider && !providerCopy(normalizedProvider).capabilities.seatMap) return null;
     node.classList.add("seatmap-launch");
     if (normalizedProvider) {
       node.classList.add(`${normalizedProvider}-seatmap-launch`);
@@ -161,7 +168,7 @@
   }
 
   function bookingAction(copy, bookingUrl) {
-    if (!bookingUrl) return "";
+    if (!copy.capabilities.booking || !bookingUrl) return "";
     return `<a href="${escapeHtml(bookingUrl)}" target="_blank" rel="noopener noreferrer" class="shared-seatmap-booking">${escapeHtml(copy.bookingLabel)}</a>`;
   }
 
@@ -505,6 +512,7 @@
 
   async function open(options = {}) {
     const copy = providerCopy(options.provider);
+    if (!copy.capabilities.seatMap) return false;
     const key = String(options.key || "").trim();
     if (!key || typeof options.load !== "function" || typeof options.adapt !== "function") return false;
     const fullKey = `${copy.id}:${key}`;
@@ -623,7 +631,7 @@
   window.addEventListener("hkcinema:movie-detail-close", () => close({ restoreFocus: false }));
 
   window.HKCinemaSeatMapShared = Object.freeze({
-    version: "7b3",
+    version: "7b3-m7r3-1",
     openEvent: OPEN_EVENT,
     prepareTrigger,
     isActivationKey,

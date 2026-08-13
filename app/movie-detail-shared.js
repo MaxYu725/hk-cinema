@@ -1,27 +1,24 @@
 (() => {
-  const providers = {
-    broadway: {
-      label: "Broadway",
+  const PROVIDER_COPY_OVERRIDES = Object.freeze({
+    broadway: Object.freeze({
       eyebrow: "BROADWAY",
       fallback: "Broadway 戲院",
       seatAvailableLabel: "可選",
       note: "座位摘要及唯讀座位圖來自 Broadway 官方資料；實際選位、鎖位、付款及最終庫存以官方網站為準。"
-    },
-    mcl: {
-      label: "MCL",
+    }),
+    mcl: Object.freeze({
       eyebrow: "MCL CINEMA",
       fallback: "MCL 戲院",
       seatAvailableLabel: "可選",
       note: "未載入完整座位圖前，已售百分比只屬 MCL 來源估算；實際選位、鎖位、付款及最終庫存以官方網站為準。"
-    },
-    emperor: {
-      label: "Emperor Cinemas",
+    }),
+    emperor: Object.freeze({
       eyebrow: "EMPEROR CINEMAS",
       fallback: "Emperor Cinemas",
       seatAvailableLabel: "未售",
       note: "Emperor 的未售數字不會被推測為保證可選；實際選位、鎖位、付款及最終庫存以官方網站為準。"
-    }
-  };
+    })
+  });
 
   let returnFocus = null;
   const showtimeCards = new WeakMap();
@@ -61,9 +58,28 @@
   }
 
   function providerCopy(providerId) {
-    const copy = providers[String(providerId || "").toLowerCase()];
-    if (!copy) throw new Error(`Unsupported detail provider: ${providerId}`);
-    return copy;
+    const normalized = String(providerId || "").trim().toLowerCase();
+    const info = window.HKCinemaViewModels?.provider?.(normalized);
+    if (!info) throw new Error(`Unregistered detail provider: ${providerId}`);
+    const override = PROVIDER_COPY_OVERRIDES[normalized] || {};
+    const label = info.label || normalized;
+    const capabilities = { ...(info.capabilities || {}) };
+    const note = override.note || (
+      capabilities.seatMap
+        ? `座位狀態只供即時參考；實際選座、鎖位、付款及最終庫存以 ${label} 官方資料為準。`
+        : capabilities.seatSummary
+          ? `${label} 只提供座位摘要，不提供座位圖；實際庫存以官方資料為準。`
+          : `${label} 不提供座位資料；場次及購票資料以官方來源為準。`
+    );
+    return {
+      id: normalized,
+      label,
+      eyebrow: override.eyebrow || String(label).toUpperCase(),
+      fallback: override.fallback || `${label} 戲院`,
+      seatAvailableLabel: override.seatAvailableLabel || "可選",
+      note,
+      capabilities
+    };
   }
 
   function ensureOverlay() {
@@ -123,6 +139,11 @@
   }
 
   function seatSummary(showtime, providerId) {
+    const copy = providerCopy(providerId);
+    if (!copy.capabilities.seatSummary) {
+      return { text: "不提供座位資料", tone: "unknown" };
+    }
+
     const summary = showtime.seats || {};
     if (showtime.purchase?.canPurchase === false) {
       return { text: "暫不可購", tone: "unknown" };
@@ -135,7 +156,7 @@
     ) {
       const ratio = summary.total > 0 ? summary.available / summary.total : 0;
       return {
-        text: `${summary.available}/${summary.total} ${providerCopy(providerId).seatAvailableLabel}`,
+        text: `${summary.available}/${summary.total} ${copy.seatAvailableLabel}`,
         tone: ratio <= 0 ? "full" : ratio <= 0.12 ? "limited" : "available"
       };
     }
@@ -207,7 +228,7 @@
   }
 
   function renderHero(view) {
-    const { movie, copy, providerId } = view;
+    const { movie, copy } = view;
     const poster = movie.posterUrl
       ? `<img src="${escapeHtml(movie.posterUrl)}" alt="${escapeHtml(movie.title.display)}">`
       : `<div class="detail-poster-placeholder">${escapeHtml(copy.label)}</div>`;
@@ -216,6 +237,9 @@
       : view.detailError
         ? `<p class="shared-detail-status warning">部分電影資料暫時未能更新。</p>`
         : "";
+    const officialAction = copy.capabilities.booking && movie.bookingUrl
+      ? `<a class="detail-action shared-official-action" href="${escapeHtml(movie.bookingUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.label)} 官方購票</a>`
+      : "";
 
     return `
       <div class="detail-hero shared-detail-hero">
@@ -226,7 +250,7 @@
           ${movie.title.secondary ? `<p class="detail-title-en">${escapeHtml(movie.title.secondary)}</p>` : ""}
           ${detailStatus}
           <div class="shared-detail-actions">
-            <a class="detail-action shared-official-action" href="${escapeHtml(movie.bookingUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.label)} 官方購票</a>
+            ${officialAction}
             ${movie.trailerUrl ? `<a class="shared-secondary-action" href="${escapeHtml(movie.trailerUrl)}" target="_blank" rel="noopener noreferrer">觀看預告</a>` : ""}
           </div>
         </div>
@@ -270,23 +294,26 @@
       ...(showtime.metadata?.languages || []),
       ...(showtime.metadata?.subtitles || [])
     ].filter(Boolean);
-    const providerClass = view.providerId === "mcl"
-      ? "mcl-showtime-card"
-      : view.providerId === "emperor"
-        ? "emperor-showtime-card"
-        : "broadway-showtime-card";
+    const providerClass = `${view.providerId}-showtime-card`;
     const priceClass = view.providerId === "mcl"
       ? "mcl-ticket-prices"
       : view.providerId === "emperor"
         ? "emperor-ticket-prices"
         : "";
+    const bookingUrl = showtime.bookingUrl || view.movie.bookingUrl || "";
+    const seatMapAction = view.copy.capabilities.seatMap && showtime.seatMap?.supported
+      ? `<button type="button" class="seat-pill shared-seatmap-button">查看座位</button>`
+      : "";
+    const bookingAction = view.copy.capabilities.booking && bookingUrl
+      ? `<a class="shared-booking-button" href="${escapeHtml(bookingUrl)}" target="_blank" rel="noopener noreferrer">官方購票</a>`
+      : "";
 
     return `
       <article
-        class="showtime-card shared-showtime-card ${providerClass}"
+        class="showtime-card shared-showtime-card ${escapeHtml(providerClass)}"
         data-detail-provider="${escapeHtml(view.providerId)}"
         data-showtime-id="${escapeHtml(showtime.sourceId || "")}"
-        data-booking-url="${escapeHtml(showtime.bookingUrl || view.movie.bookingUrl)}"
+        data-booking-url="${escapeHtml(bookingUrl)}"
       >
         <div class="shared-showtime-primary">
           <strong class="showtime-time">${escapeHtml(showtime.time || "--:--")}</strong>
@@ -300,8 +327,8 @@
           <span class="shared-seat-summary ${summary.tone}">${escapeHtml(summary.text)}</span>
         </div>
         <div class="shared-showtime-actions">
-          ${showtime.seatMap?.supported ? `<button type="button" class="seat-pill shared-seatmap-button">查看座位</button>` : ""}
-          <a class="shared-booking-button" href="${escapeHtml(showtime.bookingUrl || view.movie.bookingUrl)}" target="_blank" rel="noopener noreferrer">官方購票</a>
+          ${seatMapAction}
+          ${bookingAction}
         </div>
       </article>
     `;
@@ -441,7 +468,7 @@
   });
 
   window.HKCinemaMovieDetail = Object.freeze({
-    version: "7b3",
+    version: "7b3-m7r3-1",
     createView,
     renderHtml,
     render,
