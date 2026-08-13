@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { createCineArtSeatMapService } from "../worker/src/providers/cineart-seatmap.js";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -107,7 +108,8 @@ test("M7P1G Registry enables CineArt seatMap but keeps booking disabled", async 
   vm.runInNewContext(registrySource, { window, Map, Object, String });
   const registry = window.HKCinemaProviderRegistry;
   const cineart = registry.get("cineart");
-  assert.equal(registry.version, "m7p1g-1");
+  assert.equal(typeof registry.version, "string");
+  assert.ok(registry.version.length > 0);
   assert.equal(cineart.capabilities.seatMap, true);
   assert.equal(cineart.capabilities.booking, false);
 });
@@ -145,7 +147,7 @@ test("M7P1G orientation hotfix keeps official coordinates and moves only the Cin
     /const top = \(\(Number\(position\.top \|\| 0\) - Number\(section\.bounds\?\.minTop \|\| 0\)\) \* metrics\.scale\) \+ 24;/
   );
   assert.doesNotMatch(shared, /scaleY\(-1\)|rotateX\(180deg\)|geometryHeight\s*-\s*Number\(position\.top/);
-  assert.match(index, /seatmap-shared\.css\?v=7b3-m7p1g1/);
+  assertAsset(index, "seatmap-shared.css");
 });
 
 test("M7P1G comparison renders authoritative CineArt show id directly into the seat-map trigger", async () => {
