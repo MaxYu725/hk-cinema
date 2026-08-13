@@ -53,14 +53,18 @@ function gridModel(provider, columns) {
 
 test("M8A2 fixes Broadway grid seats at the accepted 20px viewing size", async () => {
   const shared = await loadShared(390);
-  const normal = shared.gridMetrics(gridModel("broadway", 14));
+  const compact = shared.gridMetrics(gridModel("broadway", 12));
+  const medium = shared.gridMetrics(gridModel("broadway", 14));
   const wide = shared.gridMetrics(gridModel("broadway", 32));
 
-  assert.equal(normal.size, 20);
+  assert.equal(compact.size, 20);
+  assert.equal(medium.size, 20);
   assert.equal(wide.size, 20);
-  assert.equal(normal.scrollable, false);
+  assert.equal(compact.scrollable, false);
+  assert.equal(medium.scrollable, true);
   assert.equal(wide.scrollable, true);
-  assert.ok(wide.contentWidth > normal.contentWidth);
+  assert.ok(wide.contentWidth > medium.contentWidth);
+  assert.ok(medium.contentWidth > compact.contentWidth);
 });
 
 test("M8A2 keeps the fixed Broadway policy provider-scoped", async () => {
