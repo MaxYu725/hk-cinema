@@ -1,11 +1,16 @@
 (() => {
   let scheduled = false;
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
 
-  const PROVIDERS = [
-    { key: "broadway", label: "Broadway" },
-    { key: "mcl", label: "MCL" },
-    { key: "emperor", label: "Emperor" }
-  ];
+  function providers() {
+    const shared = sharedCore?.providers?.();
+    if (Array.isArray(shared)) return shared;
+    return (window.HKCinemaProviderRegistry?.providers || []).map(descriptor => ({
+      key: descriptor.id,
+      label: descriptor.displayName || descriptor.healthLabel || descriptor.id,
+      descriptor
+    }));
+  }
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -17,7 +22,13 @@
   }
 
   function activeProviders(snapshot) {
-    return PROVIDERS.filter(provider => Boolean(snapshot?.match?.[provider.key]));
+    const aggregate = snapshot?.match?.id
+      ? window.HKCinemaMovieAggregates?.get?.(snapshot.match.id)
+      : null;
+    if (aggregate && sharedCore?.activeProvidersForAggregate) {
+      return sharedCore.activeProvidersForAggregate(aggregate);
+    }
+    return providers().filter(provider => Boolean(snapshot?.match?.[provider.key]));
   }
 
   function ensurePanel() {
@@ -66,9 +77,9 @@
     return { status: "empty", label: "暫無場次", detail: "目前未取得可售日期" };
   }
 
-  function overallState(snapshot, loading, providers) {
-    const errors = providers.filter(provider => snapshot?.errors?.[provider.key]);
-    const stale = providers.filter(provider => {
+  function overallState(snapshot, loading, active) {
+    const errors = active.filter(provider => snapshot?.errors?.[provider.key]);
+    const stale = active.filter(provider => {
       const freshness = snapshot?.freshness?.[provider.key] || {};
       return window.HKCinemaDataHealth?.classify?.({
         status: "fresh",
@@ -76,11 +87,11 @@
         updatedAt: freshness.updatedAt
       })?.level === "stale";
     });
-    if (errors.length === providers.length) {
+    if (errors.length === active.length) {
       return {
         status: "error",
         label: "資料暫不可用",
-        detail: `${providers.length} 個院線來源目前都未能更新`
+        detail: `${active.length} 個院線來源目前都未能更新`
       };
     }
     if (errors.length || stale.length) {
@@ -88,36 +99,34 @@
         status: "partial",
         label: errors.length ? "部分資料" : "部分資料已過期",
         detail: errors.length
-          ? `目前有 ${providers.length - errors.length}/${providers.length} 個院線資料可用`
+          ? `目前有 ${active.length - errors.length}/${active.length} 個院線資料可用`
           : `${stale.length} 個院線資料超過 2 小時未更新`
       };
     }
-    if (loading) {
-      return { status: "loading", label: "更新中", detail: "正在更新院線場次" };
-    }
+    if (loading) return { status: "loading", label: "更新中", detail: "正在更新院線場次" };
 
-    const hasAnyDates = providers.some(provider => (snapshot?.availableDates?.[provider.key] || []).length);
+    const hasAnyDates = active.some(provider => (snapshot?.availableDates?.[provider.key] || []).length);
     if (!hasAnyDates) {
       return {
         status: "empty",
         label: "暫無場次",
-        detail: `${providers.length} 個院線目前均未有可售日期`
+        detail: `${active.length} 個院線目前均未有可售日期`
       };
     }
 
     return {
       status: "ready",
       label: "資料完整",
-      detail: `${providers.map(provider => provider.label).join("、")} 均已完成更新`
+      detail: `${active.map(provider => provider.label).join("、")} 均已完成更新`
     };
   }
 
   function providerHtml(provider, state) {
     const retry = state.status === "error"
-      ? `<button type="button" data-provider-recovery-retry="${provider.key}">重試 ${provider.label}</button>`
+      ? `<button type="button" data-provider-recovery-retry="${escapeHtml(provider.key)}">重試 ${escapeHtml(provider.label)}</button>`
       : "";
     return `
-      <div class="provider-resilience-source ${state.status}">
+      <div class="provider-resilience-source ${escapeHtml(state.status)}" data-provider="${escapeHtml(provider.key)}">
         <div class="provider-resilience-source-main">
           <strong>${escapeHtml(provider.label)}</strong>
           <span class="provider-resilience-badge">${escapeHtml(state.label)}</span>
@@ -140,17 +149,17 @@
 
     const snapshot = compare.getState();
     if (!snapshot?.match) return;
-    const providers = activeProviders(snapshot);
-    if (!providers.length) return;
+    const active = activeProviders(snapshot);
+    if (!active.length) return;
 
     const panel = ensurePanel();
     if (!panel) return;
     const loading = isLoadingView();
-    const overall = overallState(snapshot, loading, providers);
+    const overall = overallState(snapshot, loading, active);
     const states = Object.fromEntries(
-      providers.map(provider => [provider.key, providerState(snapshot, provider.key, loading)])
+      active.map(provider => [provider.key, providerState(snapshot, provider.key, loading)])
     );
-    const partial = providers.some(provider => {
+    const partial = active.some(provider => {
       if (snapshot.errors?.[provider.key]) return true;
       const freshness = snapshot?.freshness?.[provider.key] || {};
       return window.HKCinemaDataHealth?.classify?.({
@@ -170,14 +179,14 @@
           <span class="provider-resilience-overall-dot" aria-hidden="true"></span>
           <strong>${escapeHtml(overall.label)}</strong>
           <span class="provider-resilience-mini-dots">
-            ${providers.map(provider => providerDot(provider, states[provider.key])).join("")}
+            ${active.map(provider => providerDot(provider, states[provider.key])).join("")}
           </span>
           <small>${escapeHtml(overall.detail)}</small>
           <em aria-hidden="true">⌄</em>
         </summary>
         <div class="provider-resilience-detail">
-          <div class="provider-resilience-sources provider-count-${providers.length}">
-            ${providers.map(provider => providerHtml(provider, states[provider.key])).join("")}
+          <div class="provider-resilience-sources provider-count-${active.length}">
+            ${active.map(provider => providerHtml(provider, states[provider.key])).join("")}
           </div>
           ${partial ? `
             <p class="provider-resilience-partial-note">
@@ -198,12 +207,14 @@
   }
 
   function retryProvider(provider) {
-    if (!PROVIDERS.some(entry => entry.key === provider)) return;
+    const key = sharedCore?.registeredProviderId?.(provider) ||
+      providers().find(entry => entry.key === provider)?.key || null;
+    if (!key) return;
     const compare = window.HKCinemaProviderCompare;
     const snapshot = compare?.getState?.();
     const matchId = snapshot?.match?.id;
     if (!matchId) return;
-    window.HKCinemaProviderCompareMainCache?.clearProvider?.(provider);
+    window.HKCinemaProviderCompareMainCache?.clearProvider?.(key);
     compare.open(matchId);
   }
 
@@ -244,6 +255,13 @@
     window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
     schedule();
   }
+
+  window.HKCinemaProviderCompareResilience = Object.freeze({
+    version: "m7r6-1",
+    activeProviders,
+    retryProvider,
+    refresh: schedule
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", install, { once: true });
