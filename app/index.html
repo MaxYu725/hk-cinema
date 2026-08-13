@@ -1,66 +1,151 @@
-<!doctype html>
-<html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-HK" data-skin="metro">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0078d4">
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>HK Cinema</title>
+
+  <meta
+    name="description"
+    content="香港戲院電影、場次、票價及座位資訊"
+  >
+  <link rel="manifest" href="./manifest.json?v=m5-1">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HK Cinema">
-  <title>HK Cinema</title>
-  <link rel="manifest" href="./manifest.json">
-  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css?v=9b2">
-  <link rel="stylesheet" href="./theme.css?v=9b1">
-  <link rel="stylesheet" href="./metro-theme.css?v=m6b-2">
-  <link rel="stylesheet" href="./metro-comparison.css?v=m3-4">
-  <link rel="stylesheet" href="./metro-filter-matrix.css?v=m3b-5">
-  <link rel="stylesheet" href="./metro-smart-picks.css?v=m3c-3">
-  <link rel="stylesheet" href="./metro-seatmap.css?v=m4b-3">
-  <link rel="stylesheet" href="./phase9c2-installed-polish.css?v=9c3-2">
+  <script>
+    (() => {
+      const applySkin = skin => {
+        const resolved = skin === "classic" ? "classic" : "metro";
+        document.documentElement.dataset.skin = resolved;
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.content = resolved === "classic" ? "#17191d" : "#000000";
+      };
+
+      try {
+        applySkin(new URLSearchParams(window.location.search).get("skin"));
+      } catch {
+        // Metro is now the production default; Classic remains available as an explicit fallback.
+        applySkin("metro");
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="./style.css?v=6k1">
+  <link rel="stylesheet" href="./data-health.css?v=6j2">
+  <link rel="stylesheet" href="./seatmap-shared.css?v=7b3">
+  <link rel="stylesheet" href="./multi-provider.css?v=8e2">
+  <link rel="stylesheet" href="./home-library.css?v=m6b-3">
+  <link rel="stylesheet" href="./provider-compare.css?v=5b1">
+  <link rel="stylesheet" href="./provider-compare-insights.css?v=5d3b">
+  <link rel="stylesheet" href="./provider-compare-cinema-menu.css?v=5d3b-fix8">
+  <link rel="stylesheet" href="./provider-compare-preferences.css?v=5e1">
+  <link rel="stylesheet" href="./provider-compare-resilience.css?v=6g1">
+  <link rel="stylesheet" href="./provider-compare-seats.css?v=5c2">
+  <link rel="stylesheet" href="./provider-compare-recommendations.css?v=5d1">
+  <link rel="stylesheet" href="./provider-compare-v3.css?v=6d1">
+  <link rel="stylesheet" href="./mcl-detail.css?v=7b2">
+  <link rel="stylesheet" href="./emperor-detail.css?v=7b2">
+  <link rel="stylesheet" href="./movie-detail-shared.css?v=7b3">
+  <link rel="stylesheet" href="./provider-compare-mobile-polish.css?v=5e4-mobile1">
+  <link rel="stylesheet" href="./provider-compare-accessibility.css?v=5e5-a11y1">
+  <link rel="stylesheet" href="./provider-compare-density.css?v=6l1">
+  <link rel="stylesheet" href="./provider-compare-phase6m.css?v=6m1">
+  <link rel="stylesheet" href="./phase8a-movie-navigation.css?v=8e2">
+  <link rel="stylesheet" href="./phase8b-comparison-layout.css?v=8b1">
+  <link rel="stylesheet" href="./phase8c-rich-filters.css?v=8e1">
+  <link rel="stylesheet" href="./phase8d-smart-picks.css?v=8d1">
+  <link rel="stylesheet" href="./theme-foundation.css?v=9b1">
+  <link rel="stylesheet" href="./phase9b2-classic-mobile-polish.css?v=9b2">
+  <link rel="stylesheet" href="./phase9b3-date-filter-ux.css?v=9b3">
+  <link rel="stylesheet" href="./phase9d0-home-sticky-scroll.css?v=m6b-3">
+  <link rel="stylesheet" href="./phase9c3-pwa-final-polish.css?v=9c3-1">
+  <link rel="stylesheet" href="./classic-final-ui-polish.css?v=classic-final-1">
+  <link rel="stylesheet" href="./phase10r3a-mobile-shell-date-strip.css?v=10r3b-1">
+  <link rel="stylesheet" href="./metro-theme.css?v=m6b-5">
+  <link rel="stylesheet" href="./metro-m3-comparison.css?v=m3-1">
+  <link rel="stylesheet" href="./metro-m3-filter-matrix.css?v=m3-filter-3">
+  <link rel="stylesheet" href="./metro-m3-smart-picks.css?v=m3-picks-2">
+  <link rel="stylesheet" href="./metro-m4-seat-view.css?v=m6gate-1">
 </head>
+
 <body>
-  <div id="appShell" class="app-shell">
-    <header class="app-header">
-      <div class="topbar">
-        <div class="topbar-actions">
-          <button id="installButton" class="topbar-button" type="button" hidden>安裝</button>
-          <button id="refreshButton" class="topbar-button" type="button">更新</button>
-        </div>
+  <div class="app-shell">
+
+    <header class="topbar">
+      <div class="topbar-brand">
+        <p class="eyebrow">HONG KONG CINEMA</p>
+        <h1>HK Cinema</h1>
       </div>
-      <div id="dataHealth" class="data-health" aria-live="polite"></div>
-      <div class="tabs" role="tablist" aria-label="電影狀態">
-        <button class="tab active" data-tab="now" type="button" role="tab" aria-selected="true">現正上映 <span data-tab-count="now"></span></button>
-        <button class="tab" data-tab="coming" type="button" role="tab" aria-selected="false">即將上映 <span data-tab-count="coming"></span></button>
+
+      <div class="topbar-actions" id="topbarActions">
+        <button
+          class="icon-button"
+          type="button"
+          id="refreshButton"
+          aria-label="重新整理戲院資料"
+          title="重新整理"
+        >
+          ↻
+        </button>
       </div>
     </header>
 
     <main>
-      <section class="controls">
-        <div class="search-wrap">
-          <input id="searchInput" type="search" inputmode="search" autocomplete="off" placeholder="搜尋電影">
-          <button id="searchClearButton" type="button" aria-label="清除搜尋">×</button>
+      <nav class="tabs" aria-label="電影分類">
+        <button
+          class="tab active"
+          type="button"
+          data-tab="now"
+        >
+          現正上映
+        </button>
+
+        <button
+          class="tab"
+          type="button"
+          data-tab="coming"
+        >
+          即將上映
+        </button>
+      </nav>
+
+      <section class="status-card" id="systemStatus">
+        <div class="status-dot"></div>
+
+        <div>
+          <strong>正在載入戲院資料</strong>
+          <p>
+            正在同步各院線最新電影資料。
+          </p>
         </div>
-        <label class="sort-control">
-          <span class="sr-only">排序</span>
-          <select id="sortSelect" aria-label="排序">
-            <option value="default">預設</option>
-            <option value="release">最新上映</option>
-            <option value="title">片名</option>
-          </select>
-        </label>
       </section>
 
-      <section class="movie-section" aria-labelledby="sectionTitle">
-        <div class="section-heading">
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">MOVIES</p>
           <h2 id="sectionTitle">現正上映</h2>
-          <span id="movieCount"></span>
         </div>
-        <div id="movieGrid" class="movie-grid" aria-live="polite"></div>
-        <div id="movieEmpty" class="movie-empty" hidden>暫時未有電影資料</div>
+
+        <span class="movie-count" id="movieCount">
+          0 部
+        </span>
       </section>
+
+      <section
+        class="movie-grid"
+        id="movieGrid"
+        aria-live="polite"
+      >
+      </section>
+
     </main>
 
     <footer>
