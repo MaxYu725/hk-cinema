@@ -24,6 +24,7 @@ on:
       - "scripts/m7p1d-cineart-showtimes-validation.mjs"
       - "scripts/m7p1e-cineart-price-seat-validation.mjs"
       - "scripts/m7p1f-cineart-strict-detail-validation.mjs"
+      - "scripts/m7p1g-cineart-seatplan-shape-probe.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -78,3 +79,6 @@ jobs:
 
       - name: Validate CineArt selected-date strict detail boundary
         run: node scripts/m7p1f-cineart-strict-detail-validation.mjs
+
+      - name: Probe CineArt seat-plan shape for M7P1G
+        run: node scripts/m7p1g-cineart-seatplan-shape-probe.mjs
