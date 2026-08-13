@@ -3,6 +3,7 @@ import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 import { discoverCineArt } from "./providers/cineart.js";
 import { cineArtCatalogueService } from "./providers/cineart-catalogue.js";
 import { cineArtShowtimeService } from "./providers/cineart-showtimes.js";
+import { cineArtSeatMapService } from "./providers/cineart-seatmap.js";
 import {
   providerProbeRunner,
   SUPPORTED_PROVIDERS
@@ -101,6 +102,39 @@ async function routeRequest(request, env, ctx) {
       }, 200, { "cache-control": "no-store" });
     } catch (error) {
       return errorResponse(error, "CINEART_SHOWTIMES_ERROR");
+    }
+  }
+
+  const cineArtSeatMatch = url.pathname.match(
+    /^\/api\/cineart\/shows\/(\d+)\/seats$/
+  );
+
+  if (cineArtSeatMatch) {
+    if (request.method !== "GET") {
+      return readOnlyMethodError("CineArt seat map is read-only");
+    }
+
+    try {
+      const showId = cineArtSeatMatch[1];
+      const result = await cineArtSeatMapService.get(
+        showId,
+        url.searchParams.get("movieSourceId"),
+        { ctx }
+      );
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "M7P1G",
+          provider: "cineart",
+          mode: "read-only-seatmap-official-geometry",
+          showId,
+          cacheState: result?.meta?.cacheState || "network",
+          updatedAt: result?.updatedAt || new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    } catch (error) {
+      return errorResponse(error, "CINEART_SEATMAP_ERROR");
     }
   }
 
