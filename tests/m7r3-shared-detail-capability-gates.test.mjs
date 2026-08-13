@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -199,7 +200,7 @@ test("M7R3 shared seat-map capability gate stops unsupported provider before loa
   assert.equal(node.dataset.seatmapProvider, undefined);
 });
 
-test("M7R3 changed shared runtimes use one isolated browser-cache generation", async () => {
+test("M7R3 shared runtimes remain independently cache-busted without pinning historical tokens", async () => {
   const [index, models, detail, seatmap] = await Promise.all([
     source("app/index.html"),
     source("app/view-models.js"),
@@ -207,10 +208,9 @@ test("M7R3 changed shared runtimes use one isolated browser-cache generation", a
     source("app/seatmap-shared.js")
   ]);
 
-  for (const script of ["view-models", "movie-detail-shared"]) {
-    assert.match(index, new RegExp(`${script}\\.js\\?v=7b3-m7r3-1`));
+  for (const script of ["view-models.js", "movie-detail-shared.js", "seatmap-shared.js"]) {
+    assertAsset(index, script);
   }
-  assert.match(index, /seatmap-shared\.js\?v=7b3-(?:m7r3-1|m8a1-1)/);
   assert.match(models, /unsupportedSeatMap\("unsupported"\)/);
   assert.match(models, /const SEAT_MAP_REQUEST_BUILDERS = Object\.freeze/);
   assert.match(models, /HKCinemaProviders\?\.\[providerId\]\?\.seatMapRequest/);
