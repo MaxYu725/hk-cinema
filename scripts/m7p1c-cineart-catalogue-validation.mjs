@@ -25,9 +25,9 @@ async function jsonRequest(path, options = {}) {
 const health = await jsonRequest("/health");
 assert.equal(health.response.ok, true);
 assert.equal(health.payload?.ok, true);
-assert.equal(health.payload?.data?.phase, "6G");
+assert.equal(health.payload?.phase, "6G");
 assert.equal(
-  health.payload?.data?.providers?.cineart,
+  health.payload?.providers?.cineart,
   "catalogue-production-shows-candidate-readonly"
 );
 
@@ -65,8 +65,8 @@ console.log(JSON.stringify({
   ok: true,
   baseUrl: BASE_URL,
   health: {
-    phase: health.payload.data.phase,
-    cineartService: health.payload.data.providers.cineart
+    phase: health.payload.phase,
+    cineartService: health.payload.providers.cineart
   },
   catalogue: {
     now: catalogue.payload.data.now.length,
