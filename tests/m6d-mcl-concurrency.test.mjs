@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -149,8 +150,5 @@ test("M6D 2C keeps bounded lazy price and seat owners with the MCL cache outermo
   assert.match(prices, /const MAX_CONCURRENT = 4/);
   assert.match(prices, /application\/json, text\/javascript, \*\/\*; q=0\.01/);
   assert.match(seats, /const MAX_CONCURRENT = 2/);
-  const hybrid = index.indexOf("mcl-ticketing-hybrid.js?v=7a2");
-  const bulkIndex = index.indexOf("mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c");
-  const cache = index.indexOf("provider-compare-main-cache-v3.js?v=m6d2d");
-  assert.ok(hybrid >= 0 && bulkIndex > hybrid && cache > bulkIndex);
+  assertAssetOrder(index, "mcl-ticketing-hybrid.js", "mcl-ticketing-bulk-enrichment.js", "provider-compare-main-cache-v3.js");
 });
