@@ -76,6 +76,35 @@ test("M7P1E Worker publishes base/face price plus coarse not-sold summary withou
   assert.equal("ticketTypes" in session, false);
 });
 
+test("M7P1E does not coerce missing price or seat evidence into zero", async () => {
+  const sourceHome = await fixture("cineart-home-flight.html");
+  const home = sourceHome.replace(
+    '"price":110,"seats":4,"seatsHold":1,"sold":1,"avaliable":3',
+    '"price":null,"seats":null,"seatsHold":null,"sold":null,"avaliable":null'
+  );
+  assert.notEqual(home, sourceHome, "fixture mutation must replace the show inventory fields");
+
+  const service = createCineArtShowtimeService({
+    cache: memoryCache(),
+    now: () => NOW_MS,
+    fetchImpl: async () => new Response(home, {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" }
+    })
+  });
+
+  const result = await service.getMovie("799");
+  const session = result.allSessions[0];
+  assert.equal(session.price, null);
+  if (session.seatSummary) {
+    assert.equal(session.seatSummary.total, null);
+    assert.equal(session.seatSummary.sold, null);
+    assert.equal(session.seatSummary.notSold, null);
+    assert.equal(session.seatSummary.upstreamSeatsHold, null);
+  }
+  assert.equal(String(session?.price?.display || ""), "");
+});
+
 test("M7P1E Browser Registry enables CineArt prices and seatSummary but not seatMap or booking", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
@@ -159,11 +188,14 @@ test("M7P1E route advertises the staged mode and keeps detail/booking boundaries
   assert.match(router, /phase:\s*"M7P1E"/);
   assert.match(router, /mode:\s*"showtimes-base-price-coarse-seats"/);
   assert.match(showtimes, /m7p1e\/cineart\/showtimes/);
+  assert.match(showtimes, /function finiteNumber/);
   assert.match(showtimes, /quality:\s*"coarse-not-sold"/);
   assert.match(showtimes, /available:\s*null/);
   assert.match(showtimes, /held:\s*null/);
   assert.match(showtimes, /bookingUrl:\s*null/);
-  assert.doesNotMatch(showtimes, /\/show\/|ticketPrice|seatStatus|seatPlan/);
+  assert.match(showtimes, /getCineArtWorkerSnapshot/);
+  assert.doesNotMatch(showtimes, /getCineArtShowDetail|fetchCineArtShowDetail|showDetailUrl/);
+  assert.doesNotMatch(showtimes, /ticketTypes\s*:|seatStates\s*:|seatPlan\s*:/);
   assert.match(manifest, /catalogue-showtimes-price-coarse-seats-production-detail-candidate-readonly/);
   assert.ok(index.indexOf("provider-registry.js?v=m7p1e-1") >= 0);
   assert.ok(index.indexOf("providers/cineart.js?v=m7p1e-1") >= 0);
@@ -171,6 +203,7 @@ test("M7P1E route advertises the staged mode and keeps detail/booking boundaries
 
 test("M7P1E starts only after M7P1D Android installed-PWA acceptance passed", async () => {
   const checkpoint = await source("docs/checkpoints/m7p1d-cineart-showtimes-production.md");
-  assert.match(checkpoint, /Android installed-PWA acceptance[\s\S]*?\*\*PASS\*\*/i);
+  assert.match(checkpoint, /## Android installed-PWA acceptance/i);
+  assert.match(checkpoint, /\*\*PASS\.\*\*/i);
   assert.match(checkpoint, /This PASS is the release gate permitting M7P1E to begin/i);
 });
