@@ -15,22 +15,35 @@
 
   function saveCachedCatalogue(catalogue) {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), catalogue }));
-    } catch {}
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        catalogue
+      }));
+    } catch {
+      // Storage can be unavailable in private/restricted contexts.
+    }
   }
 
   function getCachedCatalogue() {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
+
       const cached = JSON.parse(raw);
       const savedAt = Number(cached?.savedAt);
       const catalogue = cached?.catalogue;
       const ageMs = Date.now() - savedAt;
-      if (!Number.isFinite(savedAt) || !validCatalogue(catalogue) || ageMs < 0 || ageMs > CACHE_MAX_AGE_MS) {
+
+      if (
+        !Number.isFinite(savedAt) ||
+        !validCatalogue(catalogue) ||
+        ageMs < 0 ||
+        ageMs > CACHE_MAX_AGE_MS
+      ) {
         localStorage.removeItem(CACHE_KEY);
         return null;
       }
+
       return {
         ...catalogue,
         meta: {
@@ -49,6 +62,7 @@
   async function refreshCatalogue() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch(`${API_BASE}/api/cineart/catalogue`, {
         method: "GET",
@@ -56,11 +70,18 @@
         signal: controller.signal,
         headers: { Accept: "application/json" }
       });
+
       let result = null;
-      try { result = await response.json(); } catch { throw new Error(`CineArt HTTP ${response.status}`); }
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error(`CineArt HTTP ${response.status}`);
+      }
+
       if (!response.ok || result?.ok !== true || !validCatalogue(result?.data)) {
         throw new Error(result?.error?.message || `CineArt HTTP ${response.status}`);
       }
+
       const catalogue = {
         ...result.data,
         meta: {
@@ -72,6 +93,7 @@
           updatedAt: result.meta?.updatedAt || result.data.meta?.updatedAt || new Date().toISOString()
         }
       };
+
       saveCachedCatalogue(catalogue);
       adapter.catalogue = catalogue;
       return catalogue;
@@ -85,9 +107,15 @@
   }
 
   function fallbackMetadata(session) {
-    const languages = Array.isArray(session?.languages) && session.languages.length ? session.languages : ["unknown"];
-    const subtitles = Array.isArray(session?.subtitles) && session.subtitles.length ? session.subtitles : ["unknown"];
-    const formats = Array.isArray(session?.formats) && session.formats.length ? session.formats : ["unknown"];
+    const languages = Array.isArray(session?.languages) && session.languages.length
+      ? session.languages
+      : ["unknown"];
+    const subtitles = Array.isArray(session?.subtitles) && session.subtitles.length
+      ? session.subtitles
+      : ["unknown"];
+    const formats = Array.isArray(session?.formats) && session.formats.length
+      ? session.formats
+      : ["unknown"];
     return {
       languages,
       subtitles,
@@ -125,13 +153,21 @@
     const subtitleText = metadata.subtitles?.includes("unknown")
       ? "字幕未提供"
       : `字幕：${metadata.subtitleLabels.join("、")}`;
-    const secondary = [session?.house?.name, ...metadata.formatLabels, ...metadata.languageLabels, subtitleText]
-      .filter(Boolean).join(" · ");
+    const secondary = [
+      session?.house?.name,
+      ...metadata.formatLabels,
+      ...metadata.languageLabels,
+      subtitleText
+    ].filter(Boolean).join(" · ");
     const cinemaName = session?.cinema?.name?.zh || session?.cinema?.name?.en || "CineArt 戲院";
     const seatText = strict
-      ? Number.isFinite(total) ? `${available}/${total} 可選` : `${available} 個可選`
+      ? Number.isFinite(total)
+        ? `${available}/${total} 可選`
+        : `${available} 個可選`
       : Number.isFinite(notSold)
-        ? Number.isFinite(total) ? `${notSold}/${total} 未售（非可選數）` : `${notSold} 未售（非可選數）`
+        ? Number.isFinite(total)
+          ? `${notSold}/${total} 未售（非可選數）`
+          : `${notSold} 未售（非可選數）`
         : "座位資料暫缺";
 
     return {
@@ -160,20 +196,42 @@
   }
 
   function seatMapRequest(providerId, session = {}) {
-    const rawShowId = String(session?.sourceId || session?.showId || session?.id || "").replace(/^cineart:/, "");
-    const movieSourceId = String(session?.movieSourceId || session?.movieId || "").replace(/^cineart:/, "") || null;
+    const rawShowId = String(
+      session?.sourceId || session?.showId || session?.id || ""
+    ).replace(/^cineart:/, "");
+    const movieSourceId = String(
+      session?.movieSourceId || session?.movieId || ""
+    ).replace(/^cineart:/, "") || null;
     const supported = /^\d+$/.test(rawShowId);
     return {
       supported,
       layoutMode: "positioned",
-      request: { showId: supported ? rawShowId : null, movieSourceId: /^\d+$/.test(movieSourceId || "") ? movieSourceId : null },
+      request: {
+        showId: supported ? rawShowId : null,
+        movieSourceId: /^\d+$/.test(movieSourceId || "") ? movieSourceId : null
+      },
       reason: supported ? null : "missing-request-data"
     };
   }
 
   function normalizeSeat(raw = {}) {
-    const validStatuses = new Set(["available", "held", "sold", "blocked", "unavailable", "unknown"]);
-    const validTypes = new Set(["standard", "wheelchair", "sofa", "couple", "recliner", "motion", "special"]);
+    const validStatuses = new Set([
+      "available",
+      "held",
+      "sold",
+      "blocked",
+      "unavailable",
+      "unknown"
+    ]);
+    const validTypes = new Set([
+      "standard",
+      "wheelchair",
+      "sofa",
+      "couple",
+      "recliner",
+      "motion",
+      "special"
+    ]);
     const status = validStatuses.has(raw.status) ? raw.status : "unknown";
     const type = validTypes.has(raw.type) ? raw.type : "special";
     return {
@@ -208,7 +266,8 @@
     };
     const sourceSections = Array.isArray(data.sections) ? data.sections : [];
     const sections = sourceSections.map((section, index) => {
-      const seats = (Array.isArray(section?.seats) ? section.seats : []).map(normalizeSeat);
+      const seats = (Array.isArray(section?.seats) ? section.seats : [])
+        .map(normalizeSeat);
       const grouped = new Map();
       for (const seat of seats) {
         const row = seat.row || "";
@@ -217,7 +276,12 @@
       }
       const rows = Array.from(grouped, ([label, rowSeats]) => ({
         label,
-        cells: rowSeats.map(seat => ({ kind: "seat", label: null, index: seat.column, seat })),
+        cells: rowSeats.map(seat => ({
+          kind: "seat",
+          label: null,
+          index: seat.column,
+          seat
+        })),
         seats: rowSeats
       }));
       return {
@@ -243,7 +307,9 @@
       kind: "seat-map",
       schemaVersion: 1,
       provider,
-      sessionId: String(data.showId || session?.sourceId || "").replace(/^cineart:/, "") || null,
+      sessionId: String(
+        data.showId || session?.sourceId || ""
+      ).replace(/^cineart:/, "") || null,
       layoutMode: "positioned",
       screenLabel: data.screenLabel || "銀幕",
       summary: {
@@ -253,11 +319,21 @@
         held: count("held"),
         sold: count("sold"),
         blocked: count("blocked"),
-        unavailable: 0,
+        unavailable: count("unavailable"),
         unknown: count("unknown"),
-        accessibleAvailable: seats.filter(seat => seat.status === "available" && seat.type === "wheelchair").length,
+        accessibleAvailable: seats.filter(
+          seat => seat.status === "available" && seat.type === "wheelchair"
+        ).length,
         occupiedPercent: seats.length
-          ? Number((((count("held") + count("sold") + count("blocked") + count("unknown")) / seats.length) * 100).toFixed(1))
+          ? Number((
+              (
+                count("held") +
+                count("sold") +
+                count("blocked") +
+                count("unavailable") +
+                count("unknown")
+              ) / seats.length * 100
+            ).toFixed(1))
           : null,
         updatedAt: data.updatedAt || data.source?.updatedAt || null
       },
@@ -279,9 +355,13 @@
     getCatalogue,
     refreshCatalogue,
     getCachedCatalogue,
-    comparison: Object.freeze({ normalizeSession: normalizeComparisonSession }),
+    comparison: Object.freeze({
+      normalizeSession: normalizeComparisonSession
+    }),
     seatMapRequest,
-    viewModels: Object.freeze({ seatMap: seatMapViewModel }),
+    viewModels: Object.freeze({
+      seatMap: seatMapViewModel
+    }),
     apiBase: API_BASE,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };
