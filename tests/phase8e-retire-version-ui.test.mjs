@@ -42,9 +42,9 @@ test('production index loads only the current comparison, filter and recommendat
   const index = await read('index.html');
 
   assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1/);
-  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-1/);
+  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
+  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
+  assert.match(index, /provider-compare-recommendations-v4\.js\?v=10r3b-m7r4-1/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-insights-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-preferences\.js/);
