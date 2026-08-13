@@ -2,7 +2,7 @@ import { getCineArtWorkerSnapshot } from "./cineart.js";
 
 const FRESH_TTL_SECONDS = 60;
 const STALE_TTL_SECONDS = 10 * 60;
-const CACHE_KEY_BASE = "https://hk-cinema.internal/cache/m7p1d/cineart/showtimes";
+const CACHE_KEY_BASE = "https://hk-cinema.internal/cache/m7p1e/cineart/showtimes";
 
 function serviceError(code, message, status = null) {
   const error = new Error(message);
@@ -43,6 +43,41 @@ function cleanArray(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
+function publicPrice(price) {
+  if (!price || typeof price !== "object") return null;
+  const display = Number(price.display);
+  const face = Number(price.face);
+  if (!Number.isFinite(display) && !Number.isFinite(face)) return null;
+  return {
+    currency: price.currency || "HKD",
+    display: Number.isFinite(display) ? display : Number.isFinite(face) ? face : null,
+    face: Number.isFinite(face) ? face : Number.isFinite(display) ? display : null,
+    updatedAt: price.updatedAt || null
+  };
+}
+
+function publicSeatSummary(summary) {
+  if (!summary || typeof summary !== "object") return null;
+  const total = Number(summary.total);
+  const sold = Number(summary.sold);
+  const notSold = Number(summary.notSold);
+  const upstreamSeatsHold = Number(summary.upstreamSeatsHold);
+  if (![total, sold, notSold, upstreamSeatsHold].some(Number.isFinite)) return null;
+
+  return {
+    quality: "coarse-not-sold",
+    total: Number.isFinite(total) ? total : null,
+    available: null,
+    held: null,
+    sold: Number.isFinite(sold) ? sold : null,
+    blocked: null,
+    unavailable: Number.isFinite(sold) ? sold : null,
+    notSold: Number.isFinite(notSold) ? notSold : null,
+    upstreamSeatsHold: Number.isFinite(upstreamSeatsHold) ? upstreamSeatsHold : null,
+    updatedAt: summary.updatedAt || null
+  };
+}
+
 function publicSession(session) {
   return {
     sourceId: String(session?.sourceId || ""),
@@ -56,9 +91,10 @@ function publicSession(session) {
     languages: cleanArray(session?.languages),
     subtitles: cleanArray(session?.subtitles),
     formats: cleanArray(session?.formats),
-    // M7P1D publishes scheduling only. These remain deliberately hidden until later gates.
-    price: null,
-    seatSummary: null,
+    // M7P1E publishes only the home Flight base/face price and coarse not-sold summary.
+    // It deliberately does not fetch /show/<id> detail or expose strict A/H/U/L states.
+    price: publicPrice(session?.price),
+    seatSummary: publicSeatSummary(session?.seatSummary),
     bookingUrl: null
   };
 }
