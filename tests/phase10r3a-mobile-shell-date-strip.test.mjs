@@ -18,7 +18,7 @@ test("Phase 10R3A keeps fullscreen PWA semantics under the current controlled sh
   assert.equal(manifest.display, "fullscreen");
   assert.deepEqual(manifest.display_override.slice(0, 2), ["fullscreen", "standalone"]);
   assert.match(index, /manifest\.json\?v=m5-1/);
-  assert.match(worker, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}m5-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);

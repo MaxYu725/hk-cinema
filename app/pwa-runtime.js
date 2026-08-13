@@ -15,7 +15,6 @@
 
   let networkNoticeTimer = null;
   let immersiveArmed = false;
-  const watchedWorkers = new WeakSet();
 
   function ensureNotice() {
     let notice = document.querySelector("#pwaNotice");
@@ -85,17 +84,12 @@
 
   function watchInstalling(registration) {
     const worker = registration.installing;
-    if (!worker || watchedWorkers.has(worker)) return;
-    watchedWorkers.add(worker);
-
-    const handleInstalled = () => {
+    if (!worker) return;
+    worker.addEventListener("statechange", () => {
       if (worker.state !== "installed") return;
       const waiting = registration.waiting || worker;
       if (navigator.serviceWorker.controller) showUpdate(waiting);
-    };
-
-    worker.addEventListener("statechange", handleInstalled);
-    handleInstalled();
+    });
   }
 
   function applyUpdate() {
@@ -226,9 +220,6 @@
       registration.addEventListener("updatefound", () => watchInstalling(registration));
       navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-      // register() can resolve after updatefound has already fired. Inspect current
-      // installing/waiting slots immediately, without forcing a second update check.
-      watchInstalling(registration);
       if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
 
       armImmersiveFallback();

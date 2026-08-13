@@ -24,8 +24,8 @@ test("PWA install metadata now matches the Metro shell", () => {
   assert.match(index, /manifest\.json\?v=m5-1/);
 });
 
-test("controlled shell cache stays versioned without restoring automatic activation", () => {
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
+test("M5 rotates the controlled shell cache without restoring automatic activation", () => {
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m5-1`/);
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
   assert.doesNotMatch(installBlock, /skipWaiting\(\)/);
