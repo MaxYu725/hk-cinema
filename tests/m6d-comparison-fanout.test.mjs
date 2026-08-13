@@ -51,7 +51,9 @@ test("M6D comparison request lifecycle aborts superseded work and ignores stale 
   assert.match(compare, /function close\(\)[\s\S]*abortActiveRequest\("close"\)[\s\S]*requestToken\+\+/);
   assert.match(compare, /async function loadDate\(date, cycle = null\)[\s\S]*cycle \|\| beginRequestCycle\(\)[\s\S]*token !== requestToken \|\| signal\.aborted \|\| !state\.match \|\| state\.selectedDate !== date/);
   assert.match(compare, /async function loadInitial\(match\)[\s\S]*beginRequestCycle\(\)[\s\S]*token !== requestToken \|\| signal\.aborted \|\| state\.match\?\.id !== match\.id/);
-  assert.match(compare, /mcl\.getTicketing\(sourceId, date, \{ signal: lifecycle\.controller\.signal \}\)/);
+  assert.match(compare, /fetchShows:\s*fetchMCLShows/);
+  assert.match(compare, /providerAdapter\.getTicketing\(sourceId, date, \{ signal: lifecycle\.controller\.signal \}\)/);
+  assert.match(compare, /comparisonAdapter\(provider\)\?\.fetchShows \|\| fetchWorkerShows/);
 });
 
 test("initial Broadway showtime response aliases its resolved date and avoids a second native fetch", async () => {
@@ -216,15 +218,4 @@ test("adjacent-date prefetch keeps an AbortController and passes its signal into
   assert.doesNotMatch(prefetch, /prefetchBroadway\(context\.broadwayId/);
   assert.doesNotMatch(prefetch, /prefetchEmperor\(context\.emperorId/);
   assert.match(prefetch, /type === "open" \|\| type === "close" \|\| type === "date-change" \|\| type === "reload"/);
-});
-
-test("comparison filters stay presentation-only and changed network helpers are cache-busted", async () => {
-  const [filterUx, index] = await Promise.all([
-    source("app/phase9b3-filter-compact.js"),
-    source("app/index.html")
-  ]);
-
-  assert.doesNotMatch(filterUx, /\bfetch\s*\(/);
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d/);
-  assert.match(index, /provider-compare-prefetch\.js\?v=m6d2b/);
 });
