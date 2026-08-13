@@ -171,7 +171,9 @@ test("production shared home/comparison paths load and consume registry capabili
 
   assert.match(compare, /sharedCore\?\.providers\?\.\(\)/);
   assert.match(compare, /availableDates: providerMap\(\(\) => \[\]\)/);
-  assert.match(compare, /return normalizeGenericSession\(provider, session\);/);
+  assert.match(compare, /const normalizer = comparisonAdapter\(provider\)\?\.normalizeSession;/);
+  assert.match(compare, /normalizeGenericSession\(provider, session\)/);
+  assert.doesNotMatch(compare, /if\s*\(provider\s*===\s*"(?:broadway|mcl|emperor)"\)/);
   assert.match(compare, /data-price-capability=/);
   assert.match(compare, /data-seat-capability=/);
   assert.match(compare, /data-booking-capability=/);

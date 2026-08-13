@@ -51,7 +51,9 @@ test("M6D comparison request lifecycle aborts superseded work and ignores stale 
   assert.match(compare, /function close\(\)[\s\S]*abortActiveRequest\("close"\)[\s\S]*requestToken\+\+/);
   assert.match(compare, /async function loadDate\(date, cycle = null\)[\s\S]*cycle \|\| beginRequestCycle\(\)[\s\S]*token !== requestToken \|\| signal\.aborted \|\| !state\.match \|\| state\.selectedDate !== date/);
   assert.match(compare, /async function loadInitial\(match\)[\s\S]*beginRequestCycle\(\)[\s\S]*token !== requestToken \|\| signal\.aborted \|\| state\.match\?\.id !== match\.id/);
-  assert.match(compare, /mcl\.getTicketing\(sourceId, date, \{ signal: lifecycle\.controller\.signal \}\)/);
+  assert.match(compare, /fetchShows:\s*fetchMCLShows/);
+  assert.match(compare, /providerAdapter\.getTicketing\(sourceId, date, \{ signal: lifecycle\.controller\.signal \}\)/);
+  assert.match(compare, /comparisonAdapter\(provider\)\?\.fetchShows \|\| fetchWorkerShows/);
 });
 
 test("initial Broadway showtime response aliases its resolved date and avoids a second native fetch", async () => {

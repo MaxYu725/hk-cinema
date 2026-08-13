@@ -1,4 +1,5 @@
 import { probeEmperor } from "./providers/emperor.js";
+import { WORKER_PROVIDER_IDS } from "./provider-manifest.js";
 
 const DEFAULT_TIMEOUT_MS = 4500;
 const BROADWAY_PROBE_URL = "https://www.cinema.com.hk/hk/movie/ticketing";
@@ -194,7 +195,17 @@ const DEFAULT_PROBE_BUILDERS = Object.freeze({
   }
 });
 
-export const SUPPORTED_PROVIDERS = Object.freeze(Object.keys(DEFAULT_PROBE_BUILDERS));
+export const SUPPORTED_PROVIDERS = WORKER_PROVIDER_IDS;
+
+function defaultHandlers(dependencies) {
+  return new Map(WORKER_PROVIDER_IDS.map(provider => {
+    const build = DEFAULT_PROBE_BUILDERS[provider];
+    if (typeof build !== "function") {
+      throw new Error(`Missing provider probe adapter: ${provider}`);
+    }
+    return [provider, build(dependencies)];
+  }));
+}
 
 export function createProviderProbeRunner({
   fetchImpl = globalThis.fetch,
@@ -206,12 +217,7 @@ export function createProviderProbeRunner({
   const lastSuccess = new Map();
   const boundedTimeout = safeTimeout(timeoutMs);
   const dependencies = { fetchImpl, emperorProbe, timeoutMs: boundedTimeout };
-  const handlers = new Map(
-    Object.entries(DEFAULT_PROBE_BUILDERS).map(([provider, build]) => [
-      provider,
-      build(dependencies)
-    ])
-  );
+  const handlers = defaultHandlers(dependencies);
 
   for (const [provider, handler] of Object.entries(additionalProbes || {})) {
     const key = String(provider || "").trim().toLowerCase();

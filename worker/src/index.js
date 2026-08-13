@@ -19,6 +19,10 @@ import {
   getMCLSeatMap
 } from "./providers/mcl-seats.js";
 
+import {
+  providerHealthMap
+} from "./provider-manifest.js";
+
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
@@ -48,11 +52,7 @@ export default {
         service: "hk-cinema-api",
         phase: "6G",
         status: "operational",
-        providers: {
-          broadway: "catalogue-shows-seats",
-          mcl: "ticketing-seats",
-          emperor: "catalogue-shows-seats"
-        },
+        providers: providerHealthMap(),
         freshness: {
           catalogueFallbackMaxAgeSeconds: 86400,
           comparisonFreshSeconds: 900,
