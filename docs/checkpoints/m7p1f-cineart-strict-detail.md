@@ -1,6 +1,6 @@
 # M7P1F checkpoint — CineArt selected-date strict detail
 
-Status: **implementation in progress — automated/live/merge/device gates pending**
+Status: **implementation and pre-final automated/live gates complete — final exact-head rerun / merge / Android PWA gate pending**
 
 Baseline: `27a2ee8f87b0934ded9bb333ba4fd8280bf68f1c` (accepted M7P1E)
 
@@ -96,7 +96,26 @@ The Worker manifest advertises CineArt as:
 
 `catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly`
 
-Global Worker `/health` must remain `phase: "6G"`.
+Global Worker `/health` remains `phase: "6G"`.
+
+## Pre-final automated/live evidence
+
+Code head `b0f1929fb529a13489687d4ca1c5385d59f30ae1` passed both PR workflows before this documentation-only checkpoint update:
+
+- CineArt Candidate Validation #52 / run `31677152672`: PASS;
+- Deploy HK Cinema #636 / run `31677152628`: Node regression PASS, Chromium install PASS, mobile browser smoke PASS;
+- M7P1B discovery, M7P1C catalogue, M7P1D showtime, M7P1E coarse price/seat, and M7P1F selected-date strict-detail live gates all PASS;
+- global Worker health remained `phase: "6G"` with CineArt service `catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly`;
+- live source remained 20 movies / 544 normalized shows / 5 cinemas, date range 2026-08-13 through 2026-08-28;
+- discovery sample show `80852`, movie `838`, date `2026-08-13`, CineArt Maritime Square;
+- M7P1F selected date contained 9 sessions and 60 movie sessions overall;
+- bounded detail policy attempted exactly 6 of the 9 selected-date sessions: 6 detailed-price PASS, 6 strict-seat PASS, 0 fallback, 3 deliberately left coarse because of the limit;
+- strict sample: total 112, available 67, held 0, sold 45, blocked 0, unavailable 45, unknown 0;
+- detailed-price sample: display/adult HKD 60, student 50, senior 30, face 50, lowest 30, 8 active online ticket types;
+- `allSessions` retained M7P1E base-price/coarse-seat semantics;
+- public sessions exposed no `seatStates` or `seatPlan`; booking remained null; POST remained 405.
+
+This checkpoint update intentionally creates one final documentation-only PR head. Both automated suites must pass again on that exact head before review/merge.
 
 ## Required pre-merge gates
 
