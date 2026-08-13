@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -407,6 +408,6 @@ test("M7R5 removes the remaining fixed-three-provider bootstrap paths and isolat
 
   assert.match(multiProvider, /const alternateProviders = PROVIDERS\.filter/);
   assert.match(multiProvider, /data-provider-sources/);
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3-m7r5-1/);
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3-m6d2a-m7r5-1/);
+  assertAsset(index, "provider-compare-v4.js");
+  assertAsset(index, "phase8a-movie-navigation.js");
 });
