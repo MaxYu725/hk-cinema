@@ -31,7 +31,7 @@ export const PROVIDER_MANIFEST = createProviderManifest([
   },
   {
     id: "cineart",
-    service: "catalogue-showtimes-price-coarse-seats-production-detail-candidate-readonly"
+    service: "catalogue-showtimes-detailed-price-strict-seats-production-seatmap-candidate-readonly"
   }
 ]);
 
