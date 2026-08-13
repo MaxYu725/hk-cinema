@@ -109,7 +109,7 @@ test("M7P1G Registry enables CineArt seatMap but keeps booking disabled", async 
 test("M7P1G browser adapter owns request/view-model adaptation but never direct CineArt upstream transport", async () => {
   const adapterSource = await source("app/providers/cineart.js");
   assert.match(adapterSource, /seatMapRequest/);
-  assert.match(adapterSource, /viewModels:\s*Object\.freeze\(\{ seatMap: seatMapViewModel \}\)/);
+  assert.match(adapterSource, /viewModels:\s*Object\.freeze\(\{[\s\S]*?seatMap:\s*seatMapViewModel[\s\S]*?\}\)/);
   assert.match(adapterSource, /layoutMode:\s*"positioned"/);
   assert.doesNotMatch(adapterSource, /cinearthouse\.com\.hk/);
   assert.doesNotMatch(adapterSource, /MutationObserver|IntersectionObserver/);
