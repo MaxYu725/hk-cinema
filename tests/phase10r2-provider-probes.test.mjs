@@ -27,7 +27,13 @@ function deterministicClock(start = Date.parse('2026-08-11T06:30:00Z')) {
   };
 }
 
-test('Phase 10R2B probes all three providers independently with structural evidence', async () => {
+const cineartTestProbe = async () => ({
+  evidence: 'site-shell-cinema-directory',
+  source: 'cinearthouse-hk',
+  cinemaCount: 5
+});
+
+test('Phase 10R2B probes all registered Worker providers independently with structural evidence', async () => {
   const fetchImpl = async url => {
     const target = String(url);
     if (target.includes('cinema.com.hk')) {
@@ -47,19 +53,23 @@ test('Phase 10R2B probes all three providers independently with structural evide
       count: 4,
       source: 'emperor-sync-film-showing'
     }),
-    clock: deterministicClock()
+    clock: deterministicClock(),
+    additionalProbes: {
+      cineart: cineartTestProbe
+    }
   });
 
   const result = await runner.probeAll();
 
-  assert.deepEqual(SUPPORTED_PROVIDERS, ['broadway', 'mcl', 'emperor']);
+  assert.deepEqual(SUPPORTED_PROVIDERS, ['broadway', 'mcl', 'emperor', 'cineart']);
   assert.equal(result.allHealthy, true);
-  assert.equal(result.healthyCount, 3);
-  assert.equal(result.total, 3);
+  assert.equal(result.healthyCount, SUPPORTED_PROVIDERS.length);
+  assert.equal(result.total, SUPPORTED_PROVIDERS.length);
   assert.equal(result.providers.broadway.evidence.evidence, 'catalogue-page');
   assert.equal(result.providers.mcl.evidence.evidence, 'cinema-directory');
   assert.equal(result.providers.emperor.evidence.evidence, 'showing-catalogue');
   assert.equal(result.providers.emperor.evidence.count, 4);
+  assert.equal(result.providers.cineart.evidence.evidence, 'site-shell-cinema-directory');
 });
 
 test('Phase 10R2B isolates provider failures and returns stable failure categories', async () => {
@@ -81,16 +91,20 @@ test('Phase 10R2B isolates provider failures and returns stable failure categori
   const runner = createProviderProbeRunner({
     fetchImpl,
     emperorProbe: async () => { throw rateLimit; },
-    clock: deterministicClock()
+    clock: deterministicClock(),
+    additionalProbes: {
+      cineart: cineartTestProbe
+    }
   });
 
   const result = await runner.probeAll();
 
   assert.equal(result.allHealthy, false);
-  assert.equal(result.healthyCount, 1);
+  assert.equal(result.healthyCount, 2);
   assert.equal(result.providers.broadway.failure.category, 'network_error');
   assert.equal(result.providers.mcl.healthy, true);
   assert.equal(result.providers.emperor.failure.category, 'rate_limited');
+  assert.equal(result.providers.cineart.healthy, true);
 });
 
 test('Phase 10R2B keeps lastSuccessAt as best-effort per-runner state', async () => {
