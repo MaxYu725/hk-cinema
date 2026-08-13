@@ -50,7 +50,7 @@ function brief(value, depth = 4) {
     return {
       type: "array",
       length: value.length,
-      sample: value.slice(0, 3).map(item => brief(item, depth - 1))
+      sample: value.slice(0, 4).map(item => brief(item, depth - 1))
     };
   }
   if (typeof value === "object") {
@@ -58,7 +58,7 @@ function brief(value, depth = 4) {
     return {
       type: "object",
       keys: keys.slice(0, 40),
-      sample: Object.fromEntries(keys.slice(0, 16).map(key => [key, brief(value[key], depth - 1)]))
+      sample: Object.fromEntries(keys.slice(0, 20).map(key => [key, brief(value[key], depth - 1)]))
     };
   }
   return typeof value;
@@ -122,6 +122,27 @@ const plan = resolveCineArtFlightTextReference(detail.parsed?.flight || "", show
 assert.ok(plan && typeof plan === "object", "sample show must resolve an official seat plan object");
 assert.ok(Object.keys(statuses).length > 0, "sample show must expose seat status keys");
 
+const blocks = Array.isArray(plan.blocks) ? plan.blocks : [];
+const focusedBlocks = blocks.slice(0, 6).map((block, index) => ({
+  index,
+  x: block?.x,
+  y: block?.y,
+  rows: block?.rows,
+  cols: block?.cols,
+  row: block?.row,
+  ccol: block?.ccol,
+  col: brief(block?.col, 3),
+  rowDir: block?.rowDir,
+  colDir: block?.colDir,
+  align: block?.align,
+  display: block?.display,
+  rowDisplay: block?.rowDisplay,
+  rpad: brief(block?.rpad, 4),
+  removed: brief(block?.removed, 4),
+  classes: brief(block?.classes, 5),
+  seats: brief(block?.seats, 6)
+}));
+
 console.log(JSON.stringify({
   ok: true,
   baseUrl: BASE_URL,
@@ -134,10 +155,22 @@ console.log(JSON.stringify({
     time: sample.time,
     transport: detail.transport
   },
-  showShape: brief(show, 2),
-  planShape: brief(plan, 5),
+  plan: {
+    width: plan.width,
+    height: plan.height,
+    iwidth: plan.iwidth,
+    iheight: plan.iheight,
+    w: plan.w,
+    h: plan.h,
+    gx: plan.gx,
+    gy: plan.gy,
+    numSeats: plan.numSeats,
+    blockCount: blocks.length,
+    blocks: focusedBlocks,
+    components: brief(plan.comps, 5)
+  },
   seatStatus: {
     count: Object.keys(statuses).length,
-    sample: Object.fromEntries(Object.entries(statuses).slice(0, 16))
+    sample: Object.fromEntries(Object.entries(statuses).slice(0, 24))
   }
 }, null, 2));
