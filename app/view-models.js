@@ -822,7 +822,7 @@
     );
   }
 
-  const adapters = Object.freeze({
+  const BUILT_IN_ADAPTERS = Object.freeze({
     broadway: Object.freeze({
       movie: (movie, detail) => movieViewModel("broadway", movie, detail),
       showtime: session => showtimeViewModel("broadway", session),
@@ -842,21 +842,24 @@
 
   function adapter(providerId) {
     const info = provider(providerId);
-    return adapters[info.id] || {
+    const generic = {
       movie: (movie, detail) => movieViewModel(info.id, movie, detail),
       showtime: session => showtimeViewModel(info.id, session),
       seatMap: () => null
     };
+    const builtIn = BUILT_IN_ADAPTERS[info.id] || null;
+    const runtime = window.HKCinemaProviders?.[info.id]?.viewModels || null;
+    return { ...generic, ...(builtIn || {}), ...(runtime || {}) };
   }
 
   window.HKCinemaViewModels = Object.freeze({
-    version: "7b3-m7r7-1",
+    version: "7b3-m7r7-2",
     schemaVersion: SCHEMA_VERSION,
     providers: PROVIDERS,
     seatStatuses: SEAT_STATUSES,
     seatTypes: SEAT_TYPES,
     summaryQualities: SUMMARY_QUALITIES,
-    adapters,
+    adapters: BUILT_IN_ADAPTERS,
     provider,
     movie(providerId, movie, detail = null) {
       return adapter(providerId).movie(movie, detail);
