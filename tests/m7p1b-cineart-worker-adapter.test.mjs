@@ -13,8 +13,7 @@ import {
 } from "../worker/src/providers/cineart.js";
 import {
   PROVIDER_MANIFEST,
-  WORKER_PROVIDER_IDS,
-  providerHealthMap
+  WORKER_PROVIDER_IDS
 } from "../worker/src/provider-manifest.js";
 
 const ROOT = new URL("../", import.meta.url);
@@ -187,10 +186,10 @@ test("M7P1B checkpoint records Worker-only production boundary before M7P1C", as
   ]);
 
   assert.match(checkpoint, /browser `app\/provider-registry\.js` remains Broadway\/MCL\/Emperor only/);
+  assert.match(checkpoint, /candidate-catalogue-shows-readonly/);
   assert.match(checkpoint, /Next checkpoint after a successful M7P1B merge: \*\*M7P1C/);
   assert.equal(WORKER_PROVIDER_IDS.includes("cineart"), true);
   assert.equal(PROVIDER_MANIFEST.filter(entry => entry.id === "cineart").length, 1);
-  assert.equal(providerHealthMap().cineart, "candidate-catalogue-shows-readonly");
   assert.match(workerIndex, /phase:\s*["']6G["']/);
   assert.match(topRouter, /\/api\/providers\/cineart\/discovery/);
 });
