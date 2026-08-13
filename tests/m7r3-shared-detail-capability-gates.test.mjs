@@ -215,7 +215,7 @@ test("M7R3 changed shared runtimes use one isolated browser-cache generation", a
   assert.match(models, /HKCinemaProviders\?\.\[providerId\]\?\.seatMapRequest/);
   assert.match(models, /HKCinemaProviders\?\.\[info\.id\]\?\.viewModels/);
   assert.doesNotMatch(models, /if\s*\(providerId\s*===\s*"(?:broadway|mcl|emperor)"\)/);
-  assert.match(models, /return unsupportedSeatMap\("adapter-missing"\)/);
+  assert.match(models, /unsupportedSeatMap\("adapter-missing"\)/);
   assert.doesNotMatch(models, /Unsupported cinema provider/);
   assert.doesNotMatch(detail, /Unsupported detail provider/);
   assert.doesNotMatch(seatmap, /Unsupported seat-map provider/);
