@@ -1,0 +1,56 @@
+name: CineArt Candidate Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "worker/src/index-emperor-seat.js"
+      - "worker/src/provider-manifest.js"
+      - "worker/src/provider-probe.js"
+      - "worker/src/providers/cineart*.js"
+      - "tests/fixtures/cineart-*.html"
+      - "tests/m7p1b-cineart-worker-adapter.test.mjs"
+      - "scripts/m7p1b-cineart-preview-validation.mjs"
+      - ".github/workflows/cineart-candidate-validation.yml"
+  workflow_dispatch:
+    inputs:
+      worker_url:
+        description: Worker base URL to validate
+        required: false
+        default: https://hk-cinema-api.max-yu-jp.workers.dev
+
+permissions:
+  contents: read
+
+jobs:
+  cineart-live-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve candidate Worker URL
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_WORKER_URL: ${{ inputs.worker_url }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            slug="${GITHUB_HEAD_REF//\//-}"
+            worker_url="https://${slug}-hk-cinema-api.max-yu-jp.workers.dev"
+          else
+            worker_url="${MANUAL_WORKER_URL:-https://hk-cinema-api.max-yu-jp.workers.dev}"
+          fi
+          echo "HK_CINEMA_CANDIDATE_WORKER_URL=$worker_url" >> "$GITHUB_ENV"
+          echo "Validating $worker_url"
+
+      - name: Validate CineArt Worker adapter through branch preview
+        run: node scripts/m7p1b-cineart-preview-validation.mjs
