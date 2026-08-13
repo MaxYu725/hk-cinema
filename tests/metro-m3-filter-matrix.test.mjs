@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAsset, assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -12,11 +13,9 @@ const [index, css, compact, metro] = await Promise.all([
 ]);
 
 test("Metro loads the final filter matrix after the base M3 comparison skin", () => {
-  const base = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  const matrix = index.indexOf("metro-m3-filter-matrix.css?v=m3-filter-3");
-  assert.ok(base >= 0 && matrix > base);
-  assert.match(index, /phase9b3-filter-compact\.js\?v=m6b-3/);
-  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
+  assertAssetOrder(index, "metro-m3-comparison.css", "metro-m3-filter-matrix.css");
+  assertAsset(index, "phase9b3-filter-compact.js");
+  assertAsset(index, "metro-runtime.js");
 });
 
 test("Metro comparison keeps the final 3x3 compact filter controls", () => {
