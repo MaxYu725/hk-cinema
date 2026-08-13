@@ -22,11 +22,11 @@ test("M8A3 keeps Emperor positioned seats at a fixed 20px visual size", () => {
   assert.match(viewCss, /shared-seatmap-positioned-canvas > \.shared-seat[\s\S]*height:\s*20px\s*!important/);
 });
 
-test("M8A3 puts the visible Emperor SCREEN in the horizontally scrolling first canvas", () => {
+test("M8A3 puts the visible Emperor screen in the horizontally scrolling first canvas", () => {
   assert.match(viewCss, /shared-seatmap-layout > \.shared-seatmap-screen[\s\S]*display:\s*none/);
   assert.match(viewCss, /shared-seatmap-section:first-of-type \.shared-seatmap-positioned-canvas\s*\{[\s\S]*margin-top:\s*52px/);
   assert.match(viewCss, /shared-seatmap-section:first-of-type \.shared-seatmap-positioned-canvas::before[\s\S]*left:\s*42px[\s\S]*right:\s*34px[\s\S]*top:\s*-52px/);
-  assert.match(viewCss, /shared-seatmap-section:first-of-type \.shared-seatmap-positioned-canvas::after[\s\S]*content:\s*"SCREEN"/);
+  assert.match(viewCss, /shared-seatmap-section:first-of-type \.shared-seatmap-positioned-canvas::after[\s\S]*content:\s*"銀幕"/);
   assert.match(viewCss, /shared-seatmap-section:first-of-type \.shared-seatmap-positioned-rows[\s\S]*top:\s*52px/);
 });
 
