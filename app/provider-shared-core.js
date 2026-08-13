@@ -1,10 +1,4 @@
 (() => {
-  const FALLBACK_PROVIDERS = Object.freeze([
-    Object.freeze({ key: "broadway", label: "Broadway", descriptor: null }),
-    Object.freeze({ key: "mcl", label: "MCL", descriptor: null }),
-    Object.freeze({ key: "emperor", label: "Emperor", descriptor: null })
-  ]);
-
   function registry() {
     return window.HKCinemaProviderRegistry || null;
   }
@@ -14,8 +8,8 @@
   }
 
   function providers() {
-    const registered = registry()?.providers || [];
-    if (!registered.length) return [...FALLBACK_PROVIDERS];
+    const registered = registry()?.providers;
+    if (!Array.isArray(registered)) return [];
     return registered.map(descriptor => ({
       key: descriptor.id,
       label: descriptor.displayName || descriptor.healthLabel || descriptor.id,
@@ -44,6 +38,35 @@
     if (provider) return provider.displayName || provider.healthLabel || provider.id;
     const id = typeof providerOrId === "string" ? providerOrId.trim() : "";
     return id || "院線";
+  }
+
+  function registeredProviderId(value) {
+    const id = String(value || "").trim().toLowerCase();
+    return registry()?.get?.(id)?.id || null;
+  }
+
+  function providerFromNode(node) {
+    if (!node || typeof node !== "object") return null;
+    const candidates = [
+      node.dataset?.provider,
+      node.dataset?.detailProvider,
+      node.dataset?.seatmapProvider,
+      node.closest?.("[data-provider]")?.dataset?.provider,
+      node.closest?.("[data-detail-provider]")?.dataset?.detailProvider,
+      node.closest?.("[data-seatmap-provider]")?.dataset?.seatmapProvider
+    ];
+    for (const candidate of candidates) {
+      const id = registeredProviderId(candidate);
+      if (id) return id;
+    }
+
+    const classList = node.classList;
+    if (classList?.contains) {
+      for (const provider of providers()) {
+        if (classList.contains(provider.key)) return provider.key;
+      }
+    }
+    return null;
   }
 
   function normalizeSourceId(provider, value) {
@@ -95,12 +118,14 @@
   }
 
   window.HKCinemaProviderSharedCore = Object.freeze({
-    version: "m6c-3",
+    version: "m7r1-1",
     providers,
     providerIds,
     providerMap,
     descriptor,
     label,
+    registeredProviderId,
+    providerFromNode,
     normalizeSourceId,
     aggregateSourceIds,
     activeProvidersForAggregate,
