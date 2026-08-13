@@ -1,4 +1,5 @@
 (() => {
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
   const STORAGE_KEY = "hkcinema:provider-compare-filters:v2";
   const DEFAULTS = {
     provider: "all",
@@ -14,7 +15,6 @@
     sort: "time"
   };
   const ALLOWED = {
-    provider: new Set(["all", "broadway", "mcl", "emperor"]),
     region: new Set(["all", "hk", "kln", "nt-islands"]),
     period: new Set(["all", "morning", "afternoon", "evening", "next2h"]),
     seats: new Set(["all", "known", "available", "roomy"]),
@@ -31,6 +31,12 @@
     return window.HKCinemaProviderCompareFilters || null;
   }
 
+  function providerValue(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw || raw === "all") return DEFAULTS.provider;
+    return sharedCore?.registeredProviderId?.(raw) || DEFAULTS.provider;
+  }
+
   function metadataValue(input, key) {
     return typeof input[key] === "string" && /^(?:all|[a-z0-9-]+)$/.test(input[key]) ? input[key] : DEFAULTS[key];
   }
@@ -38,7 +44,7 @@
   function sanitize(value) {
     const input = value && typeof value === "object" ? value : {};
     return {
-      provider: ALLOWED.provider.has(input.provider) ? input.provider : DEFAULTS.provider,
+      provider: providerValue(input.provider),
       language: metadataValue(input, "language"),
       subtitle: metadataValue(input, "subtitle"),
       format: metadataValue(input, "format"),
@@ -140,7 +146,7 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class", "hidden", "data-seat-available", "data-seat-total"]
+      attributeFilter: ["class", "hidden", "data-provider", "data-seat-available", "data-seat-total"]
     });
   }
 
@@ -181,6 +187,12 @@
     });
     bodyObserver.observe(document.body, { childList: true, subtree: false });
   }
+
+  window.HKCinemaProviderComparePreferences = Object.freeze({
+    version: "5e1-m7r4-1",
+    sanitize,
+    readSaved
+  });
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
   else install();
