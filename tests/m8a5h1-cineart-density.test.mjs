@@ -93,8 +93,8 @@ test("M8A5H1 compresses CineArt display pitch while preserving seat semantics", 
   assert.equal(model.layoutMode, "positioned");
   assert.equal(model.bookingUrl, null);
   assert.equal(model.screenLabel, "銀幕");
-  assert.equal(model.sections[0].bounds.width, 115.2);
-  assert.equal(model.sections[0].bounds.height, 86.39999999999999);
+  assert.ok(Math.abs(model.sections[0].bounds.width - 115.2) < 1e-9);
+  assert.ok(Math.abs(model.sections[0].bounds.height - 86.4) < 1e-9);
 
   const seats = model.sections[0].seats;
   const b2 = seats.find(item => item.id === "B2");
