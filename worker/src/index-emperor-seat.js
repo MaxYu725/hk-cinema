@@ -90,9 +90,9 @@ async function routeRequest(request, env, ctx) {
         ok: true,
         data: result,
         meta: {
-          phase: "M7P1E",
+          phase: "M7P1F",
           provider: "cineart",
-          mode: "showtimes-base-price-coarse-seats",
+          mode: "showtimes-detailed-price-strict-seats-selected-date",
           movieSourceId,
           cacheState: result?.meta?.cacheState || "network",
           stale: result?.meta?.stale === true,
