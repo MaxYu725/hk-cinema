@@ -401,13 +401,15 @@ function normalizeSeatMap(parsed, { showId, movieSourceId, transport, nowMs }) {
   };
 }
 
-function cacheKey(showId) {
-  return new Request(`${CACHE_KEY_BASE}?showId=${encodeURIComponent(showId)}`, { method: "GET" });
+function cacheKey(showId, movieSourceId = null) {
+  const query = new URLSearchParams({ showId });
+  if (movieSourceId) query.set("movieSourceId", movieSourceId);
+  return new Request(`${CACHE_KEY_BASE}?${query.toString()}`, { method: "GET" });
 }
 
-async function readCached(cache, showId) {
+async function readCached(cache, showId, movieSourceId) {
   if (!cache?.match) return null;
-  const response = await cache.match(cacheKey(showId));
+  const response = await cache.match(cacheKey(showId, movieSourceId));
   if (!response) return null;
   try {
     const payload = await response.json();
@@ -441,7 +443,7 @@ export function createCineArtSeatMapService({
   async function get(showIdValue, movieSourceIdValue = null, { ctx = null } = {}) {
     const showId = numericId(showIdValue, "CINEART_SEATMAP_INVALID_SHOW", "CineArt show id");
     const movieSourceId = optionalNumericId(movieSourceIdValue, "CINEART_SEATMAP_INVALID_MOVIE", "CineArt movie id");
-    const cached = await readCached(cache, showId);
+    const cached = await readCached(cache, showId, movieSourceId);
     if (cached) {
       return {
         ...cached,
@@ -468,7 +470,7 @@ export function createCineArtSeatMapService({
       meta: { cache: false, cacheState: "network" }
     };
     if (cache?.put) {
-      const write = cache.put(cacheKey(showId), cacheResponse(stored, freshTtlSeconds));
+      const write = cache.put(cacheKey(showId, movieSourceId), cacheResponse(stored, freshTtlSeconds));
       if (ctx?.waitUntil) ctx.waitUntil(write);
       else await write;
     }
