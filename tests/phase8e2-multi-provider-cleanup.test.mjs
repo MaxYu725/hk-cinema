@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { assertAsset } from './index-assets.mjs';
 
 const APP = new URL('../app/', import.meta.url);
 
@@ -11,9 +12,9 @@ async function read(path) {
 test('Phase 8E2 loads the slim catalogue aggregation runtime', async () => {
   const index = await read('index.html');
 
-  assert.match(index, /multi-provider\.css\?v=8e2/);
-  assert.match(index, /multi-provider\.js\?v=8e2/);
-  assert.match(index, /phase8a-movie-navigation\.css\?v=8e2/);
+  for (const asset of ['multi-provider.css', 'multi-provider.js', 'phase8a-movie-navigation.css']) {
+    assertAsset(index, asset);
+  }
 });
 
 test('multi-provider keeps the registries and variant metadata needed by movie aggregates', async () => {
@@ -28,7 +29,7 @@ test('multi-provider keeps the registries and variant metadata needed by movie a
   assert.match(source, /criteriaFromVariant/);
   assert.match(source, /movieGroups: Array\.from\(groupRecords\.values\(\)\)/);
   assert.match(source, /window\.HKCinemaMultiProvider = Object\.freeze\(\{/);
-  assert.match(source, /version: "[^"]+"/);
+  assert.match(source, /version:\s*["'][^"']+["']/);
 });
 
 test('provider-only catalogue cards remain movie-first and do not expose provider navigation', async () => {
