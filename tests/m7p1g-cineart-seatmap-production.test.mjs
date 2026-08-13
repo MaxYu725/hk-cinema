@@ -78,6 +78,12 @@ test("M7P1G Worker rebuilds official parametric CineArt geometry with strict sta
   const cached = await service.get("9001", "799");
   assert.equal(calls, 1);
   assert.equal(cached.meta.cacheState, "fresh-edge");
+
+  await assert.rejects(
+    () => service.get("9001", "123"),
+    error => error?.code === "CINEART_SEATMAP_MOVIE_MISMATCH"
+  );
+  assert.equal(calls, 2, "wrong movie id must not reuse a cached seat map for another movie id");
 });
 
 test("M7P1G refuses incomplete geometry instead of inventing a partial seat map", async () => {
