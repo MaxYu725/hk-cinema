@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -203,5 +204,5 @@ test("live cinema data remains outside the Service Worker shell cache", async ()
 
   assert.match(sw, /if \(url\.origin !== self\.location\.origin \|\| !url\.pathname\.startsWith\(SCOPE_URL\.pathname\)\) \{[\s\S]*return;/);
   assert.match(sw, /Cinema APIs, MCL, Worker and all other live data stay outside the PWA cache/);
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3-m6d2a/);
+  assertAsset(index, "phase8a-movie-navigation.js");
 });
