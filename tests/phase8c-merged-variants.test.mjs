@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import { assertAsset } from './index-assets.mjs';
 
 const compare = await readFile(new URL('../app/provider-compare-v4.js', import.meta.url), 'utf8');
 const filters = await readFile(new URL('../app/provider-compare-insights-v4.js', import.meta.url), 'utf8');
@@ -12,10 +13,12 @@ const css = await readFile(new URL('../app/phase8c-rich-filters.css', import.met
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
 test('Phase 8C loads the aggregate comparison engine and rich filters', () => {
-  assert.match(index, /provider-compare-v4\.js\?v=m6c-3/);
-  assert.match(index, /provider-compare-insights-v4\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /provider-compare-preferences-v2\.js\?v=8c1-m7r4-1/);
-  assert.match(index, /phase8c-rich-filters\.css\?v=8e1/);
+  for (const asset of [
+    'provider-compare-v4.js',
+    'provider-compare-insights-v4.js',
+    'provider-compare-preferences-v2.js',
+    'phase8c-rich-filters.css'
+  ]) assertAsset(index, asset);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-v3\.js/);
   assert.doesNotMatch(index, /<script src="\.\/provider-compare-insights-v3\.js/);
 });
