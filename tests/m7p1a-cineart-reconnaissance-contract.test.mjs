@@ -50,7 +50,7 @@ test("M7P1A checkpoint records staged capabilities and rejects restoration of th
     "Subtitle metadata",
     "Format metadata"
   ]) {
-    assert.match(checkpoint, new RegExp(`\\| ${capability.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")} \\|`));
+    assert.ok(checkpoint.includes(`| ${capability} |`), `missing capability row: ${capability}`);
   }
 
   assert.match(checkpoint, /do not restore/i);
