@@ -126,14 +126,30 @@
     };
   }
 
+  function seatClass(available, total) {
+    if (!Number.isFinite(available)) return "unknown";
+    if (available <= 0) return "full";
+    if (Number.isFinite(total) && total > 0) {
+      const ratio = available / total;
+      if (ratio <= 0.08) return "full";
+      if (ratio <= 0.25) return "limited";
+    }
+    if (available <= 10) return "limited";
+    return "available";
+  }
+
   function normalizeComparisonSession(session) {
     const metadata = window.HKCinemaShowtimeMetadata?.normalizeSession?.(session) || fallbackMetadata(session);
     const summary = session?.seatSummary || {};
     const total = Number.isFinite(summary.total) ? summary.total : null;
+    const strict = summary.quality === "strict-seat-state" && Number.isFinite(summary.available);
+    const available = strict ? summary.available : null;
     const notSold = Number.isFinite(summary.notSold) ? summary.notSold : null;
-    const price = Number.isFinite(session?.price?.display)
-      ? session.price.display
-      : Number.isFinite(session?.price?.face) ? session.price.face : null;
+    const price = Number.isFinite(session?.price?.adult)
+      ? session.price.adult
+      : Number.isFinite(session?.price?.display)
+        ? session.price.display
+        : Number.isFinite(session?.price?.face) ? session.price.face : null;
     const subtitleText = metadata.subtitles?.includes("unknown")
       ? "字幕未提供"
       : `字幕：${metadata.subtitleLabels.join("、")}`;
@@ -144,11 +160,15 @@
       subtitleText
     ].filter(Boolean).join(" · ");
     const cinemaName = session?.cinema?.name?.zh || session?.cinema?.name?.en || "CineArt 戲院";
-    const seatText = Number.isFinite(notSold)
+    const seatText = strict
       ? Number.isFinite(total)
-        ? `${notSold}/${total} 未售（非可選數）`
-        : `${notSold} 未售（非可選數）`
-      : "座位資料暫缺";
+        ? `${available}/${total} 可選`
+        : `${available} 個可選`
+      : Number.isFinite(notSold)
+        ? Number.isFinite(total)
+          ? `${notSold}/${total} 未售（非可選數）`
+          : `${notSold} 未售（非可選數）`
+        : "座位資料暫缺";
 
     return {
       id: `cineart:${session?.sourceId || session?.id || Math.random()}`,
@@ -163,9 +183,8 @@
       pricePayload: session?.price || (Number.isFinite(price) ? { display: price } : null),
       seatSummary: session?.seatSummary || null,
       seatText,
-      // Coarse not-sold data is intentionally neutral: it is not selectable availability.
-      seatClass: "unknown",
-      seatAvailable: null,
+      seatClass: strict ? seatClass(available, total) : "unknown",
+      seatAvailable: available,
       seatTotal: total,
       bookingUrl: null
     };
