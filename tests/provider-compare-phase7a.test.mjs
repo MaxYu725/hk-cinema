@@ -364,9 +364,11 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   assert.match(compare, /criteriaDateDecisions/);
   assert.match(compare, /rememberCriteriaDateDecision/);
   assert.match(compare, /!combinedDates\(\)\.includes\(state\.selectedDate\)/);
-  assert.match(compare, /const lifecycle = childController\(signal, timeoutForProvider\("mcl"\)\)/);
+  assert.match(compare, /fetchShows:\s*fetchMCLShows/);
+  assert.match(compare, /const lifecycle = childController\(signal, timeoutForProvider\(provider\)\)/);
   assert.match(compare, /signal: lifecycle\.controller\.signal/);
-  assert.match(compare, /key !== "mcl" \|\| state\.data\[key\]\?\.metadataComplete === true/);
+  assert.match(compare, /const reusePolicy = comparisonAdapter\(key\)\?\.canReuse/);
+  assert.doesNotMatch(compare, /key !== "mcl"/);
   assert.match(compare, /data-show-language/);
   assert.match(compare, /if \(aggregateForMatch\(match\)\) return false/);
 
