@@ -50,7 +50,7 @@ export default {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "M7R7",
+        phase: "6G",
         status: "operational",
         providers: providerHealthMap(),
         freshness: {
