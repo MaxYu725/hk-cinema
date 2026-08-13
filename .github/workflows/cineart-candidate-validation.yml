@@ -18,10 +18,12 @@ on:
       - "tests/m7p1c-cineart-catalogue-production.test.mjs"
       - "tests/m7p1d-cineart-showtimes-production.test.mjs"
       - "tests/m7p1e-cineart-price-seat-summary.test.mjs"
+      - "tests/m7p1f-cineart-strict-detail.test.mjs"
       - "scripts/m7p1b-cineart-preview-validation.mjs"
       - "scripts/m7p1c-cineart-catalogue-validation.mjs"
       - "scripts/m7p1d-cineart-showtimes-validation.mjs"
       - "scripts/m7p1e-cineart-price-seat-validation.mjs"
+      - "scripts/m7p1f-cineart-strict-detail-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -71,5 +73,8 @@ jobs:
       - name: Revalidate CineArt production showtime boundary
         run: node scripts/m7p1d-cineart-showtimes-validation.mjs
 
-      - name: Validate CineArt production base price and coarse seat boundary
+      - name: Revalidate CineArt production base price and coarse seat boundary
         run: node scripts/m7p1e-cineart-price-seat-validation.mjs
+
+      - name: Validate CineArt selected-date strict detail boundary
+        run: node scripts/m7p1f-cineart-strict-detail-validation.mjs
