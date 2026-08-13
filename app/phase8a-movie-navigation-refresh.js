@@ -7,6 +7,5 @@
   }
 
   window.addEventListener("hkcinema:provider-matches", invalidateHomeAggregates);
-  window.addEventListener("hkcinema:mcl-catalogue", invalidateHomeAggregates);
-  window.addEventListener("hkcinema:emperor-catalogue", invalidateHomeAggregates);
+  window.addEventListener("hkcinema:provider-catalogue", invalidateHomeAggregates);
 })();

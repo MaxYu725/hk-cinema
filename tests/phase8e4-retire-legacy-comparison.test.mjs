@@ -40,6 +40,6 @@ test("production and syntax checks point at the current comparison stack", async
     assert.doesNotMatch(pkg, new RegExp(retired.replaceAll(".", "\\.")));
   }
 
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d/);
-  assert.match(index, /provider-compare-resilience-v3\.js\?v=10r3b-1/);
+  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d-m7r6-1/);
+  assert.match(index, /provider-compare-resilience-v3\.js\?v=10r3b-m7r6-1/);
 });

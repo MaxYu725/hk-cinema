@@ -168,8 +168,6 @@
       group.dataset.phase9b3Group === activeGroup &&
       event.target.closest?.(".phase9b3-filter-group-body button")
     ) {
-      // Let the shared filter engine process the option click first, then collapse
-      // the Metro floating menu without changing the shared compact decorator.
       queueFilterClose();
     }
   }
@@ -209,8 +207,7 @@
 
     [
       "hkcinema:home-tab",
-      "hkcinema:mcl-catalogue",
-      "hkcinema:emperor-catalogue",
+      "hkcinema:provider-catalogue",
       "hkcinema:provider-matches",
       "hkcinema:data-health",
       "hkcinema:provider-compare-open",
@@ -239,7 +236,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m6b-3",
+    version: "m6b-3-m7r6-1",
     refresh: scheduleSync,
     syncComparisonShell,
     syncSeatMapShell,

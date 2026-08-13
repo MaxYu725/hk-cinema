@@ -211,6 +211,10 @@
       .trim();
   }
 
+  function normalizeProvider(provider) {
+    return String(provider || "").trim().toLowerCase() || "unknown";
+  }
+
   const lookup = new Map();
 
   for (const record of records) {
@@ -221,7 +225,7 @@
   }
 
   function resolve(provider, name) {
-    const providerKey = provider === "mcl" ? "mcl" : "broadway";
+    const providerKey = normalizeProvider(provider);
     const normalized = normalize(name);
     const exact = lookup.get(`${providerKey}:${normalized}`);
     if (exact) return exact;
@@ -252,6 +256,7 @@
   }
 
   window.HKCinemaCinemaRegistry = Object.freeze({
+    version: "m7r6-1",
     regions: REGIONS,
     records: Object.freeze(records.map(record => Object.freeze({ ...record }))),
     resolve,

@@ -16,6 +16,13 @@ function mainCacheContext({ nativeFetch, mclGetTicketing = null } = {}) {
   const window = {
     location: { href: "https://maxyu725.github.io/hk-cinema/" },
     fetch: nativeFetch || (async () => new Response("{}", { status: 200 })),
+    HKCinemaProviderRegistry: {
+      providers: [
+        { id: "broadway" },
+        { id: "mcl" },
+        { id: "emperor" }
+      ]
+    },
     HKCinemaProviders: mclGetTicketing
       ? { mcl: { getTicketing: mclGetTicketing } }
       : {},
@@ -198,15 +205,16 @@ test("incomplete initial MCL metadata is not aliased over the explicit-date retr
   assert.equal(explicit.metadataComplete, true);
 });
 
-test("adjacent-date prefetch keeps an AbortController and passes its signal into provider cache helpers", async () => {
+test("adjacent-date prefetch keeps an AbortController and passes its signal into the generic provider cache helper", async () => {
   const prefetch = await source("app/provider-compare-prefetch.js");
 
   assert.match(prefetch, /let activeController = null/);
   assert.match(prefetch, /activeController\.abort\("superseded"\)/);
   assert.match(prefetch, /runPrefetch\(context, ownGeneration, controller\.signal\)/);
-  assert.match(prefetch, /prefetchBroadway\(context\.broadwayId, date, signal\)/);
-  assert.match(prefetch, /prefetchMCL\(context\.mclId, date, signal\)/);
-  assert.match(prefetch, /prefetchEmperor\(context\.emperorId, date, signal\)/);
+  assert.match(prefetch, /providerIds\(\)\.map\(provider => \(\{/);
+  assert.match(prefetch, /cache\.prefetchProvider\(entry\.provider, sourceId, date, signal\)/);
+  assert.doesNotMatch(prefetch, /prefetchBroadway\(context\.broadwayId/);
+  assert.doesNotMatch(prefetch, /prefetchEmperor\(context\.emperorId/);
   assert.match(prefetch, /type === "open" \|\| type === "close" \|\| type === "date-change" \|\| type === "reload"/);
 });
 

@@ -55,7 +55,7 @@ test("partial and stale showtime states remain isolated per provider", async () 
 
   assert.match(resilience, /status: "stale", label: "資料過期"/);
   assert.match(resilience, /status: "empty", label: "暫無場次"/);
-  assert.match(resilience, /目前有 \$\{providers\.length - errors\.length\}\/\$\{providers\.length\} 個院線資料可用/);
+  assert.match(resilience, /目前有 \$\{active\.length - errors\.length\}\/\$\{active\.length\} 個院線資料可用/);
   assert.match(resilience, /formatAge\?\.\(freshness\.updatedAt\)/);
 });
 

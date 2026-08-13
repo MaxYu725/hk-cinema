@@ -44,9 +44,10 @@ test("M6D 2D adjacent-date prefetch is cancelled before a new lifecycle owner pr
 
   assert.match(prefetch, /function cancelScheduled\(\)[\s\S]*activeController\.abort\("superseded"\)/);
   assert.match(prefetch, /type === "open" \|\| type === "close" \|\| type === "date-change" \|\| type === "reload"/);
-  assert.match(prefetch, /prefetchBroadway\(context\.broadwayId, date, signal\)/);
-  assert.match(prefetch, /prefetchMCL\(context\.mclId, date, signal\)/);
-  assert.match(prefetch, /prefetchEmperor\(context\.emperorId, date, signal\)/);
+  assert.match(prefetch, /providerIds\(\)\.map\(provider => \(\{/);
+  assert.match(prefetch, /cache\.prefetchProvider\(entry\.provider, sourceId, date, signal\)/);
+  assert.doesNotMatch(prefetch, /prefetchBroadway\(context\.broadwayId/);
+  assert.doesNotMatch(prefetch, /prefetchEmperor\(context\.emperorId/);
 });
 
 test("M6D 2D live cinema and Worker data remain outside the Service Worker shell cache", async () => {
@@ -60,9 +61,10 @@ test("M6D 2D live cinema and Worker data remain outside the Service Worker shell
 test("M6D 2D avoids generic global request coalescing and keeps bounded provider-specific caches", async () => {
   const cache = await read("app/provider-compare-main-cache-v3.js");
 
-  assert.match(cache, /broadway: 60 \* 1000/);
-  assert.match(cache, /mcl: 90 \* 1000/);
-  assert.match(cache, /emperor: 60 \* 1000/);
+  assert.match(cache, /const DEFAULT_TTL_MS = 60 \* 1000/);
+  assert.match(cache, /PROVIDER_TTL_OVERRIDES = Object\.freeze\(\{ mcl: 90 \* 1000 \}\)/);
+  assert.match(cache, /Object\.fromEntries\(PROVIDERS\.map\(provider => \[provider, new Map\(\)\]\)\)/);
+  assert.match(cache, /function ttlForProvider\(provider\)/);
   assert.match(cache, /isCacheableWorkerSnapshot/);
   assert.match(cache, /payload\?\.ok === true/);
   assert.match(cache, /deleteIfCurrent\(cache, key, snapshotPromise\)/);

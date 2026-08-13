@@ -1,18 +1,36 @@
 (() => {
-  const TTL = {
-    broadway: 60 * 1000,
-    mcl: 90 * 1000,
-    emperor: 60 * 1000
-  };
+  const DEFAULT_TTL_MS = 60 * 1000;
+  const PROVIDER_TTL_OVERRIDES = Object.freeze({ mcl: 90 * 1000 });
   const MAX_ENTRIES = 48;
   const WORKER_ORIGIN = "https://hk-cinema-api.max-yu-jp.workers.dev";
+  const sharedCore = window.HKCinemaProviderSharedCore || null;
 
+  function providerIds() {
+    const shared = sharedCore?.providerIds?.();
+    if (Array.isArray(shared)) return shared;
+    return (window.HKCinemaProviderRegistry?.providers || [])
+      .map(provider => String(provider?.id || "").trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  const PROVIDERS = Object.freeze(providerIds());
   const nativeFetch = window.fetch.bind(window);
-  const caches = {
-    broadway: new Map(),
-    mcl: new Map(),
-    emperor: new Map()
-  };
+  const caches = Object.fromEntries(PROVIDERS.map(provider => [provider, new Map()]));
+
+  function registeredProvider(provider) {
+    const key = String(provider || "").trim().toLowerCase();
+    if (!key) return null;
+    return sharedCore?.registeredProviderId?.(key) || (PROVIDERS.includes(key) ? key : null);
+  }
+
+  function ttlForProvider(provider) {
+    return PROVIDER_TTL_OVERRIDES[provider] || DEFAULT_TTL_MS;
+  }
+
+  function cacheForProvider(provider) {
+    const key = registeredProvider(provider);
+    return key ? caches[key] || null : null;
+  }
 
   function abortError() {
     const error = new Error("Comparison request cancelled");
@@ -26,6 +44,7 @@
   }
 
   function prune(cache) {
+    if (!cache) return;
     const now = Date.now();
     for (const [key, entry] of cache) {
       if (!entry || entry.expiresAt <= now) cache.delete(key);
@@ -38,6 +57,7 @@
   }
 
   function read(cache, key) {
+    if (!cache) return null;
     const entry = cache.get(key);
     if (!entry) return null;
     if (entry.expiresAt <= Date.now()) {
@@ -50,12 +70,15 @@
   }
 
   function write(cache, key, value, ttlMs) {
+    if (!cache) return false;
     cache.delete(key);
     cache.set(key, { expiresAt: Date.now() + ttlMs, value });
     prune(cache);
+    return true;
   }
 
   function deleteIfCurrent(cache, key, value) {
+    if (!cache) return;
     const current = cache.get(key);
     if (current?.value === value) cache.delete(key);
   }
@@ -65,7 +88,7 @@
   }
 
   function clearProvider(provider) {
-    const cache = caches[provider];
+    const cache = cacheForProvider(provider);
     if (!cache) return false;
     cache.clear();
     return true;
@@ -89,9 +112,12 @@
 
   function workerShowsProvider(details) {
     if (!details || details.method !== "GET" || details.url.origin !== WORKER_ORIGIN) return null;
-    if (/^\/api\/broadway\/movies\/[^/]+\/shows$/.test(details.url.pathname)) return "broadway";
-    if (/^\/api\/emperor\/movies\/[^/]+\/shows$/.test(details.url.pathname)) return "emperor";
-    return null;
+    const match = details.url.pathname.match(/^\/api\/([^/]+)\/movies\/[^/]+\/shows$/);
+    if (!match) return null;
+    const provider = registeredProvider(decodeURIComponent(match[1]));
+    // MCL showtimes use the browser/Worker hybrid ticketing adapter and its own cache.
+    if (!provider || provider === "mcl") return null;
+    return cacheForProvider(provider) ? provider : null;
   }
 
   function responseFromSnapshot(snapshot) {
@@ -124,7 +150,7 @@
       if (!selectedDate) return;
       const aliasUrl = new URL(details.url.toString());
       aliasUrl.searchParams.set("date", selectedDate);
-      write(caches[provider], aliasUrl.toString(), snapshotPromise, TTL[provider]);
+      write(cacheForProvider(provider), aliasUrl.toString(), snapshotPromise, ttlForProvider(provider));
     }).catch(() => {});
   }
 
@@ -134,7 +160,7 @@
     if (!provider) return nativeFetch(input, init);
     if (details.signal?.aborted) throw abortError();
 
-    const cache = caches[provider];
+    const cache = cacheForProvider(provider);
     const key = details.url.toString();
     const cached = read(cache, key);
     if (cached) {
@@ -151,12 +177,10 @@
         statusText: response.statusText,
         headers: Array.from(response.headers.entries())
       }));
-      write(cache, key, snapshotPromise, TTL[provider]);
+      write(cache, key, snapshotPromise, ttlForProvider(provider));
       aliasWorkerSelectedDate(provider, details, snapshotPromise);
       snapshotPromise.then(snapshot => {
-        if (!isCacheableWorkerSnapshot(snapshot)) {
-          deleteIfCurrent(cache, key, snapshotPromise);
-        }
+        if (!isCacheableWorkerSnapshot(snapshot)) deleteIfCurrent(cache, key, snapshotPromise);
       }).catch(() => {
         deleteIfCurrent(cache, key, snapshotPromise);
       });
@@ -171,25 +195,28 @@
 
   function rememberMCL(movieSetId, selectedDate, data) {
     if (!data || typeof data !== "object") return false;
-    write(caches.mcl, mclKey(movieSetId, selectedDate), data, TTL.mcl);
+    const cache = cacheForProvider("mcl");
+    if (!cache) return false;
+    write(cache, mclKey(movieSetId, selectedDate), data, ttlForProvider("mcl"));
     if (!selectedDate && data.metadataComplete === true) {
       const resolvedDate = normalizedDate(data.selectedDate);
-      if (resolvedDate) {
-        write(caches.mcl, mclKey(movieSetId, resolvedDate), data, TTL.mcl);
-      }
+      if (resolvedDate) write(cache, mclKey(movieSetId, resolvedDate), data, ttlForProvider("mcl"));
     }
     return true;
   }
 
   function workerUrl(provider, movieId, selectedDate) {
-    const id = String(movieId || "").replace(new RegExp(`^${provider}:`), "");
+    const key = registeredProvider(provider);
+    if (!key || key === "mcl") return null;
+    const id = String(movieId || "").replace(new RegExp(`^${key}:`), "");
     if (!id) return null;
-    const url = new URL(`/api/${provider}/movies/${encodeURIComponent(id)}/shows`, WORKER_ORIGIN);
+    const url = new URL(`/api/${key}/movies/${encodeURIComponent(id)}/shows`, WORKER_ORIGIN);
     if (selectedDate) url.searchParams.set("date", selectedDate);
     return url.toString();
   }
 
   function installMCLCache() {
+    if (!cacheForProvider("mcl")) return false;
     const provider = window.HKCinemaProviders?.mcl;
     if (!provider?.getTicketing) return false;
     if (provider.mainRequestCacheInstalledV3) return true;
@@ -200,7 +227,7 @@
       if (signal?.aborted) throw abortError();
 
       const key = mclKey(movieSetId, selectedDate);
-      const cached = read(caches.mcl, key);
+      const cached = read(cacheForProvider("mcl"), key);
       if (cached) {
         if (signal?.aborted) throw abortError();
         return cached;
@@ -212,15 +239,16 @@
       return data;
     };
     provider.mainRequestCacheInstalledV3 = true;
-    provider.mainRequestCacheTtlMs = TTL.mcl;
+    provider.mainRequestCacheTtlMs = ttlForProvider("mcl");
     return true;
   }
 
   async function prefetchWorker(provider, movieId, selectedDate, signal = null) {
-    const url = workerUrl(provider, movieId, selectedDate);
-    if (!url) return false;
+    const key = registeredProvider(provider);
+    const cache = cacheForProvider(key);
+    const url = workerUrl(key, movieId, selectedDate);
+    if (!key || !cache || !url) return false;
     if (signal?.aborted) throw abortError();
-    const cache = caches[provider];
     if (read(cache, url)) return true;
     const response = await window.fetch(url, { cache: "no-store", signal });
     if (!response.ok) return false;
@@ -231,15 +259,24 @@
   async function prefetchMCL(movieSetId, selectedDate, signal = null) {
     if (!installMCLCache()) return false;
     if (signal?.aborted) throw abortError();
+    const cache = cacheForProvider("mcl");
     const key = mclKey(movieSetId, selectedDate);
-    if (read(caches.mcl, key)) return true;
+    if (read(cache, key)) return true;
     const provider = window.HKCinemaProviders?.mcl;
     if (!provider?.getTicketing) return false;
     const data = await provider.getTicketing(movieSetId, selectedDate, { signal });
-    return Boolean(data && read(caches.mcl, key));
+    return Boolean(data && read(cache, key));
   }
 
-  if (!installMCLCache()) {
+  function prefetchProvider(provider, movieId, selectedDate, signal = null) {
+    const key = registeredProvider(provider);
+    if (!key) return Promise.resolve(false);
+    return key === "mcl"
+      ? prefetchMCL(movieId, selectedDate, signal)
+      : prefetchWorker(key, movieId, selectedDate, signal);
+  }
+
+  if (cacheForProvider("mcl") && !installMCLCache()) {
     window.addEventListener("DOMContentLoaded", installMCLCache, { once: true });
   }
 
@@ -250,24 +287,33 @@
   }, true);
 
   window.HKCinemaProviderCompareMainCache = {
+    version: "m7r6-1",
     clear,
     clearProvider,
+    prefetchProvider,
+    // Compatibility aliases for older callers; all route through the generic owner.
     prefetchBroadway(movieId, selectedDate, signal = null) {
-      return prefetchWorker("broadway", movieId, selectedDate, signal);
+      return prefetchProvider("broadway", movieId, selectedDate, signal);
     },
     prefetchEmperor(movieId, selectedDate, signal = null) {
-      return prefetchWorker("emperor", movieId, selectedDate, signal);
+      return prefetchProvider("emperor", movieId, selectedDate, signal);
     },
     prefetchMCL,
     getStats() {
       Object.values(caches).forEach(prune);
+      const providers = Object.fromEntries(PROVIDERS.map(provider => [provider, {
+        entries: caches[provider]?.size || 0,
+        ttlMs: ttlForProvider(provider)
+      }]));
       return {
-        broadwayEntries: caches.broadway.size,
-        mclEntries: caches.mcl.size,
-        emperorEntries: caches.emperor.size,
-        broadwayTtlMs: TTL.broadway,
-        mclTtlMs: TTL.mcl,
-        emperorTtlMs: TTL.emperor
+        providers,
+        // Preserve the legacy diagnostic keys while callers migrate.
+        broadwayEntries: caches.broadway?.size || 0,
+        mclEntries: caches.mcl?.size || 0,
+        emperorEntries: caches.emperor?.size || 0,
+        broadwayTtlMs: ttlForProvider("broadway"),
+        mclTtlMs: ttlForProvider("mcl"),
+        emperorTtlMs: ttlForProvider("emperor")
       };
     }
   };

@@ -12,7 +12,8 @@ test("Phase 8A refreshes cached card aggregates after provider catalogues change
   const source = await read("phase8a-movie-navigation-refresh.js");
   assert.match(source, /delete card\.dataset\.phase8aAggregateId/);
   assert.match(source, /hkcinema:provider-matches/);
-  assert.match(source, /hkcinema:mcl-catalogue/);
-  assert.match(source, /hkcinema:emperor-catalogue/);
+  assert.match(source, /hkcinema:provider-catalogue/);
+  assert.doesNotMatch(source, /hkcinema:mcl-catalogue/);
+  assert.doesNotMatch(source, /hkcinema:emperor-catalogue/);
   assert.match(source, /HKCinemaMovieAggregates\?\.refresh/);
 });
