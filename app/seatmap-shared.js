@@ -286,12 +286,15 @@
     const section = model.sections?.[0];
     if (!section?.rows?.length) return renderEmptyGeometry();
     const metrics = gridMetrics(model);
+    const screenWidth = Math.max(180, metrics.contentWidth - 34);
     return `
       ${metrics.scrollable ? `<p class="shared-seatmap-scroll-hint">大型／闊身影廳 · 左右滑動查看完整座位</p>` : ""}
-      ${renderScreen(model.screenLabel, Math.max(180, metrics.contentWidth - 34))}
       <div class="shared-seatmap-viewport">
         <div class="shared-seatmap-scroll ${metrics.scrollable ? "is-scrollable" : ""}" tabindex="0" aria-label="可左右捲動座位圖">
           <div class="shared-seatmap-grid" style="--seat-size:${metrics.size}px;--seat-gap:${metrics.gap}px;min-width:${metrics.contentWidth}px">
+            <div class="shared-seatmap-grid-screen" style="box-sizing:border-box;width:${metrics.contentWidth}px;padding-left:34px">
+              ${renderScreen(model.screenLabel, screenWidth)}
+            </div>
             ${section.rows.map(row => `
               <div class="shared-seatmap-row">
                 <span class="shared-seatmap-row-label">${escapeHtml(row.label || "")}</span>
@@ -637,7 +640,7 @@
   window.addEventListener("hkcinema:movie-detail-close", () => close({ restoreFocus: false }));
 
   window.HKCinemaSeatMapShared = Object.freeze({
-    version: "7b3-m8a2-1",
+    version: "7b3-m8a2h1-1",
     openEvent: OPEN_EVENT,
     prepareTrigger,
     isActivationKey,
