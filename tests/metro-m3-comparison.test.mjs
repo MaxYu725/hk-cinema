@@ -1,17 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAsset, assertAssetOrder } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Phase M3 loads the Metro comparison presentation after the consolidated Metro theme", async () => {
   const index = await read("app/index.html");
-  const theme = index.indexOf("metro-theme.css?v=m6b-5");
-  const m3 = index.indexOf("metro-m3-comparison.css?v=m3-1");
-  assert.ok(theme >= 0 && m3 > theme);
+  assertAssetOrder(index, "metro-theme.css", "metro-m3-comparison.css");
   assert.doesNotMatch(index, /metro-m2-home-polish\.css/);
-  assert.match(index, /phase10r3a-mobile-shell-date-strip\.js\?v=10r3b-m6b-1/);
-  assert.match(index, /metro-runtime\.js\?v=m6b-3/);
+  assertAsset(index, "phase10r3a-mobile-shell-date-strip.js");
+  assertAsset(index, "metro-runtime.js");
 });
 
 test("Phase M3 comparison shell follows the supplied Metro structure without forking provider logic", async () => {
