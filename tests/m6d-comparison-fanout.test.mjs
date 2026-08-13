@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -227,6 +228,6 @@ test("comparison filters stay presentation-only and changed network helpers are 
   ]);
 
   assert.doesNotMatch(filterUx, /\bfetch\s*\(/);
-  assert.match(index, /provider-compare-main-cache-v3\.js\?v=m6d2d/);
-  assert.match(index, /provider-compare-prefetch\.js\?v=m6d2b/);
+  assertAsset(index, "provider-compare-main-cache-v3.js");
+  assertAsset(index, "provider-compare-prefetch.js");
 });
