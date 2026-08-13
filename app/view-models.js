@@ -1,23 +1,39 @@
 (() => {
   const SCHEMA_VERSION = 1;
 
-  const PROVIDERS = Object.freeze({
+  const PROVIDER_DEFAULTS = Object.freeze({
     broadway: Object.freeze({
-      id: "broadway",
       label: "Broadway",
       bookingUrl: "https://www.cinema.com.hk/hk"
     }),
     mcl: Object.freeze({
-      id: "mcl",
       label: "MCL",
       bookingUrl: "https://www.mclcinema.com/"
     }),
     emperor: Object.freeze({
-      id: "emperor",
       label: "Emperor Cinemas",
       bookingUrl: "https://www.emperorcinemas.com/showtimes"
     })
   });
+
+  function registry() {
+    return window.HKCinemaProviderRegistry || null;
+  }
+
+  function providerValue(descriptor) {
+    const defaults = PROVIDER_DEFAULTS[descriptor.id] || {};
+    const capabilities = Object.freeze({ ...(descriptor.capabilities || {}) });
+    return Object.freeze({
+      id: descriptor.id,
+      label: defaults.label || descriptor.displayName || descriptor.healthLabel || descriptor.id,
+      bookingUrl: capabilities.booking ? defaults.bookingUrl || null : null,
+      capabilities
+    });
+  }
+
+  const PROVIDERS = Object.freeze(Object.fromEntries(
+    (registry()?.providers || []).map(descriptor => [descriptor.id, providerValue(descriptor)])
+  ));
 
   const SEAT_STATUSES = Object.freeze([
     "available",
@@ -47,8 +63,12 @@
 
   function provider(providerId) {
     const value = PROVIDERS[String(providerId || "").toLowerCase()];
-    if (!value) throw new Error(`Unsupported cinema provider: ${providerId}`);
-    return { ...value };
+    if (!value) throw new Error(`Unregistered cinema provider: ${providerId}`);
+    return { ...value, capabilities: { ...value.capabilities } };
+  }
+
+  function hasCapability(providerId, capability) {
+    return Boolean(provider(providerId).capabilities?.[capability]);
   }
 
   function text(value) {
@@ -185,7 +205,7 @@
       status: pickText(source => source?.status || source?.showStatus),
       title: { zh, en, display, secondary },
       posterUrl: pickText(source => source?.posterUrl || source?.poster),
-      bookingUrl: pickText(source => source?.bookingUrl) || info.bookingUrl,
+      bookingUrl: info.capabilities.booking ? pickText(source => source?.bookingUrl) || info.bookingUrl : null,
       facts,
       people: { directors, cast },
       description: pickText(source => source?.description || source?.introduction),
@@ -218,7 +238,7 @@
       name: {
         zh,
         en,
-        display: zh || en || PROVIDERS[providerId].label
+        display: zh || en || provider(providerId).label
       }
     };
   }
@@ -299,41 +319,61 @@
     };
   }
 
+  function unsupportedSeatMap(reason) {
+    return {
+      supported: false,
+      layoutMode: null,
+      request: null,
+      reason
+    };
+  }
+
   function seatMapRequest(providerId, session) {
+    if (!hasCapability(providerId, "seatMap")) return unsupportedSeatMap("unsupported");
+
     const sessionSourceId = sourceId(providerId, session);
     if (providerId === "broadway") {
       return {
         supported: Boolean(sessionSourceId),
         layoutMode: "grid",
-        request: { showId: sessionSourceId }
+        request: { showId: sessionSourceId },
+        reason: sessionSourceId ? null : "missing-request-data"
       };
     }
 
     if (providerId === "mcl") {
       const cinemaCode = firstText(session?.cinema?.sourceId, session?.cinema?.id);
+      const supported = Boolean(sessionSourceId && cinemaCode);
       return {
-        supported: Boolean(sessionSourceId && cinemaCode),
+        supported,
         layoutMode: "area-grid",
         request: {
           cinemaCode: cinemaCode ? cinemaCode.replace(/^mcl:/, "") : null,
           sessionId: sessionSourceId
-        }
+        },
+        reason: supported ? null : "missing-request-data"
       };
     }
 
-    const scheduleKey = text(session?.purchase?.scheduleKey);
-    const cinemaLinkId = firstText(session?.cinema?.sourceId, session?.cinema?.id);
-    const hallId = firstText(session?.house?.sourceId, session?.house?.id);
-    return {
-      supported: Boolean(sessionSourceId && scheduleKey && cinemaLinkId && hallId),
-      layoutMode: "positioned",
-      request: {
-        scheduleId: sessionSourceId,
-        scheduleKey,
-        cinemaLinkId,
-        hallId
-      }
-    };
+    if (providerId === "emperor") {
+      const scheduleKey = text(session?.purchase?.scheduleKey);
+      const cinemaLinkId = firstText(session?.cinema?.sourceId, session?.cinema?.id);
+      const hallId = firstText(session?.house?.sourceId, session?.house?.id);
+      const supported = Boolean(sessionSourceId && scheduleKey && cinemaLinkId && hallId);
+      return {
+        supported,
+        layoutMode: "positioned",
+        request: {
+          scheduleId: sessionSourceId,
+          scheduleKey,
+          cinemaLinkId,
+          hallId
+        },
+        reason: supported ? null : "missing-request-data"
+      };
+    }
+
+    return unsupportedSeatMap("adapter-missing");
   }
 
   function showtimeMetadata(session) {
@@ -390,10 +430,10 @@
       startAt: firstText(session?.startAt, session?.startsAt),
       endAt: firstText(session?.endAt, session?.endsAt),
       metadata,
-      price: priceViewModel(session?.price),
-      seats: seatSummaryViewModel(session?.seatSummary),
+      price: info.capabilities.prices ? priceViewModel(session?.price) : priceViewModel(),
+      seats: info.capabilities.seatSummary ? seatSummaryViewModel(session?.seatSummary) : seatSummaryViewModel(),
       purchase: purchaseViewModel(session?.purchase),
-      bookingUrl: firstText(session?.bookingUrl) || info.bookingUrl,
+      bookingUrl: info.capabilities.booking ? firstText(session?.bookingUrl) || info.bookingUrl : null,
       seatMap: seatMapRequest(providerId, session)
     };
   }
@@ -791,19 +831,23 @@
   });
 
   function adapter(providerId) {
-    const value = adapters[String(providerId || "").toLowerCase()];
-    if (!value) throw new Error(`Unsupported cinema provider: ${providerId}`);
-    return value;
+    const info = provider(providerId);
+    return adapters[info.id] || {
+      movie: (movie, detail) => movieViewModel(info.id, movie, detail),
+      showtime: session => showtimeViewModel(info.id, session),
+      seatMap: () => null
+    };
   }
 
   window.HKCinemaViewModels = Object.freeze({
-    version: "7b3",
+    version: "7b3-m7r3-1",
     schemaVersion: SCHEMA_VERSION,
     providers: PROVIDERS,
     seatStatuses: SEAT_STATUSES,
     seatTypes: SEAT_TYPES,
     summaryQualities: SUMMARY_QUALITIES,
     adapters,
+    provider,
     movie(providerId, movie, detail = null) {
       return adapter(providerId).movie(movie, detail);
     },
@@ -811,7 +855,9 @@
       return adapter(providerId).showtime(session);
     },
     seatMap(providerId, data, session = null) {
-      return adapter(providerId).seatMap(data, session);
+      const info = provider(providerId);
+      if (!info.capabilities.seatMap) return null;
+      return adapter(info.id).seatMap(data, session);
     }
   });
 })();
