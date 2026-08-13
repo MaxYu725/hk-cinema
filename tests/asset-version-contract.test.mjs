@@ -22,7 +22,7 @@ function normalizeRegexEscapes(line) {
 
 function versionPins(line) {
   const normalized = normalizeRegexEscapes(line);
-  return Array.from(normalized.matchAll(ASSET_VERSION_LITERAL), match => match[0]);
+  return Array.from(normalized.matchAll(ASSET_VERSION_LITERAL), match => match[0].replace(/^\/+/, ""));
 }
 
 test("asset-version scanner recognizes literal, regex-escaped and template cachebuster pins", () => {
