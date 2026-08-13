@@ -5,16 +5,16 @@ import { readFile } from "node:fs/promises";
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 const paths = {
-  registry: "app/provider-registry.js",
   comparison: "app/provider-compare-v4.js",
   comparisonCache: "app/provider-compare-main-cache-v3.js",
   viewModels: "app/view-models.js",
   checkpoint: "docs/checkpoints/m7p1a-cineart-provider-reconnaissance.md"
 };
 
-test("M7P1A keeps CineArt outside the browser production provider universe", async () => {
-  const registry = await read(paths.registry);
-  assert.doesNotMatch(registry, /id:\s*["']cineart["']/i);
+test("M7P1A checkpoint records that CineArt was outside browser production at reconnaissance time", async () => {
+  const checkpoint = await read(paths.checkpoint);
+  assert.match(checkpoint, /Production providers remain: Broadway, MCL, Emperor/);
+  assert.match(checkpoint, /does \*\*not\*\* register CineArt in the production browser Provider Registry/);
 });
 
 test("M7P1A retains the generic provider extension points required by a fresh CineArt integration", async () => {
