@@ -110,13 +110,28 @@
     };
   }
 
+  const CACHE_ADAPTERS = Object.freeze({
+    mcl: Object.freeze({
+      workerShows: false,
+      install: installMCLCache,
+      prefetch: prefetchMCL
+    })
+  });
+
+  function cacheAdapter(provider) {
+    const runtime = window.HKCinemaProviders?.[provider]?.comparisonCache || null;
+    const builtIn = CACHE_ADAPTERS[provider] || null;
+    return builtIn || runtime
+      ? { ...(builtIn || {}), ...(runtime || {}) }
+      : null;
+  }
+
   function workerShowsProvider(details) {
     if (!details || details.method !== "GET" || details.url.origin !== WORKER_ORIGIN) return null;
     const match = details.url.pathname.match(/^\/api\/([^/]+)\/movies\/[^/]+\/shows$/);
     if (!match) return null;
     const provider = registeredProvider(decodeURIComponent(match[1]));
-    // MCL showtimes use the browser/Worker hybrid ticketing adapter and its own cache.
-    if (!provider || provider === "mcl") return null;
+    if (!provider || cacheAdapter(provider)?.workerShows === false) return null;
     return cacheForProvider(provider) ? provider : null;
   }
 
@@ -207,7 +222,7 @@
 
   function workerUrl(provider, movieId, selectedDate) {
     const key = registeredProvider(provider);
-    if (!key || key === "mcl") return null;
+    if (!key || cacheAdapter(key)?.workerShows === false) return null;
     const id = String(movieId || "").replace(new RegExp(`^${key}:`), "");
     if (!id) return null;
     const url = new URL(`/api/${key}/movies/${encodeURIComponent(id)}/shows`, WORKER_ORIGIN);
@@ -271,13 +286,14 @@
   function prefetchProvider(provider, movieId, selectedDate, signal = null) {
     const key = registeredProvider(provider);
     if (!key) return Promise.resolve(false);
-    return key === "mcl"
-      ? prefetchMCL(movieId, selectedDate, signal)
-      : prefetchWorker(key, movieId, selectedDate, signal);
+    const handler = cacheAdapter(key)?.prefetch || prefetchWorker;
+    return handler(key, movieId, selectedDate, signal);
   }
 
-  if (cacheForProvider("mcl") && !installMCLCache()) {
-    window.addEventListener("DOMContentLoaded", installMCLCache, { once: true });
+  for (const provider of PROVIDERS) {
+    const install = cacheAdapter(provider)?.install;
+    if (typeof install !== "function" || install()) continue;
+    window.addEventListener("DOMContentLoaded", install, { once: true });
   }
 
   document.addEventListener("click", event => {
@@ -287,33 +303,17 @@
   }, true);
 
   window.HKCinemaProviderCompareMainCache = {
-    version: "m7r6-1",
+    version: "m7r7-1",
     clear,
     clearProvider,
     prefetchProvider,
-    // Compatibility aliases for older callers; all route through the generic owner.
-    prefetchBroadway(movieId, selectedDate, signal = null) {
-      return prefetchProvider("broadway", movieId, selectedDate, signal);
-    },
-    prefetchEmperor(movieId, selectedDate, signal = null) {
-      return prefetchProvider("emperor", movieId, selectedDate, signal);
-    },
-    prefetchMCL,
     getStats() {
       Object.values(caches).forEach(prune);
-      const providers = Object.fromEntries(PROVIDERS.map(provider => [provider, {
-        entries: caches[provider]?.size || 0,
-        ttlMs: ttlForProvider(provider)
-      }]));
       return {
-        providers,
-        // Preserve the legacy diagnostic keys while callers migrate.
-        broadwayEntries: caches.broadway?.size || 0,
-        mclEntries: caches.mcl?.size || 0,
-        emperorEntries: caches.emperor?.size || 0,
-        broadwayTtlMs: ttlForProvider("broadway"),
-        mclTtlMs: ttlForProvider("mcl"),
-        emperorTtlMs: ttlForProvider("emperor")
+        providers: Object.fromEntries(PROVIDERS.map(provider => [provider, {
+          entries: caches[provider]?.size || 0,
+          ttlMs: ttlForProvider(provider)
+        }]))
       };
     }
   };
