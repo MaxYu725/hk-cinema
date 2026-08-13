@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertAsset } from "./index-assets.mjs";
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -12,9 +13,7 @@ test("final Classic homepage removes redundant branding while shared runtime exp
     read("app/shared-final-controls.js")
   ]);
 
-  assert.match(index, /classic-final-ui-polish\.css\?v=classic-final-1/);
-  assert.match(index, /shared-final-controls\.js\?v=m6b-1/);
-  assert.match(index, /classic-final-ui-polish\.js\?v=classic-final-m6b-1/);
+  for (const asset of ["classic-final-ui-polish.css", "shared-final-controls.js", "classic-final-ui-polish.js"]) assertAsset(index, asset);
   assert.match(css, /\.topbar-brand\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /#refreshButton\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(css, /\.section-heading\s*\{[^}]*display:\s*none\s*!important/s);
