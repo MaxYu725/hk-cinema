@@ -1,3 +1,5 @@
+@import url("./emperor-seatmap-view.css?v=m8a3-1");
+
 .provider-emperor[data-emperor-open],
 .emperor-only-card {
   cursor: pointer;
