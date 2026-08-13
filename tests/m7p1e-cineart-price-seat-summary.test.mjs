@@ -31,12 +31,13 @@ function localStorageStub() {
   };
 }
 
-test("M7P1E Worker publishes base/face price plus coarse not-sold summary without strict seat detail", async () => {
+test("M7P1E historical coarse mode publishes base/face price plus not-sold summary without strict detail", async () => {
   const home = await fixture("cineart-home-flight.html");
   let fetchCalls = 0;
   const service = createCineArtShowtimeService({
     cache: memoryCache(),
     now: () => NOW_MS,
+    detailEnrichment: false,
     fetchImpl: async url => {
       fetchCalls += 1;
       assert.equal(String(url), "https://cinearthouse.com.hk/hk");
@@ -76,7 +77,7 @@ test("M7P1E Worker publishes base/face price plus coarse not-sold summary withou
   assert.equal("ticketTypes" in session, false);
 });
 
-test("M7P1E does not coerce missing price or seat evidence into zero", async () => {
+test("M7P1E historical coarse mode does not coerce missing price or seat evidence into zero", async () => {
   const sourceHome = await fixture("cineart-home-flight.html");
   const home = sourceHome.replace(
     '\\"price\\":110,\\"seats\\":4,\\"seatsHold\\":1,\\"sold\\":1,\\"avaliable\\":3',
@@ -87,6 +88,7 @@ test("M7P1E does not coerce missing price or seat evidence into zero", async () 
   const service = createCineArtShowtimeService({
     cache: memoryCache(),
     now: () => NOW_MS,
+    detailEnrichment: false,
     fetchImpl: async () => new Response(home, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" }
@@ -104,7 +106,7 @@ test("M7P1E does not coerce missing price or seat evidence into zero", async () 
   }
 });
 
-test("M7P1E Browser Registry enables CineArt prices and seatSummary but not seatMap or booking", async () => {
+test("M7P1E Browser Registry keeps CineArt prices and seatSummary enabled while seatMap and booking remain staged", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
@@ -122,7 +124,7 @@ test("M7P1E Browser Registry enables CineArt prices and seatSummary but not seat
   });
 });
 
-test("M7P1E CineArt comparison normalizer labels coarse seats as not-sold, never selectable", async () => {
+test("M7P1E CineArt comparison normalizer still labels coarse seats as not-sold, never selectable", async () => {
   const adapterSource = await source("app/providers/cineart.js");
   const window = {};
   vm.runInNewContext(adapterSource, {
@@ -176,31 +178,26 @@ test("M7P1E CineArt comparison normalizer labels coarse seats as not-sold, never
   assert.doesNotMatch(adapterSource, /MutationObserver|IntersectionObserver|cinearthouse\.com\.hk/);
 });
 
-test("M7P1E route advertises the staged mode and keeps detail/booking boundaries closed", async () => {
-  const [router, showtimes, manifest, index] = await Promise.all([
-    source("worker/src/index-emperor-seat.js"),
+test("M7P1E coarse snapshot boundary remains available beneath later selected-date detail stages", async () => {
+  const [showtimes, manifest, index, checkpoint] = await Promise.all([
     source("worker/src/providers/cineart-showtimes.js"),
     source("worker/src/provider-manifest.js"),
-    source("app/index.html")
+    source("app/index.html"),
+    source("docs/checkpoints/m7p1e-cineart-price-seat-summary.md")
   ]);
 
-  assert.match(router, /phase:\s*"M7P1E"/);
-  assert.match(router, /mode:\s*"showtimes-base-price-coarse-seats"/);
-  assert.match(showtimes, /m7p1e\/cineart\/showtimes/);
-  assert.match(showtimes, /function finiteNumber/);
+  assert.match(showtimes, /function publicSeatSummary/);
   assert.match(showtimes, /quality:\s*"coarse-not-sold"/);
   assert.match(showtimes, /available:\s*null/);
   assert.match(showtimes, /held:\s*null/);
   assert.match(showtimes, /bookingUrl:\s*null/);
-  assert.match(showtimes, /getCineArtWorkerSnapshot/);
-  assert.doesNotMatch(showtimes, /getCineArtShowDetail|fetchCineArtShowDetail|showDetailUrl/);
-  assert.doesNotMatch(showtimes, /ticketTypes\s*:|seatStates\s*:|seatPlan\s*:/);
-  assert.match(manifest, /catalogue-showtimes-price-coarse-seats-production-detail-candidate-readonly/);
-  assert.ok(index.indexOf("provider-registry.js?v=m7p1e-1") >= 0);
-  assert.ok(index.indexOf("providers/cineart.js?v=m7p1e-1") >= 0);
+  assert.match(manifest, /cineart/);
+  assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
+  assert.match(checkpoint, /M7P1E checkpoint/i);
+  assert.match(checkpoint, /coarse-not-sold/);
 });
 
-test("M7P1E starts only after M7P1D Android installed-PWA acceptance passed", async () => {
+test("M7P1E started only after M7P1D Android installed-PWA acceptance passed", async () => {
   const checkpoint = await source("docs/checkpoints/m7p1d-cineart-showtimes-production.md");
   assert.match(checkpoint, /## Android installed-PWA acceptance/i);
   assert.match(checkpoint, /\*\*PASS\.\*\*/i);
