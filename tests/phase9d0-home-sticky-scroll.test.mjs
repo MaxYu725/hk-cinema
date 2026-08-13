@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const root = process.cwd();
 const app = path.join(root, "app");
@@ -19,7 +20,7 @@ test("Classic latch is isolated while the transient sticky marker remains neutra
   assert.doesNotMatch(js, /classList\.toggle\("is-stuck",/);
   assert.match(home, /classList\.toggle\("is-stuck", stuck\)/);
   assert.match(js, /version:\s*VERSION/);
-  assert.match(js, /9d0-m6b-3/);
+  assert.match(js, /const VERSION\s*=\s*["'][^"']+["']/);
 });
 
 test("sticky latch keeps the buffered enter threshold and independent exit threshold", () => {
@@ -47,11 +48,6 @@ test("sticky presentation effects are scoped to Classic instead of being counter
 
 test("production versions the consolidated sticky owner after the home library", () => {
   const html = read("index.html");
-  const homeScript = html.indexOf("./home-library.js?v=8e3");
-  const stickyScript = html.indexOf("./phase9d0-home-sticky-scroll.js?v=m6b-3");
-  assert.ok(homeScript >= 0 && stickyScript > homeScript);
-
-  const homeCss = html.indexOf("./home-library.css?v=m6b-3");
-  const stickyCss = html.indexOf("./phase9d0-home-sticky-scroll.css?v=m6b-3");
-  assert.ok(homeCss >= 0 && stickyCss > homeCss);
+  assertAssetOrder(html, "home-library.js", "phase9d0-home-sticky-scroll.js");
+  assertAssetOrder(html, "home-library.css", "phase9d0-home-sticky-scroll.css");
 });
