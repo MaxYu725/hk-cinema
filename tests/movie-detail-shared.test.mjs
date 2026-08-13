@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assetPosition, assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -158,13 +159,16 @@ test("all provider loaders delegate markup to the shared renderer", async () => 
     assert.doesNotMatch(loader, /function renderSession/);
     assert.doesNotMatch(loader, /<div class="detail-hero/);
   }
-  const modelIndex = index.indexOf("view-models.js?v=7b3-m7r3-1");
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3-m7r3-1");
-  assert.ok(modelIndex > -1 && rendererIndex > modelIndex);
-  for (const loader of ["app.js?v=7b2", "mcl-detail.js?v=7b2", "emperor-detail.js?v=7b2"]) {
-    assert.ok(rendererIndex < index.indexOf(loader), `${loader} must load after the shared renderer`);
+  assertAsset(index, "view-models.js");
+  assertAsset(index, "movie-detail-shared.js");
+  const modelIndex = assetPosition(index, "view-models.js");
+  const rendererIndex = assetPosition(index, "movie-detail-shared.js");
+  assert.ok(rendererIndex > modelIndex);
+  for (const loader of ["app.js", "mcl-detail.js", "emperor-detail.js"]) {
+    assertAsset(index, loader);
+    assert.ok(rendererIndex < assetPosition(index, loader), `${loader} must load after the shared renderer`);
   }
-  assert.match(index, /movie-detail-shared\.css\?v=7b3/);
+  assertAsset(index, "movie-detail-shared.css");
   assert.match(css, /@media \(max-width: 360px\)/);
   assert.match(seatmap, /HKCinemaMovieDetail\?\.showtimeFor/);
   for (const provider of ["broadway", "mcl", "emperor"]) {
