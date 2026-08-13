@@ -66,13 +66,15 @@ test("provider probe runner accepts an additional provider handler without a sec
     fetchImpl,
     emperorProbe: async () => ({ ok: true, count: 1 }),
     additionalProbes: {
+      cineart: async () => ({ evidence: "cineart-test", source: "cineart-test-source", count: 1 }),
       fixture: async () => ({ evidence: "fixture-contract", source: "fixture-source", count: 2 })
     }
   });
   const result = await runner.probeAll();
 
-  assert.deepEqual(Array.from(runner.supportedProviders), ["broadway", "mcl", "emperor", "fixture"]);
-  assert.equal(result.total, 4);
+  assert.deepEqual(Array.from(runner.supportedProviders), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
+  assert.equal(result.total, 5);
+  assert.equal(result.providers.cineart.healthy, true);
   assert.equal(result.providers.fixture.healthy, true);
   assert.equal(result.providers.fixture.evidence.evidence, "fixture-contract");
 });
