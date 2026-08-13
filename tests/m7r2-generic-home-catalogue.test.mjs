@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
@@ -91,16 +92,16 @@ test("M7R2 current provider loaders publish through the neutral catalogue bus", 
   assert.equal(controls.includes("HKCinemaEmperorCatalogue"), false);
 });
 
-test("M7R2 changed runtime assets use one isolated browser-cache generation", async () => {
+test("M7R2 changed runtime assets remain independently cache-busted", async () => {
   const index = await source("app/index.html");
 
-  for (const value of [
-    "provider-shared-core.js?v=m6c-3-m7r2-1",
-    "multi-provider.js?v=8e2-m7r2-1",
-    "mcl-status.js?v=6h2-m7r2-1",
-    "emperor-status.js?v=6h2-m7r2-1",
-    "shared-final-controls.js?v=m6b-1-m7r2-1"
+  for (const asset of [
+    "provider-shared-core.js",
+    "multi-provider.js",
+    "mcl-status.js",
+    "emperor-status.js",
+    "shared-final-controls.js"
   ]) {
-    assert.ok(index.includes(value), `${value} must be version-isolated`);
+    assertAsset(index, asset);
   }
 });
