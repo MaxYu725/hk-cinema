@@ -12,11 +12,12 @@ const [index, phase8a, phase8b, metro] = await Promise.all([
 ]);
 
 test("M6B aggregate contract carries structured movie facts from provider catalogues", () => {
-  assert.match(index, /phase8a-movie-navigation\.js\?v=m6c-3/);
+  assert.match(index, /phase8a-movie-navigation\.js\?v=[^"]*m7r5-1/);
   assert.match(phase8a, /function factsFromSourceSets\(/);
+  assert.match(phase8a, /sharedCore\?\.catalogue\?\.\(provider\)/);
+  assert.match(phase8a, /window\.HKCinemaProviders\?\.\[provider\]/);
   assert.match(phase8a, /HKCinemaBroadwayApp\?\.getCatalogue\?\.\(\)/);
-  assert.match(phase8a, /HKCinemaMCLCatalogue/);
-  assert.match(phase8a, /HKCinemaEmperorCatalogue/);
+  assert.doesNotMatch(phase8a, /HKCinemaMCLCatalogue|HKCinemaEmperorCatalogue/);
   assert.match(phase8a, /facts:\s*factsFromSourceSets\(/);
   assert.match(phase8a, /classification, durationMinutes, releaseDate/);
 });

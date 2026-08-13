@@ -1,15 +1,32 @@
 (() => {
   const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
-  const TIMEOUTS = { broadway: 12000, mcl: 15000, emperor: 12000 };
+  const DEFAULT_TIMEOUT_MS = 12000;
+  const PROVIDER_TIMEOUTS = Object.freeze({ mcl: 15000 });
   const sharedCore = window.HKCinemaProviderSharedCore || null;
-  const PROVIDERS = sharedCore?.providers?.() || [
-    { key: "broadway", label: "Broadway" },
-    { key: "mcl", label: "MCL" },
-    { key: "emperor", label: "Emperor" }
-  ];
+
+  function registryProviders() {
+    return (window.HKCinemaProviderRegistry?.providers || []).map(descriptor => ({
+      key: descriptor.id,
+      label: descriptor.displayName || descriptor.healthLabel || descriptor.id,
+      descriptor
+    }));
+  }
+
+  const PROVIDERS = sharedCore?.providers?.() || registryProviders();
   const providerMap = factory => sharedCore?.providerMap?.(factory) || Object.fromEntries(
     PROVIDERS.map(provider => [provider.key, factory(provider.key, provider.descriptor || null)])
   );
+
+  function labelForProvider(provider) {
+    return sharedCore?.label?.(provider) ||
+      PROVIDERS.find(item => item.key === provider)?.label ||
+      String(provider || "").trim() ||
+      "院線";
+  }
+
+  function timeoutForProvider(provider) {
+    return PROVIDER_TIMEOUTS[provider] || DEFAULT_TIMEOUT_MS;
+  }
 
   const state = {
     match: null,
@@ -247,7 +264,7 @@
 
   async function fetchWorkerShows(provider, sourceId, date, parentSignal) {
     const query = date ? `?date=${encodeURIComponent(date)}` : "";
-    const lifecycle = childController(parentSignal, TIMEOUTS[provider] || 12000);
+    const lifecycle = childController(parentSignal, timeoutForProvider(provider));
     try {
       const response = await fetch(
         `${API_BASE}/api/${provider}/movies/${encodeURIComponent(sourceId)}/shows${query}`,
@@ -270,7 +287,7 @@
       };
     } catch (error) {
       if (lifecycle.timedOut()) {
-        throw new Error(`${sharedCore?.label?.(provider) || provider} 場次讀取逾時，請稍後重試。`);
+        throw new Error(`${labelForProvider(provider)} 場次讀取逾時，請稍後重試。`);
       }
       throw error;
     } finally {
@@ -282,7 +299,7 @@
     if (provider !== "mcl") return fetchWorkerShows(provider, sourceId, date, signal);
     const mcl = window.HKCinemaProviders?.mcl;
     if (!mcl?.getTicketing) throw new Error("MCL ticketing provider 未能載入");
-    const lifecycle = childController(signal, TIMEOUTS.mcl);
+    const lifecycle = childController(signal, timeoutForProvider("mcl"));
     try {
       const result = await mcl.getTicketing(sourceId, date, { signal: lifecycle.controller.signal });
       if (lifecycle.timedOut()) throw new Error("MCL 場次讀取逾時，請稍後重試。");
@@ -380,15 +397,8 @@
 
   function normalizedBase(provider, session, seatAvailable, seatTotal, price, bookingUrl, seatText, klass) {
     const metadata = sessionMetadata(session);
-    const providerLabel = sharedCore?.label?.(provider) ||
-      (provider === "mcl" ? "MCL" : provider === "emperor" ? "Emperor" : provider === "broadway" ? "Broadway" : provider);
-    const fallbackCinema = provider === "mcl"
-      ? "MCL 戲院"
-      : provider === "emperor"
-        ? "Emperor Cinemas"
-        : provider === "broadway"
-          ? "Broadway 戲院"
-          : `${providerLabel} 戲院`;
+    const providerLabel = labelForProvider(provider);
+    const fallbackCinema = provider === "emperor" ? "Emperor Cinemas" : `${providerLabel} 戲院`;
     return {
       id: `${provider}:${session?.sourceId || session?.id || Math.random()}`,
       provider,
@@ -606,15 +616,24 @@
     `;
   }
 
+  function posterForMatch(match, aggregate) {
+    if (aggregate?.posterUrl) return aggregate.posterUrl;
+    for (const provider of PROVIDERS) {
+      const entry = match?.[provider.key] || null;
+      const movie = entry?.movie || null;
+      const poster = entry?.poster || movie?.poster || movie?.posterUrl || null;
+      if (poster) return poster;
+    }
+    return null;
+  }
+
   function render() {
     const match = state.match;
     if (!match) return;
     const overlay = ensureOverlay();
     const content = overlay.querySelector("#providerCompareContent");
     const aggregate = aggregateForMatch(match);
-    const mclMovie = match.mcl?.movie || {};
-    const emperorMovie = match.emperor?.movie || {};
-    const poster = aggregate?.posterUrl || match.broadway?.poster || mclMovie.poster || emperorMovie.poster || null;
+    const poster = posterForMatch(match, aggregate);
     const labels = providerLabels(match);
     const body = state.loadingInitial
       ? `<section class="provider-compare-section"><div class="provider-compare-loading"><strong>正在建立電影比較</strong><span>正在同時取得 ${escapeHtml(labels.join("、"))} 所有版本的可售日期...</span></div></section>`
