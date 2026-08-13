@@ -42,13 +42,13 @@ async function loadSharedCoreWithFixture() {
   return { window, sample };
 }
 
-test("M6C Checkpoint 3 shared provider core enumerates a fourth registry provider", async () => {
+test("M6C Checkpoint 3 shared provider core enumerates a future registry provider beyond production", async () => {
   const { window, sample } = await loadSharedCoreWithFixture();
   const core = window.HKCinemaProviderSharedCore;
 
   assert.equal(core.version, "m6c-3");
-  assert.deepEqual(Array.from(core.providerIds()), ["broadway", "mcl", "emperor", "fixture"]);
-  assert.deepEqual(Object.keys(core.providerMap(() => [])), ["broadway", "mcl", "emperor", "fixture"]);
+  assert.deepEqual(Array.from(core.providerIds()), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
+  assert.deepEqual(Object.keys(core.providerMap(() => [])), ["broadway", "mcl", "emperor", "cineart", "fixture"]);
   assert.equal(core.label("fixture"), "Fixture Cinema");
   assert.deepEqual(Array.from(core.aggregateSourceIds(sample.movieAggregate, "fixture")), ["fixture-movie-1"]);
   assert.deepEqual(
@@ -142,6 +142,7 @@ test("Phase 8A movie aggregation accepts a registry provider card without a prov
   assert.equal(match.broadway, null);
   assert.equal(match.mcl, null);
   assert.equal(match.emperor, null);
+  assert.equal(match.cineart, null);
 });
 
 test("production shared home/comparison paths load and consume registry capability ownership", async () => {
@@ -151,7 +152,7 @@ test("production shared home/comparison paths load and consume registry capabili
     source("app/provider-compare-v4.js")
   ]);
 
-  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m7p1c-1");
   const contractIndex = index.indexOf("provider-contract.js?v=m6c-2.1");
   const coreIndex = index.indexOf("provider-shared-core.js?v=m6c-3");
   const multiProviderIndex = index.indexOf("multi-provider.js?v=");
