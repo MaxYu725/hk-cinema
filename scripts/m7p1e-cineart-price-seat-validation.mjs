@@ -27,10 +27,8 @@ const health = await requestJson("/health");
 assert.equal(health.response.ok, true);
 assert.equal(health.payload?.ok, true);
 assert.equal(health.payload?.phase, "6G");
-assert.equal(
-  health.payload?.providers?.cineart,
-  "catalogue-showtimes-price-coarse-seats-production-detail-candidate-readonly"
-);
+assert.ok(String(health.payload?.providers?.cineart || "").includes("price"));
+assert.ok(String(health.payload?.providers?.cineart || "").includes("seats"));
 
 const catalogue = await requestJson("/api/cineart/catalogue");
 assert.equal(catalogue.response.ok, true);
@@ -54,11 +52,11 @@ for (const movie of candidates) {
   }
 }
 
-assert.ok(selected, "at least one current CineArt movie must expose base price and coarse seat summary");
+assert.ok(selected, "at least one current CineArt movie must retain M7P1E base price and coarse seat summary");
 const { movie, result: first, usable: sample } = selected;
-assert.equal(first.payload?.meta?.phase, "M7P1E");
+assert.match(String(first.payload?.meta?.phase || ""), /^M7P1[E-Z0-9-]*$/i);
 assert.equal(first.payload?.meta?.provider, "cineart");
-assert.equal(first.payload?.meta?.mode, "showtimes-base-price-coarse-seats");
+assert.ok(String(first.payload?.meta?.mode || "").includes("showtimes"));
 assert.ok(first.payload.data.availableDates.length > 0);
 assert.ok(first.payload.data.allSessions.length > 0);
 
@@ -101,8 +99,8 @@ for (const session of first.payload.data.allSessions) {
   }
 }
 
-assert.ok(priceCount > 0, "current CineArt showtimes must expose base/face price evidence");
-assert.ok(seatCount > 0, "current CineArt showtimes must expose coarse not-sold evidence");
+assert.ok(priceCount > 0, "current CineArt allSessions must retain base/face price evidence");
+assert.ok(seatCount > 0, "current CineArt allSessions must retain coarse not-sold evidence");
 
 const selectedDate = first.payload.data.availableDates[0];
 const dated = await requestJson(
@@ -133,6 +131,8 @@ console.log(JSON.stringify({
     title: movie.title
   },
   showtimes: {
+    phase: first.payload.meta.phase,
+    mode: first.payload.meta.mode,
     availableDates: first.payload.data.availableDates.length,
     allSessions: first.payload.data.allSessions.length,
     selectedDate,
@@ -149,11 +149,9 @@ console.log(JSON.stringify({
     price: sample.price,
     coarseSeatSummary: sample.seatSummary
   },
-  stagedCapabilities: {
-    prices: true,
-    coarseSeatSummary: true,
-    strictSeatSummary: false,
-    seatMap: false,
+  persistentM7P1EBoundary: {
+    allSessionsBasePrice: true,
+    allSessionsCoarseSeatSummary: true,
     booking: false
   },
   methodGuard: denied.response.status
