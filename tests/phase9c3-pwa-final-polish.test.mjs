@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const root = process.cwd();
 const app = path.join(root, "app");
@@ -20,7 +21,7 @@ test("Service Worker waits for explicit update acceptance", () => {
 test("PWA runtime exposes controlled update and connection state without a redundant eager update", () => {
   const runtime = fs.readFileSync(path.join(app, "pwa-runtime.js"), "utf8");
 
-  assert.match(runtime, /version:\s*"9c3-2"/);
+  assert.match(runtime, /version:\s*["'][^"']+["']/);
   assert.match(runtime, /registration\.waiting/);
   assert.match(runtime, /"SKIP_WAITING"/);
   assert.match(runtime, /controllerchange/);
@@ -65,8 +66,8 @@ test("installed-mode polish protects safe areas and comparison controls", () => 
   assert.match(css, /\.pwa-notice/);
 });
 
-test("document loads Phase 9C3 presentation and immersive runtime versions", () => {
+test("document loads Phase 9C3 presentation and immersive runtime with cachebusters", () => {
   const html = fs.readFileSync(path.join(app, "index.html"), "utf8");
-  assert.match(html, /phase9c3-pwa-final-polish\.css\?v=9c3-1/);
-  assert.match(html, /pwa-runtime\.js\?v=9c3-2/);
+  assertAsset(html, "phase9c3-pwa-final-polish.css");
+  assertAsset(html, "pwa-runtime.js");
 });
