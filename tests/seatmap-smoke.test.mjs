@@ -48,7 +48,7 @@ async function loadSeatMaps({ innerWidth = 390, providerScripts = false } = {}) 
     URL,
     window
   });
-  for (const path of ["app/showtime-metadata.js", "app/view-models.js", "app/seatmap-shared.js"]) {
+  for (const path of ["app/provider-registry.js", "app/showtime-metadata.js", "app/view-models.js", "app/seatmap-shared.js"]) {
     vm.runInContext(await source(path), context, { filename: path });
   }
   if (providerScripts) {
@@ -225,8 +225,8 @@ test("three provider clients delegate fetch results to the shared lifecycle", as
   assert.match(css, /body\.seatmap-open/);
   assert.match(css, /@media \(max-width: 360px\)/);
 
-  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3");
-  assert.ok(sharedIndex > index.indexOf("view-models.js?v=7b3"));
+  const sharedIndex = index.indexOf("seatmap-shared.js?v=7b3-m7r3-1");
+  assert.ok(sharedIndex > index.indexOf("view-models.js?v=7b3-m7r3-1"));
   for (const loader of ["emperor-seatmap.js?v=7b3", "seatmap.js?v=7b3", "mcl-seatmap.js?v=7b3"]) {
     assert.ok(index.indexOf(loader) > sharedIndex, `${loader} must load after the shared renderer`);
   }
@@ -239,5 +239,5 @@ test("provider clients still expose one reliability surface", async () => {
   assert.equal(context.window.HKCinemaBroadwaySeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaMCLSeatMap.getStats().requestTimeoutMs, 12000);
   assert.equal(context.window.HKCinemaEmperorSeatMap.getStats().requestTimeoutMs, 12000);
-  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3");
+  assert.equal(context.window.HKCinemaSeatMapShared.version, "7b3-m7r3-1");
 });
