@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { assertAssetOrder } from "./index-assets.mjs";
 
 const index = readFileSync(new URL("../app/index.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../app/phase9b3-date-filter-ux.css", import.meta.url), "utf8");
 const runtime = readFileSync(new URL("../app/phase9b3-filter-compact.js", import.meta.url), "utf8");
 
 test("Phase 9B3 loads after Classic polish and filter scroll stability", () => {
-  assert.match(index, /phase9b2-classic-mobile-polish\.css\?v=9b2[\s\S]*phase9b3-date-filter-ux\.css\?v=9b3/);
-  assert.match(index, /phase8d1-filter-scroll-stability\.js\?v=8d1[\s\S]*phase9b3-filter-compact\.js\?v=m6b-3/);
+  assertAssetOrder(index, "phase9b2-classic-mobile-polish.css", "phase9b3-date-filter-ux.css");
+  assertAssetOrder(index, "phase8d1-filter-scroll-stability.js", "phase9b3-filter-compact.js");
 });
 
 test("selected date explicitly restores dark active contrast", () => {
