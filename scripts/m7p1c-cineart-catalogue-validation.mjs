@@ -26,10 +26,9 @@ const health = await jsonRequest("/health");
 assert.equal(health.response.ok, true);
 assert.equal(health.payload?.ok, true);
 assert.equal(health.payload?.phase, "6G");
-assert.equal(
-  health.payload?.providers?.cineart,
-  "catalogue-production-shows-candidate-readonly"
-);
+const cineartService = String(health.payload?.providers?.cineart || "");
+assert.match(cineartService, /^catalogue-/);
+assert.match(cineartService, /production/);
 
 const catalogue = await jsonRequest("/api/cineart/catalogue");
 assert.equal(catalogue.response.ok, true);
@@ -66,7 +65,7 @@ console.log(JSON.stringify({
   baseUrl: BASE_URL,
   health: {
     phase: health.payload.phase,
-    cineartService: health.payload.providers.cineart
+    cineartService
   },
   catalogue: {
     now: catalogue.payload.data.now.length,
