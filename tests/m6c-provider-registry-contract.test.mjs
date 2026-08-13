@@ -48,8 +48,8 @@ test("provider descriptors expose identity and staged capabilities", () => {
   assert.equal(registry.hasCapability("broadway", "seatMap"), true);
   assert.equal(registry.hasCapability("cineart", "catalogue"), true);
   assert.equal(registry.hasCapability("cineart", "showtimes"), true);
-  assert.equal(registry.hasCapability("cineart", "prices"), false);
-  assert.equal(registry.hasCapability("cineart", "seatSummary"), false);
+  assert.equal(registry.hasCapability("cineart", "prices"), true);
+  assert.equal(registry.hasCapability("cineart", "seatSummary"), true);
   assert.equal(registry.hasCapability("cineart", "seatMap"), false);
   assert.equal(registry.hasCapability("cineart", "booking"), false);
   assert.ok(Object.isFrozen(registry.providers));
