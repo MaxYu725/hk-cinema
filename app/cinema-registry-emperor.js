@@ -81,10 +81,13 @@
     }
   }
 
+  function normalizeProvider(provider) {
+    const key = String(provider || "").trim().toLowerCase();
+    return key || "unknown";
+  }
+
   function resolve(provider, name) {
-    const providerKey = ["broadway", "mcl", "emperor"].includes(provider)
-      ? provider
-      : "broadway";
+    const providerKey = normalizeProvider(provider);
     const normalized = normalize(name);
     const exact = lookup.get(`${providerKey}:${normalized}`);
     if (exact) return exact;
