@@ -118,7 +118,7 @@
   }
 
   window.HKCinemaProviderSharedCore = Object.freeze({
-    version: "m7r1-1",
+    version: "m6c-3",
     providers,
     providerIds,
     providerMap,
