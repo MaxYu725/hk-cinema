@@ -110,6 +110,16 @@ function rowAggregate(statuses) {
   return Array.from(rows.values());
 }
 
+function cleanOverride(value) {
+  if (value === null || value === undefined) return value;
+  if (["string", "number", "boolean"].includes(typeof value)) return value;
+  if (Array.isArray(value)) return value.slice(0, 12).map(cleanOverride);
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).slice(0, 20).map(([key, item]) => [key, cleanOverride(item)]));
+  }
+  return typeof value;
+}
+
 const discovery = await requestJson("/api/providers/cineart/discovery");
 const sample = discovery?.data?.home?.sampleShow;
 assert.ok(sample?.sourceId, "discovery must expose a sample show id");
@@ -143,8 +153,8 @@ const blockSummary = blocks.map((block, index) => ({
   rowDisplay: block?.rowDisplay,
   rpad: block?.rpad,
   removed: Array.isArray(block?.removed) ? block.removed : block?.removed,
-  classKeys: block?.classes && typeof block.classes === "object" ? Object.keys(block.classes) : [],
-  seatKeys: block?.seats && typeof block.seats === "object" ? Object.keys(block.seats) : []
+  classes: cleanOverride(block?.classes && typeof block.classes === "object" ? block.classes : {}),
+  seats: cleanOverride(block?.seats && typeof block.seats === "object" ? block.seats : {})
 }));
 const rows = rowAggregate(statuses);
 
@@ -189,7 +199,7 @@ console.log(JSON.stringify({
   seatStatus: {
     count: Object.keys(statuses).length,
     rows,
-    firstKeys: Object.keys(statuses).slice(0, 40),
-    lastKeys: Object.keys(statuses).slice(-40)
+    firstKeys: Object.keys(statuses).slice(0, 30),
+    lastKeys: Object.keys(statuses).slice(-30)
   }
 }, null, 2));
