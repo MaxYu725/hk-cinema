@@ -43,37 +43,43 @@ function cleanArray(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
+function finiteNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function publicPrice(price) {
   if (!price || typeof price !== "object") return null;
-  const display = Number(price.display);
-  const face = Number(price.face);
-  if (!Number.isFinite(display) && !Number.isFinite(face)) return null;
+  const display = finiteNumber(price.display);
+  const face = finiteNumber(price.face);
+  if (display === null && face === null) return null;
   return {
     currency: price.currency || "HKD",
-    display: Number.isFinite(display) ? display : Number.isFinite(face) ? face : null,
-    face: Number.isFinite(face) ? face : Number.isFinite(display) ? display : null,
+    display: display ?? face,
+    face: face ?? display,
     updatedAt: price.updatedAt || null
   };
 }
 
 function publicSeatSummary(summary) {
   if (!summary || typeof summary !== "object") return null;
-  const total = Number(summary.total);
-  const sold = Number(summary.sold);
-  const notSold = Number(summary.notSold);
-  const upstreamSeatsHold = Number(summary.upstreamSeatsHold);
-  if (![total, sold, notSold, upstreamSeatsHold].some(Number.isFinite)) return null;
+  const total = finiteNumber(summary.total);
+  const sold = finiteNumber(summary.sold);
+  const notSold = finiteNumber(summary.notSold);
+  const upstreamSeatsHold = finiteNumber(summary.upstreamSeatsHold);
+  if ([total, sold, notSold, upstreamSeatsHold].every(value => value === null)) return null;
 
   return {
     quality: "coarse-not-sold",
-    total: Number.isFinite(total) ? total : null,
+    total,
     available: null,
     held: null,
-    sold: Number.isFinite(sold) ? sold : null,
+    sold,
     blocked: null,
-    unavailable: Number.isFinite(sold) ? sold : null,
-    notSold: Number.isFinite(notSold) ? notSold : null,
-    upstreamSeatsHold: Number.isFinite(upstreamSeatsHold) ? upstreamSeatsHold : null,
+    unavailable: sold,
+    notSold,
+    upstreamSeatsHold,
     updatedAt: summary.updatedAt || null
   };
 }
@@ -92,7 +98,7 @@ function publicSession(session) {
     subtitles: cleanArray(session?.subtitles),
     formats: cleanArray(session?.formats),
     // M7P1E publishes only the home Flight base/face price and coarse not-sold summary.
-    // It deliberately does not fetch /show/<id> detail or expose strict A/H/U/L states.
+    // Per-show detail remains outside this service; strict A/H/U/L states are not exposed.
     price: publicPrice(session?.price),
     seatSummary: publicSeatSummary(session?.seatSummary),
     bookingUrl: null
