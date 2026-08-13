@@ -70,8 +70,8 @@
       capabilities: {
         catalogue: true,
         showtimes: true,
-        prices: false,
-        seatSummary: false,
+        prices: true,
+        seatSummary: true,
         seatMap: false,
         booking: false
       }
@@ -90,7 +90,7 @@
   }
 
   window.HKCinemaProviderRegistry = Object.freeze({
-    version: "m7p1d-1",
+    version: "m7p1e-1",
     capabilityKeys: CAPABILITY_KEYS,
     providers,
     get,
