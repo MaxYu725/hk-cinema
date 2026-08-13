@@ -32,8 +32,9 @@ test("M7P1H audit is GET-only reconnaissance and requires route plus key evidenc
   assert.doesNotMatch(audit, /MutationObserver|IntersectionObserver/);
 });
 
-test("M7P1H does not redesign the shared seat-map runtime", async () => {
+test("M7P1H defers the shared seat-map display redesign until CineArt completion", async () => {
   const checkpoint = await source("docs/checkpoints/m7p1h-cineart-final-capability-audit.md");
-  assert.match(checkpoint, /no seat-map presentation redesign in this phase/i);
-  assert.match(checkpoint, /no PWA\/Service Worker changes/i);
+  assert.match(checkpoint, /separate display-only phase/i);
+  assert.match(checkpoint, /begins only after this CineArt final-capability checkpoint is merged/i);
+  assert.match(checkpoint, /no PWA\/Service Worker file changes/i);
 });
