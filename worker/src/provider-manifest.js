@@ -31,7 +31,7 @@ export const PROVIDER_MANIFEST = createProviderManifest([
   },
   {
     id: "cineart",
-    service: "candidate-catalogue-shows-readonly"
+    service: "catalogue-production-shows-candidate-readonly"
   }
 ]);
 
