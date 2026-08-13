@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { assetPosition, assertAsset, assertAssetOrder } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 
@@ -220,25 +221,20 @@ test("Phase 7B keeps each nested provider notice intact", async () => {
 
 test("Phase 7B model loads before the shared detail and seat renderers", async () => {
   const index = await source("app/index.html");
-  const registryIndex = index.indexOf("provider-registry.js?v=");
-  const metadataIndex = index.indexOf("showtime-metadata.js?v=7a5");
-  const modelIndex = index.indexOf("view-models.js?v=7b3-m7r3-1");
+  assertAssetOrder(index, "provider-registry.js", "showtime-metadata.js", "view-models.js", "movie-detail-shared.js");
+  const modelIndex = assetPosition(index, "view-models.js");
 
-  assert.ok(registryIndex > -1);
-  assert.ok(metadataIndex > registryIndex);
-  assert.ok(modelIndex > metadataIndex);
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3-m7r3-1");
-  assert.ok(rendererIndex > modelIndex);
   for (const script of [
-    "app.js?v=7b2",
-    "mcl-detail.js?v=7b2",
-    "emperor-detail.js?v=7b2",
-    "seatmap-shared.js?v=7b3-m8a1-1",
-    "seatmap.js?v=7b3",
-    "mcl-seatmap.js?v=7b3",
-    "emperor-seatmap.js?v=7b3"
+    "app.js",
+    "mcl-detail.js",
+    "emperor-detail.js",
+    "seatmap-shared.js",
+    "seatmap.js",
+    "mcl-seatmap.js",
+    "emperor-seatmap.js"
   ]) {
-    assert.ok(modelIndex < index.indexOf(script), `${script} must load after the shared model`);
+    assertAsset(index, script);
+    assert.ok(modelIndex < assetPosition(index, script), `${script} must load after the shared model`);
   }
 });
 
