@@ -16,6 +16,9 @@ async function fixtures() {
 async function loadViewModels() {
   const window = {};
   const context = vm.createContext({ console, window });
+  vm.runInContext(await source("app/provider-registry.js"), context, {
+    filename: "provider-registry.js"
+  });
   vm.runInContext(await source("app/showtime-metadata.js"), context, {
     filename: "showtime-metadata.js"
   });
@@ -217,19 +220,20 @@ test("Phase 7B keeps each nested provider notice intact", async () => {
 
 test("Phase 7B model loads before the shared detail and seat renderers", async () => {
   const index = await source("app/index.html");
+  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
   const metadataIndex = index.indexOf("showtime-metadata.js?v=7a5");
-  const modelIndex = index.indexOf("view-models.js?v=7b3");
+  const modelIndex = index.indexOf("view-models.js?v=7b3-m7r3-1");
 
-  assert.ok(metadataIndex > -1);
-  assert.ok(modelIndex > -1);
-  assert.ok(metadataIndex < modelIndex);
-  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3");
+  assert.ok(registryIndex > -1);
+  assert.ok(metadataIndex > registryIndex);
+  assert.ok(modelIndex > metadataIndex);
+  const rendererIndex = index.indexOf("movie-detail-shared.js?v=7b3-m7r3-1");
   assert.ok(rendererIndex > modelIndex);
   for (const script of [
     "app.js?v=7b2",
     "mcl-detail.js?v=7b2",
     "emperor-detail.js?v=7b2",
-    "seatmap-shared.js?v=7b3",
+    "seatmap-shared.js?v=7b3-m7r3-1",
     "seatmap.js?v=7b3",
     "mcl-seatmap.js?v=7b3",
     "emperor-seatmap.js?v=7b3"
