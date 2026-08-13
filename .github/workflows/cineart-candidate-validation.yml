@@ -5,13 +5,19 @@ on:
     branches:
       - main
     paths:
+      - "app/provider-registry.js"
+      - "app/providers/cineart.js"
+      - "app/cineart-status.js"
+      - "app/index.html"
       - "worker/src/index-emperor-seat.js"
       - "worker/src/provider-manifest.js"
       - "worker/src/provider-probe.js"
       - "worker/src/providers/cineart*.js"
       - "tests/fixtures/cineart-*.html"
       - "tests/m7p1b-cineart-worker-adapter.test.mjs"
+      - "tests/m7p1c-cineart-catalogue-production.test.mjs"
       - "scripts/m7p1b-cineart-preview-validation.mjs"
+      - "scripts/m7p1c-cineart-catalogue-validation.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -52,5 +58,8 @@ jobs:
           echo "HK_CINEMA_CANDIDATE_WORKER_URL=$worker_url" >> "$GITHUB_ENV"
           echo "Validating $worker_url"
 
-      - name: Validate CineArt Worker adapter through branch preview
+      - name: Revalidate CineArt Worker discovery adapter
         run: node scripts/m7p1b-cineart-preview-validation.mjs
+
+      - name: Validate CineArt production catalogue boundary
+        run: node scripts/m7p1c-cineart-catalogue-validation.mjs

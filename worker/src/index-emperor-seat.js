@@ -1,6 +1,7 @@
 import emperorWorker from "./index-emperor.js";
 import { getEmperorSeatMap } from "./providers/emperor-seat-bounds.js";
 import { discoverCineArt } from "./providers/cineart.js";
+import { cineArtCatalogueService } from "./providers/cineart-catalogue.js";
 import {
   providerProbeRunner,
   SUPPORTED_PROVIDERS
@@ -28,21 +29,49 @@ function errorResponse(error, fallbackCode) {
   }, Number.isFinite(error?.status) ? error.status : 502);
 }
 
+function readOnlyMethodError(message) {
+  return json({
+    ok: false,
+    error: {
+      code: "METHOD_NOT_ALLOWED",
+      message
+    }
+  }, 405, {
+    "cache-control": "no-store",
+    allow: "GET"
+  });
+}
+
 async function routeRequest(request, env, ctx) {
   const url = new URL(request.url);
 
+  if (url.pathname === "/api/cineart/catalogue") {
+    if (request.method !== "GET") {
+      return readOnlyMethodError("CineArt catalogue is read-only");
+    }
+
+    try {
+      const result = await cineArtCatalogueService.get({ ctx });
+      return json({
+        ok: true,
+        data: result,
+        meta: {
+          phase: "M7P1C",
+          provider: "cineart",
+          mode: "catalogue-only",
+          cacheState: result?.meta?.cacheState || "network",
+          stale: result?.meta?.stale === true,
+          updatedAt: result?.meta?.updatedAt || new Date().toISOString()
+        }
+      }, 200, { "cache-control": "no-store" });
+    } catch (error) {
+      return errorResponse(error, "CINEART_CATALOGUE_ERROR");
+    }
+  }
+
   if (url.pathname === "/api/providers/cineart/discovery") {
     if (request.method !== "GET") {
-      return json({
-        ok: false,
-        error: {
-          code: "METHOD_NOT_ALLOWED",
-          message: "CineArt discovery is read-only"
-        }
-      }, 405, {
-        "cache-control": "no-store",
-        allow: "GET"
-      });
+      return readOnlyMethodError("CineArt discovery is read-only");
     }
 
     try {

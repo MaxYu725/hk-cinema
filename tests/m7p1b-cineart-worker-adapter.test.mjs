@@ -13,8 +13,7 @@ import {
 } from "../worker/src/providers/cineart.js";
 import {
   PROVIDER_MANIFEST,
-  WORKER_PROVIDER_IDS,
-  providerHealthMap
+  WORKER_PROVIDER_IDS
 } from "../worker/src/provider-manifest.js";
 
 const ROOT = new URL("../", import.meta.url);
@@ -179,20 +178,18 @@ test("M7P1B probe is bounded and identifies the CineArt site without cookies or 
   );
 });
 
-test("M7P1B registers CineArt only in the Worker universe while browser production remains three-provider", async () => {
-  const [registry, appIndex, workerIndex, topRouter] = await Promise.all([
-    source("app/provider-registry.js"),
-    source("app/index.html"),
+test("M7P1B checkpoint records Worker-only production boundary before M7P1C", async () => {
+  const [checkpoint, workerIndex, topRouter] = await Promise.all([
+    source("docs/checkpoints/m7p1b-cineart-worker-adapter.md"),
     source("worker/src/index.js"),
     source("worker/src/index-emperor-seat.js")
   ]);
 
-  assert.doesNotMatch(registry, /id:\s*["']cineart["']/i);
-  assert.doesNotMatch(appIndex, /providers\/cineart|cineart-status|cineart-compare/i);
+  assert.match(checkpoint, /browser `app\/provider-registry\.js` remains Broadway\/MCL\/Emperor only/);
+  assert.match(checkpoint, /candidate-catalogue-shows-readonly/);
+  assert.match(checkpoint, /Next checkpoint after a successful M7P1B merge: \*\*M7P1C/);
   assert.equal(WORKER_PROVIDER_IDS.includes("cineart"), true);
   assert.equal(PROVIDER_MANIFEST.filter(entry => entry.id === "cineart").length, 1);
-  assert.equal(providerHealthMap().cineart, "candidate-catalogue-shows-readonly");
   assert.match(workerIndex, /phase:\s*["']6G["']/);
   assert.match(topRouter, /\/api\/providers\/cineart\/discovery/);
-  assert.doesNotMatch(topRouter, /\/api\/cineart\/catalogue|\/api\/cineart\/movies/);
 });

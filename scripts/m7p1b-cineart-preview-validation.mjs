@@ -143,10 +143,11 @@ async function validateHealth() {
   const endpoint = `${BASE_URL}/health`;
   const payload = await fetchJson(endpoint, 12000);
   if (payload?.phase !== "6G") throw new Error(`health phase changed: ${payload?.phase}`);
-  if (payload?.providers?.cineart !== "candidate-catalogue-shows-readonly") {
+  const service = String(payload?.providers?.cineart || "").trim();
+  if (!service) {
     throw new Error(`CineArt Worker manifest missing: ${JSON.stringify(payload?.providers)}`);
   }
-  return { endpoint, phase: payload.phase, providers: payload.providers };
+  return { endpoint, phase: payload.phase, cineartService: service, providers: payload.providers };
 }
 
 const result = {

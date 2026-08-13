@@ -220,7 +220,7 @@ test("Phase 7B keeps each nested provider notice intact", async () => {
 
 test("Phase 7B model loads before the shared detail and seat renderers", async () => {
   const index = await source("app/index.html");
-  const registryIndex = index.indexOf("provider-registry.js?v=m6c-1");
+  const registryIndex = index.indexOf("provider-registry.js?v=m7p1c-1");
   const metadataIndex = index.indexOf("showtime-metadata.js?v=7a5");
   const modelIndex = index.indexOf("view-models.js?v=7b3-m7r3-1");
 
