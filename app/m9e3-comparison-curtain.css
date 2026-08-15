@@ -1,0 +1,52 @@
+/* M9E3 — Comparison Result Curtain
+ * Metro-only visual transaction boundary for comparison date refreshes.
+ * The live DOM continues updating behind an opaque black surface; no layout is collapsed.
+ */
+
+html[data-skin="metro"] #providerCompareContent[data-m9e3-curtain] {
+  position: relative;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-m9e3-curtain]::after {
+  content: attr(data-m9e3-curtain-label);
+  position: absolute;
+  z-index: 120;
+  top: var(--m9e3-curtain-top, 0px);
+  left: 0;
+  right: 0;
+  height: max(calc(100% - var(--m9e3-curtain-top, 0px)), 52dvh);
+  box-sizing: border-box;
+  border-top: 2px solid var(--metro-accent);
+  background: #000;
+  color: #777;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 18px 16px 0;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  line-height: 1.35;
+  text-align: center;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+html[data-skin="metro"] #providerCompareContent[data-m9e3-curtain="releasing"]::after {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms var(--motion-ease-exit);
+}
+
+/* The curtain owns the visible waiting state. Do not let the older stale-data
+ * pulse create a second visual transition underneath it. */
+html[data-skin="metro"] #providerCompareContent[data-m9e3-curtain] .m9b-date-loading .provider-compare-timeline {
+  opacity: 1;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] #providerCompareContent[data-m9e3-curtain="releasing"]::after {
+    transition: none !important;
+  }
+}
