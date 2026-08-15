@@ -51,6 +51,17 @@ test("M10A probe is bounded, GET-only and restricted to public reconnaissance", 
   assert.match(source, /pwaChanged:\s*false/);
 });
 
+test("M10A follows only the Bestar page's explicitly declared icirena vendor bundles", async () => {
+  const source = await read("scripts/m10a-golden-harvest-reconnaissance.mjs");
+
+  assert.match(source, /function trustedDeclaredVendorScript\(url\)/);
+  assert.match(source, /url\.hostname\.toLowerCase\(\) === "g\.alicdn\.com"/);
+  assert.match(source, /url\.pathname\.startsWith\("\/icirena-fe\/icirena-web\/"\)/);
+  assert.match(source, /fetchable: trustedCurrentHost\(url\.hostname\) \|\| trustedDeclaredVendorScript\(url\)/);
+  assert.doesNotMatch(source, /assets\.alicdn\.com/);
+  assert.doesNotMatch(source, /fetchText\([^\n]*api\.icirena\.ai/i, "M10A must discover API routes before probing unknown API endpoints");
+});
+
 test("M10A report stores structural evidence rather than raw upstream documents", async () => {
   const source = await read("scripts/m10a-golden-harvest-reconnaissance.mjs");
 
