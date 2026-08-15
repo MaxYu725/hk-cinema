@@ -1,0 +1,261 @@
+/* M9B — Loading / Waiting States
+ * Presentation-only waiting feedback built on the M9A motion vocabulary.
+ * No provider/network lifecycle is owned here.
+ */
+
+html[data-skin="metro"][data-m9b-refreshing="true"] body::before {
+  content: "";
+  position: fixed;
+  z-index: 5000;
+  top: 0;
+  left: 0;
+  width: 42%;
+  height: 2px;
+  background: var(--metro-accent);
+  transform-origin: left center;
+  animation: m9b-progress-travel 1100ms var(--motion-ease-standard) infinite alternate;
+  pointer-events: none;
+}
+
+/* Home: replace the first-load text block visually with movie-card-shaped skeletons. */
+html[data-skin="metro"] .movie-grid[data-broadway-state="loading"] {
+  position: relative;
+}
+
+html[data-skin="metro"] .movie-grid[data-broadway-state="loading"] > .m9b-home-loading-copy {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+html[data-skin="metro"] .m9b-home-skeleton {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+html[data-skin="metro"] .m9b-movie-skeleton {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--metro-border);
+  background: var(--metro-tile-strong);
+}
+
+html[data-skin="metro"] .m9b-movie-skeleton-poster {
+  aspect-ratio: 2 / 3;
+  background: #161616;
+}
+
+html[data-skin="metro"] .m9b-movie-skeleton-info {
+  min-height: 146px;
+  padding: 12px 10px;
+  background: var(--metro-tile-strong);
+}
+
+html[data-skin="metro"] .m9b-skeleton-line {
+  display: block;
+  height: 10px;
+  margin-bottom: 9px;
+  background: #292929;
+}
+
+html[data-skin="metro"] .m9b-skeleton-line.title {
+  width: 78%;
+  height: 14px;
+}
+
+html[data-skin="metro"] .m9b-skeleton-line.medium { width: 62%; }
+html[data-skin="metro"] .m9b-skeleton-line.short { width: 42%; }
+
+html[data-skin="metro"] .m9b-home-skeleton,
+html[data-skin="metro"] .m9b-compare-skeleton,
+html[data-skin="metro"] .m9b-seatmap-skeleton {
+  animation: hk-motion-pulse var(--motion-duration-pulse) ease-in-out infinite alternate;
+}
+
+/* Comparison: hero remains visible while the showtime region becomes a stable skeleton. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-loading {
+  min-height: 250px;
+  padding: 4px 0 0;
+  color: var(--metro-subtext);
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-loading > strong,
+html[data-skin="metro"] #providerCompareContent .provider-compare-loading > span {
+  display: block;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-loading > strong {
+  color: var(--metro-fg);
+  font-size: .86rem;
+  font-weight: 600;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-loading > span {
+  margin-top: 4px;
+  color: var(--metro-subtext);
+  font-size: .72rem;
+}
+
+html[data-skin="metro"] .m9b-compare-skeleton {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+html[data-skin="metro"] .m9b-compare-skeleton-row {
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 46px;
+  gap: 10px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--metro-border);
+  background: #101010;
+}
+
+html[data-skin="metro"] .m9b-compare-skeleton-row > span {
+  height: 11px;
+  background: #292929;
+}
+
+html[data-skin="metro"] .m9b-compare-skeleton-row > span:first-child { height: 18px; }
+html[data-skin="metro"] .m9b-compare-skeleton-row > span:last-child { width: 100%; }
+
+/* Date changes keep prior sessions visible but clearly stale until the new request resolves. */
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading {
+  position: relative;
+}
+
+html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar {
+  position: relative;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  margin: 0 0 10px;
+  padding: 8px 10px 8px 14px;
+  overflow: hidden;
+  border: 1px solid var(--metro-border);
+  background: #0c0c0c;
+  color: var(--metro-subtext);
+  font-size: .72rem;
+}
+
+html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36%;
+  height: 2px;
+  background: var(--metro-accent);
+  transform-origin: left center;
+  animation: m9b-local-progress 900ms var(--motion-ease-standard) infinite alternate;
+}
+
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading .provider-compare-timeline {
+  opacity: .42;
+  transition: opacity var(--motion-fast);
+}
+
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading .provider-compare-show {
+  pointer-events: none;
+}
+
+/* Seat map: keep cinema/showtime header, then show a cheap static geometry skeleton. */
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading {
+  min-height: 330px;
+  display: block;
+  margin-top: 18px;
+  padding: 14px 10px 12px;
+  border: 1px solid var(--metro-border);
+  background: #060606;
+  text-align: left;
+}
+
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading .shared-seatmap-spinner {
+  display: none;
+}
+
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading > strong,
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading > span:not(.shared-seatmap-spinner) {
+  display: block;
+  padding-inline: 4px;
+}
+
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading > strong {
+  color: var(--metro-fg);
+  font-size: .84rem;
+}
+
+html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading > span:not(.shared-seatmap-spinner) {
+  margin-top: 4px;
+  color: var(--metro-subtext);
+  font-size: .7rem;
+}
+
+html[data-skin="metro"] .m9b-seatmap-skeleton {
+  margin-top: 28px;
+  padding: 12px 6px 4px;
+}
+
+html[data-skin="metro"] .m9b-seatmap-skeleton-screen {
+  width: 76%;
+  height: 3px;
+  margin: 0 auto 26px;
+  background: #2e2e2e;
+}
+
+html[data-skin="metro"] .m9b-seatmap-skeleton-row {
+  width: min(100%, 360px);
+  height: 18px;
+  margin: 0 auto 9px;
+  background: repeating-linear-gradient(
+    90deg,
+    #292929 0 16px,
+    transparent 16px 22px
+  );
+}
+
+html[data-skin="metro"] .m9b-seatmap-skeleton-row:nth-child(3n) { width: min(92%, 332px); }
+html[data-skin="metro"] .m9b-seatmap-skeleton-row:nth-child(4n) { width: min(84%, 304px); }
+
+@keyframes m9b-progress-travel {
+  from { transform: translateX(-35%) scaleX(.7); opacity: .55; }
+  to { transform: translateX(175%) scaleX(1.2); opacity: 1; }
+}
+
+@keyframes m9b-local-progress {
+  from { transform: translateX(-30%) scaleX(.7); opacity: .6; }
+  to { transform: translateX(210%) scaleX(1.1); opacity: 1; }
+}
+
+@media (max-width: 430px) {
+  html[data-skin="metro"] .m9b-home-skeleton { gap: 12px; }
+  html[data-skin="metro"] .m9b-movie-skeleton-info { min-height: 142px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"][data-m9b-refreshing="true"] body::before,
+  html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar::before,
+  html[data-skin="metro"] .m9b-home-skeleton,
+  html[data-skin="metro"] .m9b-compare-skeleton,
+  html[data-skin="metro"] .m9b-seatmap-skeleton {
+    animation: none !important;
+  }
+
+  html[data-skin="metro"][data-m9b-refreshing="true"] body::before {
+    width: 70%;
+    opacity: .8;
+    transform: none;
+  }
+}
