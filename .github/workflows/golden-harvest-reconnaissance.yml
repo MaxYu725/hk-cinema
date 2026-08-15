@@ -69,7 +69,11 @@ jobs:
         run: node scripts/m10a-golden-harvest-reconnaissance.mjs
 
       - name: Install Chromium for passive browser reconnaissance
-        run: npx playwright install --with-deps chromium
+        run: |
+          if ! npx playwright install --with-deps chromium > /tmp/m10a-playwright-install.log 2>&1; then
+            cat /tmp/m10a-playwright-install.log
+            exit 1
+          fi
 
       - name: Capture passive Bestar browser network evidence
         run: node scripts/m10a-bestar-browser-reconnaissance.mjs
