@@ -33,7 +33,53 @@ async function relativeGeometry(overlay) {
   });
 }
 
-test("M9E1 date refresh keeps date/filter/reset geometry stable and never paints raw Smart Picks white", async ({ page }) => {
+async function installFrameSampler(page) {
+  await page.evaluate(() => {
+    window.__m9e2Frames = [];
+    window.__m9e2Sampling = false;
+    window.__m9e2SampleCount = 0;
+
+    const sample = () => {
+      if (window.__m9e2Sampling) {
+        const root = document.querySelector("#providerCompareContent");
+        const section = root?.querySelector(".provider-compare-timeline-section");
+        const date = section?.querySelector(":scope > .provider-compare-date-rail");
+        const filter = section?.querySelector(":scope > [data-provider-insights]");
+        const reset = filter?.querySelector("[data-provider-compare-reset]");
+        const heading = section?.querySelector(":scope > .provider-compare-section-heading");
+
+        if (section && date && filter && reset) {
+          const sectionTop = section.getBoundingClientRect().top;
+          const top = node => Math.round((node.getBoundingClientRect().top - sectionTop) * 10) / 10;
+          window.__m9e2Frames.push({
+            missing: false,
+            dateTop: top(date),
+            filterTop: top(filter),
+            resetTop: top(reset),
+            headingTop: heading ? top(heading) : null,
+            sectionLoading: section.classList.contains("m9b-date-loading"),
+            filterAnimation: getComputedStyle(filter).animationName,
+            filterTransition: getComputedStyle(filter).transitionDuration
+          });
+        } else {
+          window.__m9e2Frames.push({
+            missing: true,
+            hasSection: Boolean(section),
+            hasDate: Boolean(date),
+            hasFilter: Boolean(filter),
+            hasReset: Boolean(reset)
+          });
+        }
+        window.__m9e2SampleCount += 1;
+      }
+      requestAnimationFrame(sample);
+    };
+
+    requestAnimationFrame(sample);
+  });
+}
+
+test("M9E2 date refresh never paints filter/reset above the date rail on any sampled frame", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
 
@@ -73,17 +119,19 @@ test("M9E1 date refresh keeps date/filter/reset geometry stable and never paints
   const before = await relativeGeometry(overlay);
   expect(before).not.toBeNull();
   expect(before.dateBeforeFilter).toBe(true);
+  expect(before.filterTop).toBeGreaterThan(before.dateTop);
 
   const targetIndex = await dates.evaluateAll(nodes => nodes.findIndex(node => !node.classList.contains("active")));
   expect(targetIndex, "a non-active comparison date is required").toBeGreaterThanOrEqual(0);
   const targetDate = dates.nth(targetIndex);
 
-  // Hold only the post-open Worker requests long enough to inspect the in-flight layout.
   await page.route(/https:\/\/hk-cinema-api\.max-yu-jp\.workers\.dev\/.*/, async route => {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 1200));
     await route.continue();
   });
 
+  await installFrameSampler(page);
+  await page.evaluate(() => { window.__m9e2Sampling = true; });
   await targetDate.click();
 
   const staleSection = overlay.locator(".provider-compare-timeline-section.m9b-date-loading");
@@ -92,24 +140,31 @@ test("M9E1 date refresh keeps date/filter/reset geometry stable and never paints
 
   const busyStatus = staleSection.locator(".m9b-local-loading-bar");
   await expect(busyStatus).toHaveCount(1);
-  const busyVisual = await busyStatus.evaluate(node => {
-    const style = getComputedStyle(node);
-    return {
-      width: style.width,
-      height: style.height,
-      overflow: style.overflow,
-      clipPath: style.clipPath,
-      position: style.position
-    };
+
+  await page.waitForTimeout(700);
+  const inFlightFrames = await page.evaluate(() => {
+    window.__m9e2Sampling = false;
+    return window.__m9e2Frames.slice();
   });
-  expect(busyVisual.width).toBe("1px");
-  expect(busyVisual.height).toBe("1px");
-  expect(busyVisual.overflow).toBe("hidden");
-  expect(busyVisual.position).toBe("absolute");
+
+  expect(inFlightFrames.length, "must sample multiple painted frames during the delayed request").toBeGreaterThanOrEqual(8);
+  const completeFrames = inFlightFrames.filter(frame => !frame.missing);
+  expect(completeFrames.length, "date/filter/reset should remain present through the sampled loading window").toBe(inFlightFrames.length);
+
+  for (const frame of completeFrames) {
+    expect(frame.filterTop, `filter painted above date: ${JSON.stringify(frame)}`).toBeGreaterThan(frame.dateTop);
+    expect(frame.resetTop, `reset painted above filter: ${JSON.stringify(frame)}`).toBeGreaterThanOrEqual(frame.filterTop);
+    if (frame.headingTop !== null) {
+      expect(frame.headingTop, `heading painted before filter: ${JSON.stringify(frame)}`).toBeGreaterThan(frame.filterTop);
+    }
+    if (frame.sectionLoading) {
+      expect(frame.filterAnimation).toBe("none");
+    }
+  }
 
   const after = await relativeGeometry(overlay);
   expect(after).not.toBeNull();
-  expect(after.dateBeforeFilter).toBe(true);
+  expect(after.filterTop).toBeGreaterThan(after.dateTop);
   expect(Math.abs(after.dateTop - before.dateTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(after.filterTop - before.filterTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(after.resetTop - before.resetTop)).toBeLessThanOrEqual(1);
