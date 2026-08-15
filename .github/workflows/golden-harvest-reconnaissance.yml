@@ -13,6 +13,7 @@ on:
     paths:
       - ".github/workflows/golden-harvest-reconnaissance.yml"
       - "scripts/m10a-golden-harvest-reconnaissance.mjs"
+      - "scripts/m10a-bestar-browser-reconnaissance.mjs"
       - "tests/m10a-golden-harvest-reconnaissance.test.mjs"
       - "docs/checkpoints/m10a-golden-harvest-provider-reconnaissance.md"
 
@@ -23,10 +24,11 @@ jobs:
   reconnaissance:
     name: bestar-current-public-source
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       BESTAR_ORIGIN: ${{ inputs.origin || 'https://www.bestarfilm.hk' }}
       BESTAR_RECON_REPORT: golden-harvest-reconnaissance.json
+      BESTAR_BROWSER_RECON_REPORT: bestar-browser-reconnaissance.json
 
     steps:
       - name: Checkout
@@ -36,12 +38,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
 
       - name: Validate reconnaissance contract
         run: node --test tests/m10a-golden-harvest-reconnaissance.test.mjs
 
       - name: Check reconnaissance script syntax
-        run: node --check scripts/m10a-golden-harvest-reconnaissance.mjs
+        run: |
+          node --check scripts/m10a-golden-harvest-reconnaissance.mjs
+          node --check scripts/m10a-bestar-browser-reconnaissance.mjs
 
       - name: Cross-check Bestar public GET transport with curl
         continue-on-error: true
@@ -61,11 +69,19 @@ jobs:
       - name: Probe current Bestar public source
         run: node scripts/m10a-golden-harvest-reconnaissance.mjs
 
-      - name: Upload reconnaissance report
+      - name: Install Chromium for passive browser reconnaissance
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture passive Bestar browser network evidence
+        run: node scripts/m10a-bestar-browser-reconnaissance.mjs
+
+      - name: Upload reconnaissance reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bestar-successor-reconnaissance-${{ github.run_id }}
-          path: golden-harvest-reconnaissance.json
+          path: |
+            golden-harvest-reconnaissance.json
+            bestar-browser-reconnaissance.json
           if-no-files-found: warn
           retention-days: 7
