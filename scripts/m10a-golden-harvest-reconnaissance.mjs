@@ -2,27 +2,27 @@ import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { writeFile } from "node:fs/promises";
 
-const ORIGIN = new URL(process.env.GOLDEN_HARVEST_ORIGIN || "https://www.goldenharvest.com");
-const ALTERNATE_ORIGIN = ORIGIN.hostname.startsWith("www.")
-  ? new URL(`${ORIGIN.protocol}//${ORIGIN.hostname.slice(4)}${ORIGIN.port ? `:${ORIGIN.port}` : ""}`)
-  : null;
-const REPORT_PATH = process.env.GOLDEN_HARVEST_RECON_REPORT || "golden-harvest-reconnaissance.json";
+const CURRENT_ORIGIN = new URL(process.env.BESTAR_ORIGIN || "https://www.bestarfilm.hk");
+const LEGACY_GOLDEN_HARVEST_HOSTS = Object.freeze([
+  "www.goldenharvest.com",
+  "goldenharvest.com"
+]);
+const REPORT_PATH = process.env.BESTAR_RECON_REPORT || process.env.GOLDEN_HARVEST_RECON_REPORT || "golden-harvest-reconnaissance.json";
 const REQUEST_TIMEOUT_MS = 12_000;
-const MAX_HTML_BYTES = 2 * 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 const MAX_SCRIPT_BYTES = 768 * 1024;
 const MAX_SCRIPT_TOTAL_BYTES = 6 * 1024 * 1024;
 const MAX_SCRIPTS = 16;
 const MAX_CANDIDATES = 120;
 const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 
-const PAGE_PATHS = Object.freeze([
+const SEED_PATHS = Object.freeze([
   "/",
-  "/film/list?category=now",
-  "/film/list?category=coming",
-  "/cinema/index"
+  "/robots.txt",
+  "/sitemap.xml"
 ]);
 
-const DISCOVERY_TERMS = /(api|ajax|film|movie|cinema|theatre|theater|show|session|schedule|ticket|seat|programme|program)/i;
+const DISCOVERY_TERMS = /(api|ajax|film|movie|cinema|theatre|theater|show|session|schedule|ticket|seat|programme|program|wapid)/i;
 const STATIC_ASSET = /\.(?:css|js|mjs|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|map)(?:[?#]|$)/i;
 const REQUEST_HINTS = Object.freeze([
   ["fetch", /\bfetch\s*\(/g],
@@ -32,9 +32,14 @@ const REQUEST_HINTS = Object.freeze([
   ["xhr", /XMLHttpRequest/g]
 ]);
 
-function trustedGoldenHarvestHost(hostname) {
+function currentBaseDomain() {
+  return CURRENT_ORIGIN.hostname.replace(/^www\./i, "").toLowerCase();
+}
+
+function trustedCurrentHost(hostname) {
   const host = String(hostname || "").toLowerCase();
-  return host === "goldenharvest.com" || host.endsWith(".goldenharvest.com");
+  const base = currentBaseDomain();
+  return host === base || host.endsWith(`.${base}`);
 }
 
 function sha256(text) {
@@ -120,7 +125,7 @@ async function fetchText(url, maxBytes) {
       redirect: "follow",
       cache: "no-store",
       headers: {
-        Accept: "text/html,application/javascript,text/javascript,application/json;q=0.9,*/*;q=0.7",
+        Accept: "text/html,application/javascript,text/javascript,application/json,text/plain,application/xml;q=0.9,*/*;q=0.7",
         "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
         "User-Agent": BROWSER_USER_AGENT
       },
@@ -158,25 +163,29 @@ async function fetchText(url, maxBytes) {
   }
 }
 
-function scriptUrls(html, baseUrl) {
-  const urls = [];
+function scriptInventory(html, baseUrl) {
+  const inventory = [];
   const seen = new Set();
   const pattern = /<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
   let match;
-  while ((match = pattern.exec(html)) && urls.length < MAX_SCRIPTS) {
+  while ((match = pattern.exec(html)) && inventory.length < MAX_SCRIPTS * 2) {
     try {
       const url = new URL(match[1], baseUrl);
-      if (url.protocol !== "https:" || !trustedGoldenHarvestHost(url.hostname)) continue;
+      if (url.protocol !== "https:") continue;
       url.hash = "";
       const value = url.toString();
       if (seen.has(value)) continue;
       seen.add(value);
-      urls.push(value);
+      inventory.push({
+        url: value,
+        host: url.hostname,
+        fetchable: trustedCurrentHost(url.hostname)
+      });
     } catch {
       // Ignore malformed script URLs from source markup.
     }
   }
-  return urls;
+  return inventory;
 }
 
 function normalizeCandidate(raw, baseUrl) {
@@ -188,7 +197,7 @@ function normalizeCandidate(raw, baseUrl) {
     const url = new URL(value, baseUrl);
     if (!/^https?:$/.test(url.protocol)) return null;
     url.hash = "";
-    return trustedGoldenHarvestHost(url.hostname)
+    return trustedCurrentHost(url.hostname)
       ? `${url.origin}${url.pathname}${url.search}`
       : value.slice(0, 240);
   } catch {
@@ -258,29 +267,27 @@ function reportFetchResult(result) {
 }
 
 async function main() {
-  const primaryDns = await dnsEvidence(ORIGIN.hostname);
-  const alternateDns = ALTERNATE_ORIGIN ? await dnsEvidence(ALTERNATE_ORIGIN.hostname) : null;
-  const probeOrigin = !primaryDns.ok && alternateDns?.ok ? ALTERNATE_ORIGIN : ORIGIN;
-  const pages = [];
-  const pageBodies = [];
-  const allScriptUrls = [];
-  const seenScriptUrls = new Set();
+  const currentDns = await dnsEvidence(CURRENT_ORIGIN.hostname);
+  const legacyGoldenHarvestDns = await Promise.all(LEGACY_GOLDEN_HARVEST_HOSTS.map(dnsEvidence));
+  const documents = [];
+  const documentBodies = [];
+  const scriptMap = new Map();
 
-  for (const path of PAGE_PATHS) {
-    const requestedUrl = new URL(path, probeOrigin).toString();
-    const result = await fetchText(requestedUrl, MAX_HTML_BYTES);
-    pages.push({
+  for (const path of SEED_PATHS) {
+    const requestedUrl = new URL(path, CURRENT_ORIGIN).toString();
+    const result = await fetchText(requestedUrl, MAX_DOCUMENT_BYTES);
+    const inventory = scriptInventory(result.text, result.finalUrl);
+    documents.push({
       requestedUrl,
       ...reportFetchResult(result),
       title: safeTitle(result.text),
-      scriptCount: scriptUrls(result.text, result.finalUrl).length
+      scriptCount: inventory.length,
+      scriptHosts: Array.from(new Set(inventory.map(item => item.host))).sort()
     });
     if (result.text) {
-      pageBodies.push({ source: new URL(result.finalUrl).pathname || "/", url: result.finalUrl, text: result.text });
-      for (const scriptUrl of scriptUrls(result.text, result.finalUrl)) {
-        if (seenScriptUrls.has(scriptUrl) || allScriptUrls.length >= MAX_SCRIPTS) continue;
-        seenScriptUrls.add(scriptUrl);
-        allScriptUrls.push(scriptUrl);
+      documentBodies.push({ source: new URL(result.finalUrl).pathname || "/", url: result.finalUrl, text: result.text });
+      for (const script of inventory) {
+        if (!scriptMap.has(script.url)) scriptMap.set(script.url, script);
       }
     }
   }
@@ -288,13 +295,13 @@ async function main() {
   const scripts = [];
   const scriptBodies = [];
   let scriptBytes = 0;
-  for (const url of allScriptUrls) {
+  for (const script of Array.from(scriptMap.values()).filter(item => item.fetchable).slice(0, MAX_SCRIPTS)) {
     if (scriptBytes >= MAX_SCRIPT_TOTAL_BYTES) break;
     const remaining = Math.min(MAX_SCRIPT_BYTES, MAX_SCRIPT_TOTAL_BYTES - scriptBytes);
-    const result = await fetchText(url, remaining);
+    const result = await fetchText(script.url, remaining);
     scriptBytes += result.bytes;
     scripts.push({
-      url,
+      url: script.url,
       ...reportFetchResult(result),
       requestHints: requestHints(result.text)
     });
@@ -302,34 +309,34 @@ async function main() {
   }
 
   const candidates = mergeCandidates([
-    ...pageBodies.map(item => discoverCandidates(item.text, item.url, `page:${item.source}`)),
+    ...documentBodies.map(item => discoverCandidates(item.text, item.url, `document:${item.source}`)),
     ...scriptBodies.map(item => discoverCandidates(item.text, item.url, `script:${item.source}`))
   ]);
 
-  const sameOriginCandidates = candidates.filter(item => {
+  const sameBestarHostCandidates = candidates.filter(item => {
     try {
-      return trustedGoldenHarvestHost(new URL(item.candidate, probeOrigin).hostname);
+      return trustedCurrentHost(new URL(item.candidate, CURRENT_ORIGIN).hostname);
     } catch {
       return false;
     }
   });
 
-  const reachablePages = pages.filter(page => page.ok).length;
+  const reachableDocuments = documents.filter(document => document.ok).length;
   const report = {
     phase: "M10A",
-    providerCandidate: "golden-harvest",
-    mode: "reconnaissance-only",
+    providerCandidate: "bestar",
+    predecessor: "golden-harvest-hong-kong",
+    mode: "successor-reconnaissance-only",
     generatedAt: new Date().toISOString(),
-    requestedOrigin: ORIGIN.origin,
-    probeOrigin: probeOrigin.origin,
+    currentOrigin: CURRENT_ORIGIN.origin,
     transport: {
-      primaryDns,
-      alternateDns,
+      currentDns,
+      legacyGoldenHarvestDns,
       browserLikeUserAgent: true
     },
     limits: {
       requestTimeoutMs: REQUEST_TIMEOUT_MS,
-      maxHtmlBytes: MAX_HTML_BYTES,
+      maxDocumentBytes: MAX_DOCUMENT_BYTES,
       maxScriptBytes: MAX_SCRIPT_BYTES,
       maxScriptTotalBytes: MAX_SCRIPT_TOTAL_BYTES,
       maxScripts: MAX_SCRIPTS,
@@ -343,14 +350,16 @@ async function main() {
       pwaChanged: false
     },
     summary: {
-      reachablePages,
-      probedPages: pages.length,
+      reachableDocuments,
+      probedDocuments: documents.length,
+      declaredScripts: scriptMap.size,
       fetchedScripts: scripts.filter(script => script.ok).length,
       discoveredCandidates: candidates.length,
-      sameGoldenHarvestHostCandidates: sameOriginCandidates.length,
-      sourceReachable: reachablePages > 0
+      sameBestarHostCandidates: sameBestarHostCandidates.length,
+      sourceReachable: reachableDocuments > 0
     },
-    pages,
+    documents,
+    declaredScripts: Array.from(scriptMap.values()),
     scripts,
     candidates
   };
@@ -359,7 +368,7 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
 
   if (!report.summary.sourceReachable) {
-    console.warn("M10A reconnaissance: neither the selected Golden Harvest host path nor its bounded apex fallback produced a usable public source; preserve transport diagnostics and do not enable production integration from this evidence alone.");
+    console.warn("M10A reconnaissance: current Bestar public source was not reachable from the runner; preserve transport evidence and do not enable production integration.");
   }
 }
 
