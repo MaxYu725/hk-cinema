@@ -88,7 +88,7 @@ test("M7P1F enriches only selected-date CineArt sessions with detailed price and
     unknown: 0,
     updatedAt: "2026-08-13T00:00:00.000Z"
   });
-  assert.equal(selected.bookingUrl, null);
+  assert.equal(selected.bookingUrl, "https://cinearthouse.com.hk/hk/show/9001");
   assert.equal("seatStates" in selected, false);
   assert.equal("seatPlan" in selected, false);
 
@@ -210,7 +210,7 @@ test("M7P1F public showtime boundary remains seat-map-free after M7P1G enables a
 
   assert.equal(cineart.capabilities.prices, true);
   assert.equal(cineart.capabilities.seatSummary, true);
-  assert.equal(cineart.capabilities.booking, false);
+  assert.equal(cineart.capabilities.booking, true);
   assert.match(router, /phase:\s*"M7P1F"/);
   assert.match(router, /showtimes-detailed-price-strict-seats-selected-date/);
   assert.match(showtimesSource, /selected-date-bounded/);
