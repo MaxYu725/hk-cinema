@@ -7,7 +7,6 @@
 
   let content = null;
   let observer = null;
-  let bodyObserver = null;
   let mutationVersion = 0;
   let settleRaf = 0;
   let releaseTimer = 0;
@@ -247,13 +246,8 @@
     window.addEventListener("keydown", event => {
       if (event.key === "Escape") clearCurtain();
     }, true);
-
+    window.addEventListener("hkcinema:provider-compare-open", bindContentObserver);
     bindContentObserver();
-    bodyObserver = new MutationObserver(() => {
-      bindContentObserver();
-      if (!overlayOpen()) clearCurtain();
-    });
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   window.HKCinemaM9E3ComparisonCurtain = Object.freeze({
