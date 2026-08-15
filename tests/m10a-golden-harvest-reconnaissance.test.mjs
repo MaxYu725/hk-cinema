@@ -99,7 +99,7 @@ test("M10A workflow is read-only and publishes both bounded Bestar reconnaissanc
   assert.match(workflow, /name:\s*Bestar Successor Reconnaissance/);
   assert.match(workflow, /default:\s*https:\/\/www\.bestarfilm\.hk/);
   assert.match(workflow, /permissions:\s*\n\s*contents:\s*read/);
-  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm install/);
   assert.match(workflow, /node --test tests\/m10a-golden-harvest-reconnaissance\.test\.mjs/);
   assert.match(workflow, /node --check scripts\/m10a-bestar-browser-reconnaissance\.mjs/);
   assert.match(workflow, /npx playwright install --with-deps chromium/);
