@@ -1,0 +1,38 @@
+/* M9F3 — Final Low-risk Polish
+ * Only Data Health close continuity and poster load opacity finishing.
+ */
+
+html[data-skin="metro"] .movie-poster img.m9f3-poster-media {
+  opacity: .7;
+  transition:
+    opacity 160ms cubic-bezier(0, 0, .2, 1),
+    filter 200ms ease;
+}
+
+html[data-skin="metro"] .movie-poster img.m9f3-poster-media.m9f3-poster-loaded {
+  opacity: 1;
+}
+
+html[data-skin="metro"] .m9f3-data-health-exit-ghost {
+  position: fixed;
+  overflow: hidden;
+  margin: 0;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+html[data-skin="metro"] .m9f3-data-health-exit-ghost,
+html[data-skin="metro"] .m9f3-data-health-exit-ghost * {
+  pointer-events: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] .movie-poster img.m9f3-poster-media {
+    opacity: 1;
+    transition: none !important;
+  }
+
+  html[data-skin="metro"] .m9f3-data-health-exit-ghost {
+    display: none !important;
+  }
+}
