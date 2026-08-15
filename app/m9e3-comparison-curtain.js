@@ -57,7 +57,6 @@
     if (!root) return;
     root.removeAttribute("data-m9e3-curtain");
     root.removeAttribute("data-m9e3-curtain-label");
-    root.removeAttribute("aria-busy");
   }
 
   function loadingStillOwned(root = content) {
@@ -91,7 +90,6 @@
     if (!root) return;
     root.removeAttribute("data-m9e3-curtain");
     root.removeAttribute("data-m9e3-curtain-label");
-    root.removeAttribute("aria-busy");
     forceReleasing = false;
     quietFrames = 0;
     lastCheckedVersion = -1;
@@ -214,7 +212,6 @@
     mutationVersion += 1;
     root.dataset.m9e3Curtain = "active";
     root.dataset.m9e3CurtainLabel = label;
-    root.setAttribute("aria-busy", "true");
     syncCurtainTop(root);
     scheduleSettleCheck();
   }
