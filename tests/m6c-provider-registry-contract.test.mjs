@@ -50,7 +50,7 @@ test("provider descriptors expose identity and current staged capabilities", () 
   assert.equal(registry.hasCapability("cineart", "prices"), true);
   assert.equal(registry.hasCapability("cineart", "seatSummary"), true);
   assert.equal(registry.hasCapability("cineart", "seatMap"), true);
-  assert.equal(registry.hasCapability("cineart", "booking"), false);
+  assert.equal(registry.hasCapability("cineart", "booking"), true);
   assert.ok(Object.isFrozen(registry.providers));
 });
 
