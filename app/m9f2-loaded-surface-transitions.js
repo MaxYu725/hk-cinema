@@ -213,7 +213,7 @@
     });
 
     bodyObserver = new MutationObserver(handleBodyMutations);
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
+    bodyObserver.observe(document.body, { childList: true });
     bindDynamicTargets();
   }
 
