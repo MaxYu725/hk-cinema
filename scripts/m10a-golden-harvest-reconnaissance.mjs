@@ -42,6 +42,11 @@ function trustedCurrentHost(hostname) {
   return host === base || host.endsWith(`.${base}`);
 }
 
+function trustedDeclaredVendorScript(url) {
+  return url.hostname.toLowerCase() === "g.alicdn.com" &&
+    url.pathname.startsWith("/icirena-fe/icirena-web/");
+}
+
 function sha256(text) {
   return createHash("sha256").update(text).digest("hex");
 }
@@ -179,7 +184,7 @@ function scriptInventory(html, baseUrl) {
       inventory.push({
         url: value,
         host: url.hostname,
-        fetchable: trustedCurrentHost(url.hostname)
+        fetchable: trustedCurrentHost(url.hostname) || trustedDeclaredVendorScript(url)
       });
     } catch {
       // Ignore malformed script URLs from source markup.
