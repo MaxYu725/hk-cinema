@@ -46,16 +46,21 @@ jobs:
       - name: Cross-check public GET transport with curl
         continue-on-error: true
         run: |
-          curl \
-            --silent \
-            --show-error \
-            --location \
-            --max-time 12 \
-            --request GET \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36" \
-            --output /dev/null \
-            --write-out 'curl_http=%{http_code} curl_url=%{url_effective} ssl_verify=%{ssl_verify_result}\n' \
-            "${GOLDEN_HARVEST_ORIGIN}/"
+          browser_ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+          apex_origin="${GOLDEN_HARVEST_ORIGIN/\/\/www./\/\/}"
+          for probe_origin in "$GOLDEN_HARVEST_ORIGIN" "$apex_origin"; do
+            echo "transport_probe=${probe_origin}"
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --max-time 12 \
+              --request GET \
+              --user-agent "$browser_ua" \
+              --output /dev/null \
+              --write-out 'curl_http=%{http_code} curl_url=%{url_effective} ssl_verify=%{ssl_verify_result}\n' \
+              "${probe_origin}/" || true
+          done
 
       - name: Probe Golden Harvest public source
         run: node scripts/m10a-golden-harvest-reconnaissance.mjs
