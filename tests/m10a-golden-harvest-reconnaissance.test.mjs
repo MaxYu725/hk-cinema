@@ -59,7 +59,27 @@ test("M10A follows only the Bestar page's explicitly declared icirena vendor bun
   assert.match(source, /url\.pathname\.startsWith\("\/icirena-fe\/icirena-web\/"\)/);
   assert.match(source, /fetchable: trustedCurrentHost\(url\.hostname\) \|\| trustedDeclaredVendorScript\(url\)/);
   assert.doesNotMatch(source, /assets\.alicdn\.com/);
-  assert.doesNotMatch(source, /fetchText\([^\n]*api\.icirena\.ai/i, "M10A must discover API routes before probing unknown API endpoints");
+  assert.doesNotMatch(source, /fetchText\([^\n]*api\.icirena\.ai/i, "static reconnaissance must discover API routes before custom API probing");
+});
+
+test("M10A passive browser capture performs no user action and stores network structure only", async () => {
+  const source = await read("scripts/m10a-bestar-browser-reconnaissance.mjs");
+
+  assert.doesNotThrow(() => new Function(source.replace(/^import .*?;$/gm, "").replace(/await main\(\);?\s*$/m, "")));
+  assert.match(source, /page\.goto\(TARGET\.toString\(\)/);
+  assert.match(source, /SETTLE_MS\s*=\s*6_000/);
+  assert.match(source, /MAX_EVENTS\s*=\s*160/);
+  assert.match(source, /MAX_RESPONSE_BODY_BYTES\s*=\s*1024 \* 1024/);
+  assert.match(source, /host === "icirena\.ai" \|\| host\.endsWith\("\.icirena\.ai"\)/);
+  assert.doesNotMatch(source, /\.click\s*\(|\.fill\s*\(|\.type\s*\(|\.press\s*\(/, "passive reconnaissance must not interact with the site");
+  assert.doesNotMatch(source, /context\.addCookies|storageState|Authorization|Bearer/i);
+  assert.match(source, /requestBodiesStored:\s*false/);
+  assert.match(source, /headersStored:\s*false/);
+  assert.match(source, /cookiesStored:\s*false/);
+  assert.match(source, /responseValuesStored:\s*false/);
+  assert.match(source, /bodyKeys:/);
+  assert.match(source, /operationHints:/);
+  assert.match(source, /jsonShape:/);
 });
 
 test("M10A report stores structural evidence rather than raw upstream documents", async () => {
@@ -73,15 +93,18 @@ test("M10A report stores structural evidence rather than raw upstream documents"
   assert.doesNotMatch(source, /report\s*=\s*\{[\s\S]*?\btext\s*[,}]/, "raw document/script bodies must not be written into the report object");
 });
 
-test("M10A workflow is read-only and only publishes the bounded Bestar reconnaissance artifact", async () => {
+test("M10A workflow is read-only and publishes both bounded Bestar reconnaissance reports", async () => {
   const workflow = await read(".github/workflows/golden-harvest-reconnaissance.yml");
 
   assert.match(workflow, /name:\s*Bestar Successor Reconnaissance/);
   assert.match(workflow, /default:\s*https:\/\/www\.bestarfilm\.hk/);
   assert.match(workflow, /permissions:\s*\n\s*contents:\s*read/);
+  assert.match(workflow, /npm ci/);
   assert.match(workflow, /node --test tests\/m10a-golden-harvest-reconnaissance\.test\.mjs/);
-  assert.match(workflow, /node --check scripts\/m10a-golden-harvest-reconnaissance\.mjs/);
-  assert.match(workflow, /node scripts\/m10a-golden-harvest-reconnaissance\.mjs/);
+  assert.match(workflow, /node --check scripts\/m10a-bestar-browser-reconnaissance\.mjs/);
+  assert.match(workflow, /npx playwright install --with-deps chromium/);
+  assert.match(workflow, /node scripts\/m10a-bestar-browser-reconnaissance\.mjs/);
+  assert.match(workflow, /bestar-browser-reconnaissance\.json/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.doesNotMatch(workflow, /wrangler|deploy|pages|secrets\./i);
 });
