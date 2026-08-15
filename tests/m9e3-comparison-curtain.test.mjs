@@ -33,6 +33,7 @@ test("M9E3 runtime stays presentation-only and scopes observation to comparison 
   assert.match(source, /\[data-provider-compare-date\]/);
   assert.match(source, /\[data-provider-compare-retry\]/);
   assert.doesNotMatch(source, /cloneNode\s*\(/);
+  assert.doesNotMatch(source, /aria-busy/, "comparison core retains aria-busy ownership");
 });
 
 test("M9E3 waits for a decorated final structure and three quiet frames before reveal", async () => {
