@@ -65,7 +65,10 @@ let seatCount = 0;
 for (const session of first.payload.data.allSessions) {
   assert.equal(session?.provider, "cineart");
   assert.equal(String(session?.movieSourceId), String(movie.sourceId));
-  assert.equal(session?.bookingUrl, null);
+  assert.equal(
+    session?.bookingUrl,
+    `https://cinearthouse.com.hk/hk/show/${encodeURIComponent(session.sourceId)}`
+  );
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
   assert.equal("ticketTypes" in session, false);
@@ -147,12 +150,13 @@ console.log(JSON.stringify({
     time: sample.time,
     cinema: sample.cinema,
     price: sample.price,
-    coarseSeatSummary: sample.seatSummary
+    coarseSeatSummary: sample.seatSummary,
+    bookingUrl: sample.bookingUrl
   },
   persistentM7P1EBoundary: {
     allSessionsBasePrice: true,
     allSessionsCoarseSeatSummary: true,
-    booking: false
+    exactSessionBooking: true
   },
   methodGuard: denied.response.status
 }, null, 2));
