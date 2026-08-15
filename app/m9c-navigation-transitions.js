@@ -18,12 +18,17 @@
     window.setTimeout(remove, delay);
   }
 
+  function clearExitGhosts() {
+    document.querySelectorAll(".m9c-exit-ghost, .m9c-node-exit-ghost").forEach(node => node.remove());
+  }
+
   function spawnExitGhost(kind) {
     if (reducedMotion()) return false;
     const now = performance.now();
     if (now - (lastExitAt[kind] || 0) < EXIT_DEDUPE_MS) return false;
     lastExitAt[kind] = now;
 
+    document.querySelectorAll(`.m9c-exit-ghost[data-m9c-exit-kind="${kind}"]`).forEach(node => node.remove());
     const ghost = document.createElement("div");
     ghost.className = "m9c-exit-ghost";
     ghost.dataset.m9cExitKind = kind;
@@ -62,6 +67,7 @@
 
   function stampEntry(node) {
     if (!node || node.hidden || reducedMotion()) return;
+    document.querySelectorAll(".m9c-node-exit-ghost").forEach(ghost => ghost.remove());
     node.classList.remove("m9c-panel-enter");
     requestAnimationFrame(() => {
       if (!node.isConnected || node.hidden) return;
@@ -111,10 +117,12 @@
     const current = !overlay.hidden;
     if (!overlayVisibility.has(overlay)) {
       overlayVisibility.set(overlay, current);
+      if (current) clearExitGhosts();
       return;
     }
     const previous = overlayVisibility.get(overlay);
     overlayVisibility.set(overlay, current);
+    if (!previous && current) clearExitGhosts();
     if (previous && !current) spawnExitGhost(kind);
   }
 
@@ -154,6 +162,7 @@
 
     const openButton = event.target.closest?.("[data-compare-open]");
     if (openButton) {
+      clearExitGhosts();
       markNavigationSource(openButton);
       return;
     }
@@ -207,11 +216,15 @@
     window.addEventListener("click", handleClickCapture, true);
     window.addEventListener("keydown", handleKeyCapture, true);
 
-    [
-      "hkcinema:provider-compare-open",
-      "hkcinema:provider-compare-lifecycle",
-      "hkcinema:seatmap-opening"
-    ].forEach(name => window.addEventListener(name, scheduleSync));
+    window.addEventListener("hkcinema:provider-compare-open", () => {
+      clearExitGhosts();
+      scheduleSync();
+    });
+    window.addEventListener("hkcinema:provider-compare-lifecycle", scheduleSync);
+    window.addEventListener("hkcinema:seatmap-opening", () => {
+      clearExitGhosts();
+      scheduleSync();
+    });
 
     const observer = new MutationObserver(records => {
       for (const record of records) {
@@ -230,9 +243,10 @@
   }
 
   window.HKCinemaM9CTransitions = Object.freeze({
-    version: "m9c-1",
+    version: "m9c-1-m9e1",
     refresh: scheduleSync,
-    syncDateCurrent
+    syncDateCurrent,
+    clearExitGhosts
   });
 
   if (document.readyState === "loading") {
