@@ -1,0 +1,31 @@
+/* M9F2 — Loaded Surface Transitions
+ * Presentation-only finishing for loaded seat maps, PWA notices and the cinema portal.
+ */
+
+html[data-skin="metro"] #sharedSeatMapContent .shared-seatmap-content,
+html[data-skin="metro"] .pwa-notice,
+html[data-skin="metro"] .provider-compare-cinema-portal {
+  transform-origin: center top;
+}
+
+html[data-skin="metro"] .m9f2-exit-ghost {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+html[data-skin="metro"] .m9f2-pwa-exit-ghost,
+html[data-skin="metro"] .m9f2-portal-exit-ghost {
+  pointer-events: none !important;
+}
+
+html[data-skin="metro"] .m9f2-exit-ghost button,
+html[data-skin="metro"] .m9f2-exit-ghost a,
+html[data-skin="metro"] .m9f2-exit-ghost [tabindex] {
+  pointer-events: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] .m9f2-exit-ghost {
+    display: none !important;
+  }
+}
