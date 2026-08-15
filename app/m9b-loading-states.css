@@ -174,6 +174,63 @@ html[data-skin="metro"] #providerCompareContent .m9b-date-loading .provider-comp
   pointer-events: none;
 }
 
+/* M9E2: lock the visual order at the CSS layout layer. Phase 8B, filter and Smart
+ * Picks decorators may rebuild nodes on adjacent animation frames; those DOM moves
+ * must never be allowed to paint filter/reset above the date rail for even one frame. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .provider-compare-date-rail {
+  order: 10;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > [data-provider-insights] {
+  order: 20;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > [data-phase8b-recommendation-toggle] {
+  order: 30;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > [data-provider-recommendations] {
+  order: 40;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .provider-compare-section-heading {
+  order: 50;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > [data-insight-result] {
+  order: 60;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .provider-compare-timeline,
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .provider-compare-empty {
+  order: 70;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .provider-compare-note {
+  order: 80;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-timeline-section > .m9b-local-loading-bar {
+  order: 90;
+}
+
+/* Structural decorators should not replay their own entry transition during a date
+ * refresh. The date button/underline may still acknowledge selection, but wrappers
+ * cannot fade/slide and create a perceived full-panel flash. */
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading > [data-provider-insights],
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading > [data-phase8b-recommendation-toggle],
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading > [data-provider-recommendations],
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading > .provider-compare-section-heading,
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading > [data-insight-result] {
+  animation: none !important;
+  transition: none !important;
+}
+
 /* Seat map: keep cinema/showtime header, then show a cheap static geometry skeleton. */
 html[data-skin="metro"] .shared-seatmap-state.m9b-seatmap-loading {
   min-height: 330px;
