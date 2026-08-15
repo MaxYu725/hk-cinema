@@ -109,11 +109,11 @@ test("M10A workflow is read-only and publishes both bounded Bestar reconnaissanc
   assert.doesNotMatch(workflow, /wrangler|deploy|pages|secrets\./i);
 });
 
-test("M10A checkpoint permits only a later Bestar Worker-only adapter after current-source proof", async () => {
+test("M10A checkpoint permits only a later Bestar Worker catalogue adapter after current-source proof", async () => {
   const checkpoint = await read("docs/checkpoints/m10a-golden-harvest-provider-reconnaissance.md");
 
   assert.match(checkpoint, /successor reconnaissance/i);
-  assert.match(checkpoint, /M10B[^\n]*Bestar Worker adapter only/i);
+  assert.match(checkpoint, /M10B[^\n]*Bestar Worker catalogue adapter/i);
   assert.match(checkpoint, /does \*\*not register\*\* Bestar/i);
   assert.match(checkpoint, /adds no:[\s\S]*?PWA or Service Worker change/i);
 });
