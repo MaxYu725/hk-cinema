@@ -1,0 +1,23 @@
+/* M9F1 — Home Content Continuity
+ * Keep home data/render ownership in app.js and home-library.js.
+ * This layer only smooths stable Metro control state and focus feedback.
+ */
+
+html[data-skin="metro"] .home-movie-search,
+html[data-skin="metro"] .home-movie-sort {
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+
+html[data-skin="metro"] #movieGrid,
+html[data-skin="metro"] #homeLibraryEmpty {
+  transform-origin: center top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] .home-movie-search,
+  html[data-skin="metro"] .home-movie-sort {
+    transition: none !important;
+  }
+}
