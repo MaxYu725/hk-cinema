@@ -43,9 +43,10 @@ test("M9C observes close intent before document owners and keeps after-images pa
   assert.match(source, /window\.addEventListener\("keydown", handleKeyCapture, true\)/);
   assert.match(source, /spawnExitGhost\("comparison"\)/);
   assert.match(source, /spawnExitGhost\("seatmap"\)/);
-  assert.match(source, /cloneNode\(true\)/, "small filter/Smart Pick panels may use passive visual snapshots");
+  assert.match(source, /nodeExitKind/, "filter and Smart Picks exits should use lightweight surfaces");
+  assert.doesNotMatch(source, /cloneNode\(/, "M9C must not duplicate large interactive DOM trees for exit motion");
   assert.match(css, /\.m9c-exit-ghost[\s\S]*?pointer-events:\s*none\s*!important/);
-  assert.match(css, /\.m9c-node-exit-ghost,[\s\S]*?pointer-events:\s*none\s*!important/);
+  assert.match(css, /\.m9c-node-exit-ghost[\s\S]*?pointer-events:\s*none\s*!important/);
 });
 
 test("M9C covers filter, Smart Picks, date selection and source navigation feedback", async () => {
@@ -57,6 +58,7 @@ test("M9C covers filter, Smart Picks, date selection and source navigation feedb
   assert.match(source, /data-phase8b-recommendation-toggle/);
   assert.match(source, /m9c-navigation-origin/);
   assert.match(source, /aria-current", "date"/);
+  assert.match(source, /stampEntryAfterOwnerRender/, "Smart Picks entry must wait for the existing owner render");
   assert.match(css, /provider-compare-date::after/);
   assert.match(css, /phase8b-section-toggle\[aria-expanded="true"\]/);
   assert.match(css, /provider-compare-show\.is-recommendation-jump/);
