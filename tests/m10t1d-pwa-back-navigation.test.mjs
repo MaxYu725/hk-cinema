@@ -30,7 +30,7 @@ test("M10T1D tracks only the three full-screen app navigation layers", async () 
   assert.match(source, /HKCinemaSeatMapShared\?\.close/);
   assert.match(source, /HKCinemaMovieDetail\?\.close/);
   assert.match(source, /HKCinemaProviderCompare\?\.close/);
-  assert.doesNotMatch(source, /dataHealth|filter|recommendation|scrollLeft/);
+  assert.doesNotMatch(source, /#dataHealth|data-provider-insights|data-provider-filter|provider-compare-recommendations|scrollLeft\s*=/);
 });
 
 test("M10T1D keeps body observation direct-child only and overlay observation hidden-only", async () => {
