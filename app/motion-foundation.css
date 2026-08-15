@@ -1,0 +1,208 @@
+/* M9A — Motion Foundation
+ * Metro motion tokens and reusable interaction primitives.
+ * Keep functional lifecycle ownership in existing JS; this layer is presentation-only.
+ */
+
+:root {
+  --motion-duration-press: 120ms;
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 200ms;
+  --motion-duration-slow: 240ms;
+  --motion-duration-pulse: 900ms;
+  --motion-distance-small: 8px;
+  --motion-distance-medium: 16px;
+  --motion-ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --motion-ease-enter: cubic-bezier(0, 0, .2, 1);
+  --motion-ease-exit: cubic-bezier(.4, 0, 1, 1);
+}
+
+html[data-skin="metro"] {
+  --motion-press: var(--motion-duration-press) var(--motion-ease-standard);
+  --motion-fast: var(--motion-duration-fast) var(--motion-ease-standard);
+  --motion-base: var(--motion-duration-base) var(--motion-ease-standard);
+  --motion-slow: var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+/* Shared press / selected / focus feedback. Keep transforms shallow so repeated taps stay stable. */
+html[data-skin="metro"] :where(
+  .tab,
+  .home-library-filter-options > button,
+  .movie-card,
+  .movie-favorite-button,
+  .data-health-heading,
+  .provider-compare-close,
+  .provider-resilience-compact,
+  .provider-compare-date,
+  .provider-compare-filter-toggle,
+  .phase9b3-filter-group-summary,
+  .provider-compare-control-group button,
+  .phase8b-section-toggle,
+  .provider-compare-booking,
+  .shared-seatmap-close,
+  .shared-seatmap-booking,
+  .shared-seatmap-state button,
+  .pwa-notice button
+) {
+  -webkit-tap-highlight-color: transparent;
+  transform-origin: center;
+  transition:
+    transform var(--motion-press),
+    opacity var(--motion-fast),
+    color var(--motion-fast),
+    background-color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+html[data-skin="metro"] :where(
+  .tab,
+  .home-library-filter-options > button,
+  .movie-card,
+  .movie-favorite-button,
+  .data-health-heading,
+  .provider-compare-close,
+  .provider-resilience-compact,
+  .provider-compare-date,
+  .provider-compare-filter-toggle,
+  .phase9b3-filter-group-summary,
+  .provider-compare-control-group button,
+  .phase8b-section-toggle,
+  .provider-compare-booking,
+  .shared-seatmap-close,
+  .shared-seatmap-booking,
+  .shared-seatmap-state button,
+  .pwa-notice button
+):active {
+  transform: translateY(1px) scale(.98);
+}
+
+html[data-skin="metro"] :where(
+  .tab,
+  .home-library-filter-options > button,
+  .movie-favorite-button,
+  .provider-compare-date,
+  .provider-compare-control-group button
+).active {
+  transition:
+    transform var(--motion-press),
+    color var(--motion-fast),
+    background-color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+html[data-skin="metro"] :where(
+  button,
+  [role="button"],
+  input,
+  select,
+  summary,
+  .movie-card
+):focus-visible {
+  transition:
+    outline-color var(--motion-fast),
+    outline-offset var(--motion-fast),
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+
+/* Existing overlays may safely animate on entry without changing hidden/open lifecycle semantics. */
+html[data-skin="metro"] .provider-compare-overlay:not([hidden]) .provider-compare-sheet,
+html[data-skin="metro"] .shared-seatmap-overlay:not([hidden]) .shared-seatmap-sheet {
+  animation: hk-motion-sheet-enter var(--motion-duration-base) var(--motion-ease-enter) both;
+}
+
+html[data-skin="metro"] .data-health[open] .data-health-body,
+html[data-skin="metro"] .provider-resilience-detail:not([hidden]) {
+  animation: hk-motion-flyout-enter var(--motion-duration-fast) var(--motion-ease-enter) both;
+}
+
+html[data-skin="metro"] .data-health-chevron {
+  transition: transform var(--motion-fast);
+}
+
+/* Reusable primitives for M9B–M9D. */
+html[data-skin="metro"] .motion-fade-in,
+html[data-skin="metro"] [data-motion="fade-in"] {
+  animation: hk-motion-fade-in var(--motion-duration-fast) var(--motion-ease-enter) both;
+}
+
+html[data-skin="metro"] .motion-slide-up,
+html[data-skin="metro"] [data-motion="slide-up"] {
+  animation: hk-motion-slide-up var(--motion-duration-base) var(--motion-ease-enter) both;
+}
+
+html[data-skin="metro"] .motion-pulse,
+html[data-skin="metro"] [data-motion="pulse"] {
+  animation: hk-motion-pulse var(--motion-duration-pulse) ease-in-out infinite alternate;
+}
+
+@keyframes hk-motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hk-motion-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-small));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hk-motion-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-medium));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hk-motion-flyout-enter {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-distance-small) * -1));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hk-motion-pulse {
+  from { opacity: .55; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-press: .01ms;
+    --motion-duration-fast: .01ms;
+    --motion-duration-base: .01ms;
+    --motion-duration-slow: .01ms;
+    --motion-duration-pulse: .01ms;
+    --motion-distance-small: 0px;
+    --motion-distance-medium: 0px;
+  }
+
+  html[data-skin="metro"] .motion-pulse,
+  html[data-skin="metro"] [data-motion="pulse"] {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  html[data-skin="metro"] .provider-compare-overlay:not([hidden]) .provider-compare-sheet,
+  html[data-skin="metro"] .shared-seatmap-overlay:not([hidden]) .shared-seatmap-sheet,
+  html[data-skin="metro"] .data-health[open] .data-health-body,
+  html[data-skin="metro"] .provider-resilience-detail:not([hidden]),
+  html[data-skin="metro"] .motion-fade-in,
+  html[data-skin="metro"] [data-motion="fade-in"],
+  html[data-skin="metro"] .motion-slide-up,
+  html[data-skin="metro"] [data-motion="slide-up"] {
+    animation: none !important;
+  }
+}
