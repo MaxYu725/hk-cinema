@@ -29,6 +29,15 @@ function evidenceHost(hostname) {
   return host === current || host.endsWith(`.${current}`) || host === "icirena.ai" || host.endsWith(".icirena.ai");
 }
 
+function apiOrigin(origin) {
+  try {
+    const host = new URL(origin).hostname;
+    return host === "icirena.ai" || host.endsWith(".icirena.ai");
+  } catch {
+    return false;
+  }
+}
+
 function safeRequestUrl(rawUrl) {
   try {
     const url = new URL(rawUrl);
@@ -241,7 +250,7 @@ async function main() {
       responses: responses.length,
       syncRequests: requests.filter(item => /\/sync\/?$/i.test(item.pathname || "")).length,
       observedMethods: Array.from(new Set(requests.map(item => item.method))).sort(),
-      observedApiOrigins: Array.from(new Set(requests.filter(item => /icirena\.ai$/i.test(new URL(item.origin).hostname)).map(item => item.origin))).sort(),
+      observedApiOrigins: Array.from(new Set(requests.filter(item => apiOrigin(item.origin)).map(item => item.origin))).sort(),
       pageErrors: pageErrors.length
     },
     requests,
@@ -249,8 +258,19 @@ async function main() {
     pageErrors
   };
 
+  const apiRequests = requests.filter(item => apiOrigin(item.origin)).slice(0, 40);
+  const apiResponses = responses.filter(item => apiOrigin(item.origin)).slice(0, 40);
+
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify(report, null, 2));
+  console.log(JSON.stringify({
+    phase: report.phase,
+    providerCandidate: report.providerCandidate,
+    navigation: report.navigation,
+    summary: report.summary,
+    apiRequests,
+    apiResponses,
+    pageErrors: report.pageErrors
+  }, null, 2));
 
   await context.close();
   await browser.close();
