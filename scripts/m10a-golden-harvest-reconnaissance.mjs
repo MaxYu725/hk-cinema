@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { writeFile } from "node:fs/promises";
 
 const ORIGIN = new URL(process.env.GOLDEN_HARVEST_ORIGIN || "https://www.goldenharvest.com");
@@ -9,6 +10,7 @@ const MAX_SCRIPT_BYTES = 768 * 1024;
 const MAX_SCRIPT_TOTAL_BYTES = 6 * 1024 * 1024;
 const MAX_SCRIPTS = 16;
 const MAX_CANDIDATES = 120;
+const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 
 const PAGE_PATHS = Object.freeze([
   "/",
@@ -43,6 +45,34 @@ function compactWhitespace(value) {
 function safeTitle(html) {
   const match = String(html || "").match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   return compactWhitespace(match?.[1] || "").slice(0, 160) || null;
+}
+
+function safeErrorDetails(error) {
+  if (error?.name === "AbortError") {
+    return { error: "timeout", errorName: "AbortError", errorCode: null, errorCause: null };
+  }
+  const cause = error?.cause;
+  const causeText = compactWhitespace(cause?.message || cause?.name || "").slice(0, 220) || null;
+  return {
+    error: compactWhitespace(error?.message || String(error || "fetch failed")).slice(0, 220) || "fetch failed",
+    errorName: error?.name || null,
+    errorCode: cause?.code || error?.code || null,
+    errorCause: causeText
+  };
+}
+
+async function dnsEvidence() {
+  try {
+    const answers = await lookup(ORIGIN.hostname, { all: true });
+    return {
+      ok: answers.length > 0,
+      addresses: answers.slice(0, 8).map(answer => ({ family: answer.family, address: answer.address })),
+      error: null
+    };
+  } catch (error) {
+    const details = safeErrorDetails(error);
+    return { ok: false, addresses: [], error: details.error, errorCode: details.errorCode };
+  }
 }
 
 async function readBoundedResponse(response, maxBytes) {
@@ -87,7 +117,7 @@ async function fetchText(url, maxBytes) {
       headers: {
         Accept: "text/html,application/javascript,text/javascript,application/json;q=0.9,*/*;q=0.7",
         "Accept-Language": "zh-HK,zh-TW;q=0.9,en;q=0.8",
-        "User-Agent": "HKCinema-M10A-Reconnaissance/1.0 (+read-only public-source audit)"
+        "User-Agent": BROWSER_USER_AGENT
       },
       signal: controller.signal
     });
@@ -100,7 +130,11 @@ async function fetchText(url, maxBytes) {
       elapsedMs: Date.now() - startedAt,
       bytes: Buffer.byteLength(text),
       hash: sha256(text),
-      text
+      text,
+      error: null,
+      errorName: null,
+      errorCode: null,
+      errorCause: null
     };
   } catch (error) {
     return {
@@ -112,7 +146,7 @@ async function fetchText(url, maxBytes) {
       bytes: 0,
       hash: null,
       text: "",
-      error: error?.name === "AbortError" ? "timeout" : String(error?.message || error)
+      ...safeErrorDetails(error)
     };
   } finally {
     clearTimeout(timeout);
@@ -202,7 +236,24 @@ function mergeCandidates(collections) {
   return merged;
 }
 
+function reportFetchResult(result) {
+  return {
+    ok: result.ok,
+    status: result.status,
+    finalUrl: result.finalUrl,
+    contentType: result.contentType,
+    elapsedMs: result.elapsedMs,
+    bytes: result.bytes,
+    hash: result.hash,
+    error: result.error,
+    errorName: result.errorName,
+    errorCode: result.errorCode,
+    errorCause: result.errorCause
+  };
+}
+
 async function main() {
+  const dns = await dnsEvidence();
   const pages = [];
   const pageBodies = [];
   const allScriptUrls = [];
@@ -213,15 +264,8 @@ async function main() {
     const result = await fetchText(requestedUrl, MAX_HTML_BYTES);
     pages.push({
       requestedUrl,
-      ok: result.ok,
-      status: result.status,
-      finalUrl: result.finalUrl,
-      contentType: result.contentType,
-      elapsedMs: result.elapsedMs,
-      bytes: result.bytes,
-      hash: result.hash,
+      ...reportFetchResult(result),
       title: safeTitle(result.text),
-      error: result.error || null,
       scriptCount: scriptUrls(result.text, result.finalUrl).length
     });
     if (result.text) {
@@ -244,14 +288,7 @@ async function main() {
     scriptBytes += result.bytes;
     scripts.push({
       url,
-      ok: result.ok,
-      status: result.status,
-      finalUrl: result.finalUrl,
-      contentType: result.contentType,
-      elapsedMs: result.elapsedMs,
-      bytes: result.bytes,
-      hash: result.hash,
-      error: result.error || null,
+      ...reportFetchResult(result),
       requestHints: requestHints(result.text)
     });
     if (result.text) scriptBodies.push({ source: new URL(result.finalUrl).pathname, url: result.finalUrl, text: result.text });
@@ -277,6 +314,10 @@ async function main() {
     mode: "reconnaissance-only",
     generatedAt: new Date().toISOString(),
     origin: ORIGIN.origin,
+    transport: {
+      dns,
+      browserLikeUserAgent: true
+    },
     limits: {
       requestTimeoutMs: REQUEST_TIMEOUT_MS,
       maxHtmlBytes: MAX_HTML_BYTES,
@@ -309,7 +350,7 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
 
   if (!report.summary.sourceReachable) {
-    console.warn("M10A reconnaissance: no representative Golden Harvest page returned a successful response; record as blocked/unreachable evidence rather than enabling production integration.");
+    console.warn("M10A reconnaissance: no representative Golden Harvest page returned a successful response; preserve transport diagnostics and do not enable production integration from this evidence alone.");
   }
 }
 
