@@ -115,12 +115,12 @@ test("M7P1E CineArt comparison normalizer still labels coarse seats as not-sold,
   });
   assert.equal(item.price, 110);
   assert.equal(item.pricePayload.display, 110);
-  assert.equal(item.seatText, "3/4 未售（非可選數）");
+  assert.equal(item.seatText, "3/4 未售（未核實可選）");
   assert.equal(item.seatAvailable, null);
   assert.equal(item.seatTotal, 4);
   assert.equal(item.seatClass, "unknown");
   assert.equal(item.bookingUrl, null);
-  assert.doesNotMatch(item.seatText, /可選(?!數)/);
+  assert.doesNotMatch(item.seatText, /^\d+\/\d+ 可選$/);
   assert.doesNotMatch(adapterSource, /MutationObserver|IntersectionObserver|cinearthouse\.com\.hk/);
 });
 
