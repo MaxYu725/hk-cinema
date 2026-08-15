@@ -32,6 +32,7 @@ test("M9F2 remains a passive Metro presentation companion", async () => {
   assert.doesNotMatch(source, /stopImmediatePropagation\s*\(/, "M9F2 must not block existing owners");
   assert.doesNotMatch(source, /scrollLeft\s*=/, "M9F2 must not take seat-map scroll ownership");
   assert.doesNotMatch(source, /innerHTML\s*=/, "M9F2 must not render live surface content");
+  assert.match(source, /bodyObserver\.observe\(document\.body, \{ childList: true \}\)/, "body discovery must stay direct-child only");
 });
 
 test("M9F2 reveals the real seat map after the M9B skeleton is replaced", async () => {
@@ -50,20 +51,25 @@ test("M9F2 handles PWA notice entry and passive non-interactive exit after-image
 
   assert.match(source, /#pwaNotice/);
   assert.match(source, /attributeFilter:\s*\["hidden"\]/);
-  assert.match(source, /m9f2-pwa-exit-ghost/);
+  assert.match(source, /prepareGhost\(notice, "pwa"\)/);
+  assert.match(source, /`m9f2-\$\{kind\}-exit-ghost`/);
   assert.match(source, /ghost\.hidden = false/);
+  assert.match(css, /m9f2-pwa-exit-ghost/);
   assert.match(css, /m9f2-exit-ghost[\s\S]*?pointer-events:\s*none/);
 });
 
 test("M9F2 gives the cinema portal entry/exit continuity and clears stale ghosts on reopen", async () => {
   const source = await readApp("m9f2-loaded-surface-transitions.js");
+  const css = await readApp("m9f2-loaded-surface-transitions.css");
 
   assert.match(source, /providerCompareCinemaPortal/);
   assert.match(source, /dataset\.m9f2Entered = "true"/);
   assert.match(source, /translateY\(4px\) scale\(\.985\)/);
   assert.match(source, /clearGhosts\("portal"\)/);
   assert.match(source, /addedPortals\.length/);
-  assert.match(source, /m9f2-portal-exit-ghost/);
+  assert.match(source, /prepareGhost\(portal, "portal"\)/);
+  assert.match(source, /`m9f2-\$\{kind\}-exit-ghost`/);
+  assert.match(css, /m9f2-portal-exit-ghost/);
 });
 
 test("M9F2 motion is short, compositor-only and reduced-motion safe", async () => {
