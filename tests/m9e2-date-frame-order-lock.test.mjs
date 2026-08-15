@@ -8,9 +8,13 @@ async function readApp(path) {
   return readFile(new URL(path, APP), "utf8");
 }
 
-test("M9E2 ships a fresh M9B stylesheet cache key", async () => {
+test("M9E2 keeps the M9B stylesheet loaded after the motion foundation", async () => {
   const html = await readApp("index.html");
-  assert.match(html, /m9b-loading-states\.css\?v=m9b-1-m9e3/);
+  const motion = html.indexOf("motion-foundation.css");
+  const loading = html.indexOf("m9b-loading-states.css");
+  assert.ok(motion >= 0, "motion foundation must remain loaded");
+  assert.ok(loading > motion, "M9B frame-order rules must remain after the motion foundation");
+  assert.match(html.slice(loading, loading + 120), /m9b-loading-states\.css\?/);
 });
 
 test("M9E2 locks Metro comparison structure into a stable visual order", async () => {
