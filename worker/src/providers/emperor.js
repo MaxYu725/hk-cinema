@@ -222,6 +222,30 @@ function money(value) {
   return Number.isFinite(amount) ? amount / 100 : null;
 }
 
+export function buildEmperorSessionBookingUrl({
+  scheduleId,
+  filmUniqueId,
+  cinemaId,
+  cinemaLinkId
+} = {}) {
+  const normalizedScheduleId = String(scheduleId || "").trim();
+  const normalizedFilmId = String(filmUniqueId || "").trim();
+  const normalizedCinemaLinkId = String(cinemaLinkId || cinemaId || "").trim();
+  const normalizedCinemaId = String(cinemaId || cinemaLinkId || "").trim();
+
+  if (!normalizedScheduleId || !normalizedFilmId || !normalizedCinemaLinkId || !normalizedCinemaId) {
+    return null;
+  }
+
+  const url = new URL("https://www.emperorcinemas.com/seat");
+  url.searchParams.set("cinemaId", normalizedCinemaId);
+  url.searchParams.set("cinemaLinkId", normalizedCinemaLinkId);
+  url.searchParams.set("filmUniqueId", normalizedFilmId);
+  url.searchParams.set("scheduleId", normalizedScheduleId);
+  url.searchParams.set("wapid", CHANNEL_CODE);
+  return url.toString();
+}
+
 function normalizeMovie(movie) {
   const sourceId = String(movie?.filmUniqueId || "").trim();
   const levels = (() => {
@@ -292,14 +316,29 @@ function normalizeSchedule(group, schedule) {
   const availableSeats = Number.isFinite(totalSeats) && Number.isFinite(soldSeats)
     ? Math.max(0, totalSeats - soldSeats)
     : null;
+  const scheduleId = String(schedule?.scheduleId || "").trim();
+  const filmUniqueId = String(schedule?.filmUniqueId || "").trim();
+  const cinemaLinkId = String(
+    schedule?.cinemaLinkId ||
+    group?.cinemaInfo?.cinemaLinkId ||
+    schedule?.cinemaId ||
+    group?.cinemaInfo?.cinemaId ||
+    ""
+  ).trim();
+  const cinemaId = String(
+    schedule?.cinemaId ||
+    group?.cinemaInfo?.cinemaId ||
+    cinemaLinkId ||
+    ""
+  ).trim();
 
   return {
-    id: `emperor:${schedule?.scheduleId || ""}`,
+    id: `emperor:${scheduleId}`,
     provider: "emperor",
-    sourceId: String(schedule?.scheduleId || ""),
-    movieSourceId: String(schedule?.filmUniqueId || ""),
+    sourceId: scheduleId,
+    movieSourceId: filmUniqueId,
     cinema: {
-      sourceId: String(schedule?.cinemaLinkId || group?.cinemaInfo?.cinemaLinkId || ""),
+      sourceId: cinemaLinkId,
       name: {
         zh: schedule?.cinemaLinkName || group?.cinemaInfo?.cinemaName || "Emperor Cinemas"
       },
@@ -336,9 +375,12 @@ function normalizeSchedule(group, schedule) {
         : null
     },
     purchase: normalizePurchase(schedule),
-    bookingUrl: schedule?.filmUniqueId
-      ? `https://www.emperorcinemas.com/showtimes?wapid=${CHANNEL_CODE}&filmUniqueId=${encodeURIComponent(schedule.filmUniqueId)}`
-      : "https://www.emperorcinemas.com/showtimes"
+    bookingUrl: buildEmperorSessionBookingUrl({
+      scheduleId,
+      filmUniqueId,
+      cinemaId,
+      cinemaLinkId
+    })
   };
 }
 
