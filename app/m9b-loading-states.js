@@ -4,6 +4,7 @@
   let scheduled = false;
   let comparisonSnapshot = null;
   let pendingComparisonDate = null;
+  let comparisonRestoreToken = 0;
   let targetedObserver = null;
   const observedTargets = new WeakSet();
 
@@ -57,6 +58,12 @@
     `;
   }
 
+  function clearComparisonSnapshot() {
+    comparisonRestoreToken += 1;
+    comparisonSnapshot = null;
+    pendingComparisonDate = null;
+  }
+
   function cleanSnapshot(section) {
     if (!section) return null;
     section.classList.remove("m9b-date-loading");
@@ -76,11 +83,56 @@
     });
   }
 
+  function dateLoader(root = document.querySelector("#providerCompareContent")) {
+    if (!root) return null;
+    return Array.from(root.querySelectorAll(".provider-compare-loading"))
+      .find(loader => (loader.textContent || "").includes("正在整理同日場次")) || null;
+  }
+
+  function restoreComparisonSnapshot(loader = dateLoader(), expectedDate = pendingComparisonDate) {
+    if (!comparisonSnapshot || !pendingComparisonDate || expectedDate !== pendingComparisonDate) return false;
+
+    const root = document.querySelector("#providerCompareContent");
+    if (!root) return false;
+
+    if (comparisonSnapshot.isConnected && comparisonSnapshot.closest("#providerCompareContent") === root) {
+      comparisonSnapshot.classList.add("m9b-date-loading");
+      comparisonSnapshot.setAttribute("aria-busy", "true");
+      markSnapshotDate(comparisonSnapshot, pendingComparisonDate);
+      return true;
+    }
+
+    const loaderSection = loader?.closest(".provider-compare-section");
+    if (!loaderSection) return false;
+
+    const restored = cleanSnapshot(comparisonSnapshot);
+    restored.classList.add("m9b-date-loading");
+    restored.setAttribute("aria-busy", "true");
+    markSnapshotDate(restored, pendingComparisonDate);
+
+    const status = document.createElement("div");
+    status.className = "m9b-local-loading-bar";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.textContent = "正在更新所選日期場次";
+    restored.append(status);
+
+    loaderSection.replaceWith(restored);
+    return true;
+  }
+
+  function queueCapturedComparisonRestore(expectedDate) {
+    const token = ++comparisonRestoreToken;
+    queueMicrotask(() => {
+      if (token !== comparisonRestoreToken || expectedDate !== pendingComparisonDate) return;
+      restoreComparisonSnapshot(dateLoader(), expectedDate);
+    });
+  }
+
   function captureComparisonDate(event) {
     const closeButton = event.target.closest?.("[data-provider-compare-close]");
     if (closeButton) {
-      comparisonSnapshot = null;
-      pendingComparisonDate = null;
+      clearComparisonSnapshot();
       return;
     }
 
@@ -90,32 +142,9 @@
     const timeline = root?.querySelector(".provider-compare-timeline");
     const section = timeline?.closest(".provider-compare-section");
     pendingComparisonDate = String(dateButton.dataset.providerCompareDate || "");
-    comparisonSnapshot = section ? cleanSnapshot(section.cloneNode(true)) : null;
+    comparisonSnapshot = section ? cleanSnapshot(section) : null;
     markSnapshotDate(comparisonSnapshot, pendingComparisonDate);
-  }
-
-  function restoreComparisonSnapshot(loader) {
-    if (!comparisonSnapshot || !pendingComparisonDate) return false;
-    const loaderSection = loader.closest(".provider-compare-section");
-    if (!loaderSection) return false;
-
-    const restored = cleanSnapshot(comparisonSnapshot.cloneNode(true));
-    restored.classList.add("m9b-date-loading");
-    restored.setAttribute("aria-busy", "true");
-    markSnapshotDate(restored, pendingComparisonDate);
-
-    const notice = document.createElement("div");
-    notice.className = "m9b-local-loading-bar";
-    notice.setAttribute("role", "status");
-    notice.setAttribute("aria-live", "polite");
-    notice.textContent = "正在更新所選日期場次；先保留上一批資料。";
-
-    const dateRail = restored.querySelector(".provider-compare-date-rail");
-    if (dateRail) dateRail.insertAdjacentElement("afterend", notice);
-    else restored.prepend(notice);
-
-    loaderSection.replaceWith(restored);
-    return true;
+    if (comparisonSnapshot && pendingComparisonDate) queueCapturedComparisonRestore(pendingComparisonDate);
   }
 
   function decorateComparisonLoading() {
@@ -123,8 +152,7 @@
     if (!root) return;
     const overlay = document.querySelector("#providerCompareOverlay");
     if (overlay?.hidden) {
-      comparisonSnapshot = null;
-      pendingComparisonDate = null;
+      clearComparisonSnapshot();
       return;
     }
 
@@ -139,8 +167,7 @@
 
     const freshTimeline = root.querySelector(".provider-compare-timeline");
     if (!loaders.length && freshTimeline && !freshTimeline.closest(".m9b-date-loading")) {
-      comparisonSnapshot = null;
-      pendingComparisonDate = null;
+      clearComparisonSnapshot();
     }
   }
 
@@ -217,8 +244,7 @@
   function install() {
     window.addEventListener("click", captureComparisonDate, true);
     window.addEventListener("hkcinema:provider-compare-open", () => {
-      comparisonSnapshot = null;
-      pendingComparisonDate = null;
+      clearComparisonSnapshot();
       schedule();
     });
     window.addEventListener("hkcinema:data-health", schedule);

@@ -1,5 +1,52 @@
 /* M3 Smart Picks hotfix: keep Metro recommendations compact, balanced and scannable. */
 
+/* M9E1 defensive Metro baseline: recommendation owners can briefly recreate the panel
+   before Phase 8B adds its final layout class. Never allow that transient DOM to fall
+   back to the old Classic white recommendation surface. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks {
+  margin: -6px 0 14px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--metro-border) !important;
+  border-radius: 0 !important;
+  background: #0c0c0c !important;
+  color: var(--metro-fg);
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .phase8d-smart-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  grid-auto-columns: auto !important;
+  grid-auto-rows: auto !important;
+  align-items: stretch;
+  gap: 8px;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .phase8d-smart-grid.pick-count-1 {
+  grid-template-columns: 1fr !important;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .phase8d-smart-pick,
+html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .provider-compare-recommendation.balanced.phase8d-smart-pick {
+  width: auto;
+  min-width: 0;
+  min-height: 138px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--metro-border) !important;
+  border-radius: 0 !important;
+  background: var(--metro-tile) !important;
+  color: var(--metro-fg) !important;
+  box-shadow: none;
+  transform: none;
+}
+
 html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel {
   margin: -6px 0 14px;
   padding: 12px;
@@ -167,16 +214,20 @@ html[data-skin="metro"] #providerCompareContent .provider-compare-show.is-recomm
 }
 
 @media (max-width: 380px) {
-  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel {
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks {
     padding: 10px;
   }
 
-  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid {
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-grid,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .phase8d-smart-grid {
     gap: 7px;
   }
 
   html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .phase8d-smart-pick,
-  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation.balanced.phase8d-smart-pick {
+  html[data-skin="metro"] #providerCompareContent .phase8b-recommendation-panel .provider-compare-recommendation.balanced.phase8d-smart-pick,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .phase8d-smart-pick,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks .provider-compare-recommendation.balanced.phase8d-smart-pick {
     min-height: 132px;
     padding: 10px;
   }

@@ -131,28 +131,17 @@ html[data-skin="metro"] .m9b-compare-skeleton-row > span {
 html[data-skin="metro"] .m9b-compare-skeleton-row > span:first-child { height: 18px; }
 html[data-skin="metro"] .m9b-compare-skeleton-row > span:last-child { width: 100%; }
 
-/* Date changes keep prior sessions visible but clearly stale until the new request resolves. */
+/* Date changes keep the exact existing timeline DOM in place. The busy signal is
+ * a compositor-only 2px rail and a visually-hidden live region, so no box is added
+ * between the date rail and filters and no layout shift is introduced. */
 html[data-skin="metro"] #providerCompareContent .m9b-date-loading {
   position: relative;
 }
 
-html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar {
-  position: relative;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  margin: 0 0 10px;
-  padding: 8px 10px 8px 14px;
-  overflow: hidden;
-  border: 1px solid var(--metro-border);
-  background: #0c0c0c;
-  color: var(--metro-subtext);
-  font-size: .72rem;
-}
-
-html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar::before {
+html[data-skin="metro"] #providerCompareContent .m9b-date-loading::before {
   content: "";
   position: absolute;
+  z-index: 12;
   top: 0;
   left: 0;
   width: 36%;
@@ -160,10 +149,24 @@ html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar::before {
   background: var(--metro-accent);
   transform-origin: left center;
   animation: m9b-local-progress 900ms var(--motion-ease-standard) infinite alternate;
+  pointer-events: none;
+}
+
+html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 html[data-skin="metro"] #providerCompareContent .m9b-date-loading .provider-compare-timeline {
-  opacity: .42;
+  opacity: .72;
   transition: opacity var(--motion-fast);
 }
 
@@ -246,7 +249,7 @@ html[data-skin="metro"] .m9b-seatmap-skeleton-row:nth-child(4n) { width: min(84%
 
 @media (prefers-reduced-motion: reduce) {
   html[data-skin="metro"][data-m9b-refreshing="true"] body::before,
-  html[data-skin="metro"] #providerCompareContent .m9b-local-loading-bar::before,
+  html[data-skin="metro"] #providerCompareContent .m9b-date-loading::before,
   html[data-skin="metro"] .m9b-home-skeleton,
   html[data-skin="metro"] .m9b-compare-skeleton,
   html[data-skin="metro"] .m9b-seatmap-skeleton {
@@ -254,6 +257,12 @@ html[data-skin="metro"] .m9b-seatmap-skeleton-row:nth-child(4n) { width: min(84%
   }
 
   html[data-skin="metro"][data-m9b-refreshing="true"] body::before {
+    width: 70%;
+    opacity: .8;
+    transform: none;
+  }
+
+  html[data-skin="metro"] #providerCompareContent .m9b-date-loading::before {
     width: 70%;
     opacity: .8;
     transform: none;

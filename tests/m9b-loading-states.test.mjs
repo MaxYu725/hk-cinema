@@ -41,13 +41,36 @@ test("M9B provides home, comparison, seat-map and data-refresh waiting states", 
   assert.match(source, /refreshButton\?\.classList\.contains\("is-loading"\)/, "refresh indicator must follow the existing busy owner");
 });
 
-test("M9B keeps prior comparison content locally during date requests without taking request ownership", async () => {
+test("M9B preserves the live comparison DOM during date requests before the next paint", async () => {
   const source = await readApp("m9b-loading-states.js");
 
-  assert.match(source, /window\.addEventListener\("click", captureComparisonDate, true\)/, "date snapshot must be captured before the document-level request handler runs");
-  assert.match(source, /section\.cloneNode\(true\)/, "existing rendered sessions should be preserved as a visual snapshot");
-  assert.match(source, /loaderSection\.replaceWith\(restored\)/, "date-only loader should be replaced by preserved local content");
+  assert.match(source, /window\.addEventListener\("click", captureComparisonDate, true\)/, "date state must be captured before the document-level request handler runs");
+  assert.match(source, /comparisonSnapshot = section \? cleanSnapshot\(section\) : null/, "the actual rendered section must be preserved instead of a clone");
+  assert.doesNotMatch(source, /cloneNode\(/, "date loading must not clone decorated comparison DOM");
+  assert.match(source, /queueMicrotask\(/, "the preserved section must be restored in the same event-loop paint cycle");
+  assert.match(source, /loaderSection\.replaceWith\(restored\)/, "date-only loader should be replaced by the preserved live content");
   assert.match(source, /aria-busy/, "preserved content must expose a busy semantic");
+});
+
+test("M9B date progress is non-layout and Metro Smart Picks have a raw-panel dark fallback", async () => {
+  const css = await readApp("m9b-loading-states.css");
+  const smartCss = await readApp("metro-m3-smart-picks.css");
+
+  assert.match(css, /\.m9b-date-loading::before/);
+  assert.match(css, /\.m9b-local-loading-bar[\s\S]*?width:\s*1px\s*!important/);
+  assert.match(css, /\.m9b-local-loading-bar[\s\S]*?clip-path:\s*inset\(50%\)/);
+  assert.doesNotMatch(css, /\.m9b-local-loading-bar\s*\{[\s\S]*?min-height:\s*34px/, "date loading must not insert a visible 34px notice row");
+
+  assert.match(
+    smartCss,
+    /provider-compare-recommendations\.phase8d-smart-picks[\s\S]*?background:\s*#0c0c0c\s*!important/,
+    "Metro must paint raw Smart Picks panels dark even before Phase 8B decoration"
+  );
+  assert.match(
+    smartCss,
+    /provider-compare-recommendations\.phase8d-smart-picks[\s\S]*?phase8d-smart-pick[\s\S]*?background:\s*var\(--metro-tile\)\s*!important/,
+    "transient Smart Pick cards must never fall back to Classic white"
+  );
 });
 
 test("M9B animation remains cheap and reduced-motion safe", async () => {
