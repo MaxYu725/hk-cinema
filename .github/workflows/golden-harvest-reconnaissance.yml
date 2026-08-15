@@ -43,6 +43,20 @@ jobs:
       - name: Check reconnaissance script syntax
         run: node --check scripts/m10a-golden-harvest-reconnaissance.mjs
 
+      - name: Cross-check public GET transport with curl
+        continue-on-error: true
+        run: |
+          curl \
+            --silent \
+            --show-error \
+            --location \
+            --max-time 12 \
+            --request GET \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36" \
+            --output /dev/null \
+            --write-out 'curl_http=%{http_code} curl_url=%{url_effective} ssl_verify=%{ssl_verify_result}\n' \
+            "${GOLDEN_HARVEST_ORIGIN}/"
+
       - name: Probe Golden Harvest public source
         run: node scripts/m10a-golden-harvest-reconnaissance.mjs
 
