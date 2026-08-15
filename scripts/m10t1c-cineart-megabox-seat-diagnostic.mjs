@@ -9,6 +9,20 @@ const TARGET_DATE = process.env.CINEART_DIAGNOSTIC_DATE || "2026-08-16";
 const TARGET_TIME = process.env.CINEART_DIAGNOSTIC_TIME || "14:45";
 const TARGET_CINEMA = process.env.CINEART_DIAGNOSTIC_CINEMA || "MegaBox";
 
+function objectShape(value) {
+  if (!value || typeof value !== "object") return null;
+  return {
+    type: Array.isArray(value) ? "array" : "object",
+    keys: Object.keys(value).sort(),
+    width: Number(value.width) || null,
+    height: Number(value.height) || null,
+    seatWidth: Number(value.w) || null,
+    seatHeight: Number(value.h) || null,
+    blockCount: Array.isArray(value.blocks) ? value.blocks.length : null,
+    componentCount: Array.isArray(value.comps) ? value.comps.length : null
+  };
+}
+
 const snapshot = await getCineArtWorkerSnapshot();
 const matches = snapshot.normalized.sessions.filter(session => {
   const cinema = `${session?.cinema?.name?.zh || ""} ${session?.cinema?.name?.en || ""}`;
@@ -49,6 +63,19 @@ for (const session of matches) {
     recordKind = match?.[1]?.slice(0, 16) || null;
   }
 
+  let inlineJson = null;
+  let inlineJsonError = null;
+  if (typeof config === "string" && !reference) {
+    try {
+      const value = JSON.parse(config);
+      inlineJson = objectShape(value) || {
+        type: Array.isArray(value) ? "array" : value === null ? "null" : typeof value
+      };
+    } catch (error) {
+      inlineJsonError = error instanceof Error ? error.name : "parse-error";
+    }
+  }
+
   reports.push({
     showId,
     movieId: String(session.movieSourceId || ""),
@@ -63,20 +90,16 @@ for (const session of matches) {
     } : null,
     planConfig: {
       type: Array.isArray(config) ? "array" : config === null ? "null" : typeof config,
+      stringLength: typeof config === "string" ? config.length : null,
+      startsWithJsonObject: typeof config === "string" ? config.trim().startsWith("{") : false,
+      startsWithJsonArray: typeof config === "string" ? config.trim().startsWith("[") : false,
       isFlightTextReference: Boolean(reference),
       reference,
-      referenceRecordPrefix: recordKind
+      referenceRecordPrefix: recordKind,
+      inlineJson,
+      inlineJsonError
     },
-    resolvedPlan: resolved && typeof resolved === "object" ? {
-      type: Array.isArray(resolved) ? "array" : "object",
-      keys: Object.keys(resolved).sort(),
-      width: Number(resolved.width) || null,
-      height: Number(resolved.height) || null,
-      seatWidth: Number(resolved.w) || null,
-      seatHeight: Number(resolved.h) || null,
-      blockCount: Array.isArray(resolved.blocks) ? resolved.blocks.length : null,
-      componentCount: Array.isArray(resolved.comps) ? resolved.comps.length : null
-    } : {
+    resolvedPlan: objectShape(resolved) || {
       type: resolved === null ? "null" : typeof resolved
     }
   });
