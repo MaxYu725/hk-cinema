@@ -56,7 +56,10 @@ for (const session of first.payload.data.allSessions) {
   assert.match(String(session?.time || ""), /^\d{2}:\d{2}$/);
   assert.ok(String(session?.cinema?.sourceId || "").length > 0);
   assert.ok(session?.cinema?.name?.zh || session?.cinema?.name?.en);
-  assert.equal(session?.bookingUrl, null);
+  assert.equal(
+    session?.bookingUrl,
+    `https://cinearthouse.com.hk/hk/show/${encodeURIComponent(session.sourceId)}`
+  );
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
   assert.equal("ticketTypes" in session, false);
@@ -102,7 +105,7 @@ console.log(JSON.stringify({
     stale: first.payload.meta.stale
   },
   persistentBoundaries: {
-    booking: false,
+    exactSessionBooking: true,
     perShowSeatStates: false,
     seatPlan: false
   },
