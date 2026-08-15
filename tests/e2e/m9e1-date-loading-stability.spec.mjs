@@ -74,7 +74,16 @@ test("M9E1 date refresh keeps date/filter/reset geometry stable and never paints
   expect(before).not.toBeNull();
   expect(before.dateBeforeFilter).toBe(true);
 
-  const targetDate = dates.nth(1);
+  const targetIndex = await dates.evaluateAll(nodes => nodes.findIndex(node => !node.classList.contains("active")));
+  expect(targetIndex, "a non-active comparison date is required").toBeGreaterThanOrEqual(0);
+  const targetDate = dates.nth(targetIndex);
+
+  // Hold only the post-open Worker requests long enough to inspect the in-flight layout.
+  await page.route(/https:\/\/hk-cinema-api\.max-yu-jp\.workers\.dev\/.*/, async route => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await route.continue();
+  });
+
   await targetDate.click();
 
   const staleSection = overlay.locator(".provider-compare-timeline-section.m9b-date-loading");
