@@ -4,6 +4,8 @@
   let scheduled = false;
   let comparisonSnapshot = null;
   let pendingComparisonDate = null;
+  let targetedObserver = null;
+  const observedTargets = new WeakSet();
 
   function homeSkeletonCard() {
     return `
@@ -172,8 +174,34 @@
     if (dataHealth) dataHealth.setAttribute("aria-busy", next);
   }
 
+  function observeTarget(selector, attributeFilter) {
+    const node = document.querySelector(selector);
+    if (!node || observedTargets.has(node) || !targetedObserver) return;
+    observedTargets.add(node);
+    targetedObserver.observe(node, { attributes: true, attributeFilter });
+  }
+
+  function bindTargetObservers() {
+    observeTarget("#movieGrid", ["data-broadway-state"]);
+    observeTarget("#refreshButton", ["class"]);
+    observeTarget("#providerCompareOverlay", ["hidden"]);
+    observeTarget("#sharedSeatMapOverlay", ["hidden"]);
+  }
+
+  function loadingOwnerNode(node) {
+    if (!(node instanceof Element)) return false;
+    const selector = "#movieGrid, #providerCompareContent, #sharedSeatMapContent, #dataHealth, #providerCompareOverlay, #sharedSeatMapOverlay";
+    return node.matches(selector) || Boolean(node.closest(selector)) || Boolean(node.querySelector(selector));
+  }
+
+  function childMutationTouchesLoadingOwner(record) {
+    if (loadingOwnerNode(record.target)) return true;
+    return [...record.addedNodes, ...record.removedNodes].some(loadingOwnerNode);
+  }
+
   function sync() {
     scheduled = false;
+    bindTargetObservers();
     decorateHomeLoading();
     decorateComparisonLoading();
     decorateSeatMapLoading();
@@ -197,12 +225,15 @@
     window.addEventListener("hkcinema:home-tab", schedule);
     window.addEventListener("hkcinema:seatmap-opening", schedule);
 
-    const observer = new MutationObserver(schedule);
-    observer.observe(document.body, {
+    targetedObserver = new MutationObserver(schedule);
+    bindTargetObservers();
+
+    const contentObserver = new MutationObserver(records => {
+      if (records.some(childMutationTouchesLoadingOwner)) schedule();
+    });
+    contentObserver.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "hidden", "data-broadway-state"]
+      subtree: true
     });
 
     sync();
