@@ -3,6 +3,9 @@ import { lookup } from "node:dns/promises";
 import { writeFile } from "node:fs/promises";
 
 const ORIGIN = new URL(process.env.GOLDEN_HARVEST_ORIGIN || "https://www.goldenharvest.com");
+const ALTERNATE_ORIGIN = ORIGIN.hostname.startsWith("www.")
+  ? new URL(`${ORIGIN.protocol}//${ORIGIN.hostname.slice(4)}${ORIGIN.port ? `:${ORIGIN.port}` : ""}`)
+  : null;
 const REPORT_PATH = process.env.GOLDEN_HARVEST_RECON_REPORT || "golden-harvest-reconnaissance.json";
 const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
@@ -61,17 +64,19 @@ function safeErrorDetails(error) {
   };
 }
 
-async function dnsEvidence() {
+async function dnsEvidence(hostname) {
   try {
-    const answers = await lookup(ORIGIN.hostname, { all: true });
+    const answers = await lookup(hostname, { all: true });
     return {
+      hostname,
       ok: answers.length > 0,
       addresses: answers.slice(0, 8).map(answer => ({ family: answer.family, address: answer.address })),
-      error: null
+      error: null,
+      errorCode: null
     };
   } catch (error) {
     const details = safeErrorDetails(error);
-    return { ok: false, addresses: [], error: details.error, errorCode: details.errorCode };
+    return { hostname, ok: false, addresses: [], error: details.error, errorCode: details.errorCode };
   }
 }
 
@@ -183,7 +188,7 @@ function normalizeCandidate(raw, baseUrl) {
     const url = new URL(value, baseUrl);
     if (!/^https?:$/.test(url.protocol)) return null;
     url.hash = "";
-    return url.origin === ORIGIN.origin || trustedGoldenHarvestHost(url.hostname)
+    return trustedGoldenHarvestHost(url.hostname)
       ? `${url.origin}${url.pathname}${url.search}`
       : value.slice(0, 240);
   } catch {
@@ -253,14 +258,16 @@ function reportFetchResult(result) {
 }
 
 async function main() {
-  const dns = await dnsEvidence();
+  const primaryDns = await dnsEvidence(ORIGIN.hostname);
+  const alternateDns = ALTERNATE_ORIGIN ? await dnsEvidence(ALTERNATE_ORIGIN.hostname) : null;
+  const probeOrigin = !primaryDns.ok && alternateDns?.ok ? ALTERNATE_ORIGIN : ORIGIN;
   const pages = [];
   const pageBodies = [];
   const allScriptUrls = [];
   const seenScriptUrls = new Set();
 
   for (const path of PAGE_PATHS) {
-    const requestedUrl = new URL(path, ORIGIN).toString();
+    const requestedUrl = new URL(path, probeOrigin).toString();
     const result = await fetchText(requestedUrl, MAX_HTML_BYTES);
     pages.push({
       requestedUrl,
@@ -301,7 +308,7 @@ async function main() {
 
   const sameOriginCandidates = candidates.filter(item => {
     try {
-      return trustedGoldenHarvestHost(new URL(item.candidate, ORIGIN).hostname);
+      return trustedGoldenHarvestHost(new URL(item.candidate, probeOrigin).hostname);
     } catch {
       return false;
     }
@@ -313,9 +320,11 @@ async function main() {
     providerCandidate: "golden-harvest",
     mode: "reconnaissance-only",
     generatedAt: new Date().toISOString(),
-    origin: ORIGIN.origin,
+    requestedOrigin: ORIGIN.origin,
+    probeOrigin: probeOrigin.origin,
     transport: {
-      dns,
+      primaryDns,
+      alternateDns,
       browserLikeUserAgent: true
     },
     limits: {
@@ -350,7 +359,7 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
 
   if (!report.summary.sourceReachable) {
-    console.warn("M10A reconnaissance: no representative Golden Harvest page returned a successful response; preserve transport diagnostics and do not enable production integration from this evidence alone.");
+    console.warn("M10A reconnaissance: neither the selected Golden Harvest host path nor its bounded apex fallback produced a usable public source; preserve transport diagnostics and do not enable production integration from this evidence alone.");
   }
 }
 
