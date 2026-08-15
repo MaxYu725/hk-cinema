@@ -82,7 +82,6 @@ html[data-skin="metro"] .m9c-exit-ghost {
   align-items: stretch;
   pointer-events: none !important;
   contain: layout paint style;
-  animation: m9c-ghost-backdrop-exit var(--motion-duration-fast) var(--motion-ease-exit) both;
 }
 
 html[data-skin="metro"] .m9c-exit-surface {
@@ -151,11 +150,6 @@ html[data-skin="metro"] .m9c-node-exit-ghost .provider-compare-cinema-portal {
     opacity: 1;
     transform: scale(1);
   }
-}
-
-@keyframes m9c-ghost-backdrop-exit {
-  from { background: rgba(0, 0, 0, .18); }
-  to { background: rgba(0, 0, 0, 0); }
 }
 
 @keyframes m9c-sheet-exit {
