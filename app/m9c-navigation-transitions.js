@@ -4,8 +4,10 @@
   const EXIT_DEDUPE_MS = 100;
   const CLEANUP_MS = 360;
   const overlayVisibility = new WeakMap();
+  const observedOverlays = new WeakSet();
   const lastExitAt = { comparison: 0, seatmap: 0 };
   let syncQueued = false;
+  let overlayObserver = null;
 
   function reducedMotion() {
     return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -18,12 +20,17 @@
     window.setTimeout(remove, delay);
   }
 
+  function clearExitGhosts() {
+    document.querySelectorAll(".m9c-exit-ghost, .m9c-node-exit-ghost").forEach(node => node.remove());
+  }
+
   function spawnExitGhost(kind) {
     if (reducedMotion()) return false;
     const now = performance.now();
     if (now - (lastExitAt[kind] || 0) < EXIT_DEDUPE_MS) return false;
     lastExitAt[kind] = now;
 
+    document.querySelectorAll(`.m9c-exit-ghost[data-m9c-exit-kind="${kind}"]`).forEach(node => node.remove());
     const ghost = document.createElement("div");
     ghost.className = "m9c-exit-ghost";
     ghost.dataset.m9cExitKind = kind;
@@ -62,6 +69,7 @@
 
   function stampEntry(node) {
     if (!node || node.hidden || reducedMotion()) return;
+    document.querySelectorAll(".m9c-node-exit-ghost").forEach(ghost => ghost.remove());
     node.classList.remove("m9c-panel-enter");
     requestAnimationFrame(() => {
       if (!node.isConnected || node.hidden) return;
@@ -83,16 +91,6 @@
     });
   }
 
-  function scheduleSync() {
-    if (syncQueued) return;
-    syncQueued = true;
-    requestAnimationFrame(() => {
-      syncQueued = false;
-      syncDateCurrent();
-      scanOverlays();
-    });
-  }
-
   function overlayKind(overlay) {
     if (overlay?.id === "providerCompareOverlay") return "comparison";
     if (overlay?.id === "sharedSeatMapOverlay") return "seatmap";
@@ -104,6 +102,12 @@
     overlayVisibility.set(overlay, !overlay.hidden);
   }
 
+  function bindOverlayObserver(overlay) {
+    if (!overlay || observedOverlays.has(overlay) || !overlayObserver) return;
+    observedOverlays.add(overlay);
+    overlayObserver.observe(overlay, { attributes: true, attributeFilter: ["hidden"] });
+  }
+
   function syncOverlayVisibility(overlay) {
     if (!overlay) return;
     const kind = overlayKind(overlay);
@@ -111,10 +115,12 @@
     const current = !overlay.hidden;
     if (!overlayVisibility.has(overlay)) {
       overlayVisibility.set(overlay, current);
+      if (current) clearExitGhosts();
       return;
     }
     const previous = overlayVisibility.get(overlay);
     overlayVisibility.set(overlay, current);
+    if (!previous && current) clearExitGhosts();
     if (previous && !current) spawnExitGhost(kind);
   }
 
@@ -124,8 +130,30 @@
       document.querySelector("#sharedSeatMapOverlay")
     ].filter(Boolean).forEach(overlay => {
       registerOverlay(overlay);
+      bindOverlayObserver(overlay);
       syncOverlayVisibility(overlay);
     });
+  }
+
+  function scheduleSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(() => {
+      syncQueued = false;
+      scanOverlays();
+      syncDateCurrent();
+    });
+  }
+
+  function motionOwnerNode(node) {
+    if (!(node instanceof Element)) return false;
+    const selector = "#providerCompareOverlay, #providerCompareContent, #sharedSeatMapOverlay";
+    return node.matches(selector) || Boolean(node.closest(selector)) || Boolean(node.querySelector(selector));
+  }
+
+  function childMutationTouchesMotionOwner(record) {
+    if (motionOwnerNode(record.target)) return true;
+    return [...record.addedNodes, ...record.removedNodes].some(motionOwnerNode);
   }
 
   function navigationSource(openButton) {
@@ -154,6 +182,7 @@
 
     const openButton = event.target.closest?.("[data-compare-open]");
     if (openButton) {
+      clearExitGhosts();
       markNavigationSource(openButton);
       return;
     }
@@ -200,6 +229,11 @@
   }
 
   function install() {
+    overlayObserver = new MutationObserver(records => {
+      for (const record of records) syncOverlayVisibility(record.target);
+      scheduleSync();
+    });
+
     scanOverlays();
     syncDateCurrent();
 
@@ -207,32 +241,30 @@
     window.addEventListener("click", handleClickCapture, true);
     window.addEventListener("keydown", handleKeyCapture, true);
 
-    [
-      "hkcinema:provider-compare-open",
-      "hkcinema:provider-compare-lifecycle",
-      "hkcinema:seatmap-opening"
-    ].forEach(name => window.addEventListener(name, scheduleSync));
-
-    const observer = new MutationObserver(records => {
-      for (const record of records) {
-        if (record.type === "attributes" && record.attributeName === "hidden") {
-          syncOverlayVisibility(record.target);
-        }
-      }
+    window.addEventListener("hkcinema:provider-compare-open", () => {
+      clearExitGhosts();
       scheduleSync();
     });
-    observer.observe(document.body, {
+    window.addEventListener("hkcinema:provider-compare-lifecycle", scheduleSync);
+    window.addEventListener("hkcinema:seatmap-opening", () => {
+      clearExitGhosts();
+      scheduleSync();
+    });
+
+    const contentObserver = new MutationObserver(records => {
+      if (records.some(childMutationTouchesMotionOwner)) scheduleSync();
+    });
+    contentObserver.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden"]
+      subtree: true
     });
   }
 
   window.HKCinemaM9CTransitions = Object.freeze({
-    version: "m9c-1",
+    version: "m9c-1-m9e1",
     refresh: scheduleSync,
-    syncDateCurrent
+    syncDateCurrent,
+    clearExitGhosts
   });
 
   if (document.readyState === "loading") {
