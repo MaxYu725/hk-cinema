@@ -5,6 +5,9 @@ import {
   resolveCineArtFlightTextReference
 } from "../worker/src/providers/cineart-flight.js";
 
+const BASE_URL = String(
+  process.env.HK_CINEMA_CANDIDATE_WORKER_URL || "https://hk-cinema-api.max-yu-jp.workers.dev"
+).replace(/\/$/, "");
 const TARGET_DATE = process.env.CINEART_DIAGNOSTIC_DATE || "2026-08-16";
 const TARGET_TIME = process.env.CINEART_DIAGNOSTIC_TIME || "14:45";
 const TARGET_CINEMA = process.env.CINEART_DIAGNOSTIC_CINEMA || "MegaBox";
@@ -23,6 +26,17 @@ function objectShape(value) {
   };
 }
 
+async function workerSeatMap(showId, movieId) {
+  const response = await fetch(
+    `${BASE_URL}/api/cineart/shows/${encodeURIComponent(showId)}/seats?movieSourceId=${encodeURIComponent(movieId)}`,
+    { cache: "no-store", headers: { Accept: "application/json" } }
+  );
+  let payload = null;
+  try { payload = await response.json(); }
+  catch { throw new Error(`Candidate seat map returned non-JSON HTTP ${response.status}`); }
+  return { response, payload };
+}
+
 const snapshot = await getCineArtWorkerSnapshot();
 const matches = snapshot.normalized.sessions.filter(session => {
   const cinema = `${session?.cinema?.name?.zh || ""} ${session?.cinema?.name?.en || ""}`;
@@ -37,6 +51,7 @@ assert.ok(matches.length <= 3, "Diagnostic target unexpectedly matched more than
 const reports = [];
 for (const session of matches) {
   const showId = String(session.sourceId);
+  const movieId = String(session.movieSourceId || "");
   const response = await fetch(`${CINEART_HOME_URL}/show/${encodeURIComponent(showId)}`, {
     method: "GET",
     redirect: "follow",
@@ -76,9 +91,22 @@ for (const session of matches) {
     }
   }
 
+  assert.ok(resolved && typeof resolved === "object" && !Array.isArray(resolved), "reported MegaBox plan must now resolve as an object");
+  assert.equal(Number(resolved.numSeats), Number(session?.seatSummary?.total), "resolved plan seat count must correlate with home session total");
+
+  const live = await workerSeatMap(showId, movieId);
+  assert.equal(live.response.ok, true, `candidate Worker seat map returned HTTP ${live.response.status}`);
+  assert.equal(live.payload?.ok, true);
+  assert.equal(String(live.payload?.data?.showId), showId);
+  assert.equal(String(live.payload?.data?.movieSourceId), movieId);
+  assert.equal(live.payload?.data?.layoutMode, "positioned");
+  assert.equal(Number(live.payload?.data?.counts?.total), Number(session?.seatSummary?.total));
+  assert.equal(live.payload?.data?.sections?.[0]?.seats?.length, Number(session?.seatSummary?.total));
+  assert.equal(live.payload?.data?.source?.geometry, "official-parametric-blocks");
+
   reports.push({
     showId,
-    movieId: String(session.movieSourceId || ""),
+    movieId,
     cinemaId: session.cinema?.sourceId || null,
     houseId: session.house?.sourceId || null,
     houseName: session.house?.name || null,
@@ -99,14 +127,23 @@ for (const session of matches) {
       inlineJson,
       inlineJsonError
     },
-    resolvedPlan: objectShape(resolved) || {
-      type: resolved === null ? "null" : typeof resolved
+    resolvedPlan: objectShape(resolved),
+    candidateSeatMap: {
+      status: live.response.status,
+      total: live.payload.data.counts.total,
+      available: live.payload.data.counts.available,
+      held: live.payload.data.counts.held,
+      sold: live.payload.data.counts.sold,
+      blocked: live.payload.data.counts.blocked,
+      canvas: live.payload.data.canvas,
+      cacheState: live.payload.data.meta?.cacheState || live.payload.meta?.cacheState || null
     }
   });
 }
 
 console.log(JSON.stringify({
   ok: true,
+  baseUrl: BASE_URL,
   target: { date: TARGET_DATE, time: TARGET_TIME, cinema: TARGET_CINEMA },
   matches: reports
 }, null, 2));
