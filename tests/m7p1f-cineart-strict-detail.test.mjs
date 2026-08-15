@@ -189,9 +189,10 @@ test("M7P1F browser normalizer renders strict CineArt seats as selectable while 
     price: { currency: "HKD", display: 110, face: 110 },
     seatSummary: { quality: "coarse-not-sold", total: 4, available: null, held: null, sold: 1, notSold: 3 }
   });
-  assert.equal(coarse.seatText, "3/4 未售（非可選數）");
+  assert.equal(coarse.seatText, "3/4 未售（未核實可選）");
   assert.equal(coarse.seatAvailable, null);
   assert.equal(coarse.seatClass, "unknown");
+  assert.doesNotMatch(coarse.seatText, /^\d+\/\d+ 可選$/);
 });
 
 test("M7P1F public showtime boundary remains seat-map-free after M7P1G enables a separate read-only seat-map capability", async () => {

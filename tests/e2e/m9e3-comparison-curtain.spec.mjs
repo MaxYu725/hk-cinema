@@ -35,6 +35,11 @@ test("M9E3 keeps date refresh behind an opaque curtain until decorated results s
     await route.continue();
   });
 
+  await page.evaluate(() => {
+    window.HKCinemaProviderComparePrefetch?.cancel?.();
+    window.HKCinemaProviderCompareMainCache?.clear?.();
+  });
+
   await targetDate.click();
   await expect(content).toHaveAttribute("data-m9e3-curtain", "active", { timeout: 2_000 });
 
@@ -59,12 +64,10 @@ test("M9E3 keeps date refresh behind an opaque curtain until decorated results s
   expect(curtainVisual.top).toBeGreaterThanOrEqual(curtainVisual.heroBottom);
   expect(curtainVisual.label).toContain("更新");
 
-  // The old live timeline remains in flow behind the curtain while the delayed request runs.
   const staleSection = overlay.locator(".provider-compare-timeline-section.m9b-date-loading");
   await expect(staleSection).toBeVisible({ timeout: 2_000 });
   await expect(content).toHaveAttribute("data-m9e3-curtain", "active");
 
-  // Reveal is allowed only after the real final structure is decorated and quiet.
   await expect(content).not.toHaveAttribute("data-m9e3-curtain", /.+/, { timeout: 30_000 });
   await expect(overlay.locator(".provider-compare-timeline-section.phase8b-timeline-section")).toBeVisible();
   await expect(overlay.locator("[data-provider-insights]")).toBeVisible();

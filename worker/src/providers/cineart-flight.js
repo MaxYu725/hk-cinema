@@ -131,11 +131,32 @@ function sliceUtf8Bytes(source, startIndex, byteLength) {
   return bytes === byteLength ? source.slice(startIndex, endIndex) : null;
 }
 
-export function resolveCineArtFlightTextReference(flightInput, reference) {
-  const flight = decodeCineArtFlightPayload(flightInput);
-  const ref = String(reference || "");
-  if (!/^\$[0-9a-f]+$/i.test(ref)) return null;
+function inlineJsonObject(value) {
+  const source = String(value || "").trim();
+  if (!source.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(source);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
 
+export function resolveCineArtFlightTextReference(flightInput, reference) {
+  const ref = String(reference || "").trim();
+
+  // CineArt currently emits the same official plan object in two transport
+  // shapes: a Next Flight $hex text reference, and (notably for some MegaBox
+  // halls) a JSON object serialized directly into show.plan.config.
+  // Parse only a complete JSON object here; malformed/other strings still fail
+  // closed and no geometry is inferred.
+  const inline = inlineJsonObject(ref);
+  if (inline) return inline;
+
+  if (!/^\$[0-9a-f]+$/i.test(ref)) return null;
+  const flight = decodeCineArtFlightPayload(flightInput);
   const id = ref.slice(1).toLowerCase();
   const pattern = new RegExp(`(?:^|\\n)${id}:T([0-9a-f]+),`, "i");
   const match = pattern.exec(flight);

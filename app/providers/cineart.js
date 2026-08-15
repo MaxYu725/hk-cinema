@@ -167,8 +167,8 @@
         : `${available} 個可選`
       : Number.isFinite(notSold)
         ? Number.isFinite(total)
-          ? `${notSold}/${total} 未售（非可選數）`
-          : `${notSold} 未售（非可選數）`
+          ? `${notSold}/${total} 未售（未核實可選）`
+          : `${notSold} 未售（未核實可選）`
         : "座位資料暫缺";
 
     return {
