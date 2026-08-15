@@ -370,7 +370,15 @@ async function main() {
   };
 
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify(report, null, 2));
+  console.log(JSON.stringify({
+    phase: report.phase,
+    providerCandidate: report.providerCandidate,
+    predecessor: report.predecessor,
+    currentOrigin: report.currentOrigin,
+    transport: report.transport,
+    summary: report.summary,
+    candidates: report.candidates.slice(0, 50)
+  }, null, 2));
 
   if (!report.summary.sourceReachable) {
     console.warn("M10A reconnaissance: current Bestar public source was not reachable from the runner; preserve transport evidence and do not enable production integration.");
