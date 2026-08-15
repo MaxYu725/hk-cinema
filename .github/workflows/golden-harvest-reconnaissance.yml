@@ -1,12 +1,12 @@
-name: Golden Harvest Reconnaissance
+name: Bestar Successor Reconnaissance
 
 on:
   workflow_dispatch:
     inputs:
       origin:
-        description: Golden Harvest public origin
+        description: Bestar current public origin
         required: false
-        default: https://www.goldenharvest.com
+        default: https://www.bestarfilm.hk
   pull_request:
     branches:
       - main
@@ -21,12 +21,12 @@ permissions:
 
 jobs:
   reconnaissance:
-    name: golden-harvest-public-source
+    name: bestar-current-public-source
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      GOLDEN_HARVEST_ORIGIN: ${{ inputs.origin || 'https://www.goldenharvest.com' }}
-      GOLDEN_HARVEST_RECON_REPORT: golden-harvest-reconnaissance.json
+      BESTAR_ORIGIN: ${{ inputs.origin || 'https://www.bestarfilm.hk' }}
+      BESTAR_RECON_REPORT: golden-harvest-reconnaissance.json
 
     steps:
       - name: Checkout
@@ -43,33 +43,29 @@ jobs:
       - name: Check reconnaissance script syntax
         run: node --check scripts/m10a-golden-harvest-reconnaissance.mjs
 
-      - name: Cross-check public GET transport with curl
+      - name: Cross-check Bestar public GET transport with curl
         continue-on-error: true
         run: |
           browser_ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
-          apex_origin="${GOLDEN_HARVEST_ORIGIN/\/\/www./\/\/}"
-          for probe_origin in "$GOLDEN_HARVEST_ORIGIN" "$apex_origin"; do
-            echo "transport_probe=${probe_origin}"
-            curl \
-              --silent \
-              --show-error \
-              --location \
-              --max-time 12 \
-              --request GET \
-              --user-agent "$browser_ua" \
-              --output /dev/null \
-              --write-out 'curl_http=%{http_code} curl_url=%{url_effective} ssl_verify=%{ssl_verify_result}\n' \
-              "${probe_origin}/" || true
-          done
+          curl \
+            --silent \
+            --show-error \
+            --location \
+            --max-time 12 \
+            --request GET \
+            --user-agent "$browser_ua" \
+            --output /dev/null \
+            --write-out 'curl_http=%{http_code} curl_url=%{url_effective} ssl_verify=%{ssl_verify_result}\n' \
+            "${BESTAR_ORIGIN}/" || true
 
-      - name: Probe Golden Harvest public source
+      - name: Probe current Bestar public source
         run: node scripts/m10a-golden-harvest-reconnaissance.mjs
 
       - name: Upload reconnaissance report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: golden-harvest-reconnaissance-${{ github.run_id }}
+          name: bestar-successor-reconnaissance-${{ github.run_id }}
           path: golden-harvest-reconnaissance.json
           if-no-files-found: warn
           retention-days: 7
