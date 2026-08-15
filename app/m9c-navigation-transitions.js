@@ -4,8 +4,10 @@
   const EXIT_DEDUPE_MS = 100;
   const CLEANUP_MS = 360;
   const overlayVisibility = new WeakMap();
+  const observedOverlays = new WeakSet();
   const lastExitAt = { comparison: 0, seatmap: 0 };
   let syncQueued = false;
+  let overlayObserver = null;
 
   function reducedMotion() {
     return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -89,16 +91,6 @@
     });
   }
 
-  function scheduleSync() {
-    if (syncQueued) return;
-    syncQueued = true;
-    requestAnimationFrame(() => {
-      syncQueued = false;
-      syncDateCurrent();
-      scanOverlays();
-    });
-  }
-
   function overlayKind(overlay) {
     if (overlay?.id === "providerCompareOverlay") return "comparison";
     if (overlay?.id === "sharedSeatMapOverlay") return "seatmap";
@@ -108,6 +100,12 @@
   function registerOverlay(overlay) {
     if (!overlay || overlayVisibility.has(overlay)) return;
     overlayVisibility.set(overlay, !overlay.hidden);
+  }
+
+  function bindOverlayObserver(overlay) {
+    if (!overlay || observedOverlays.has(overlay) || !overlayObserver) return;
+    observedOverlays.add(overlay);
+    overlayObserver.observe(overlay, { attributes: true, attributeFilter: ["hidden"] });
   }
 
   function syncOverlayVisibility(overlay) {
@@ -132,8 +130,30 @@
       document.querySelector("#sharedSeatMapOverlay")
     ].filter(Boolean).forEach(overlay => {
       registerOverlay(overlay);
+      bindOverlayObserver(overlay);
       syncOverlayVisibility(overlay);
     });
+  }
+
+  function scheduleSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(() => {
+      syncQueued = false;
+      scanOverlays();
+      syncDateCurrent();
+    });
+  }
+
+  function motionOwnerNode(node) {
+    if (!(node instanceof Element)) return false;
+    const selector = "#providerCompareOverlay, #providerCompareContent, #sharedSeatMapOverlay";
+    return node.matches(selector) || Boolean(node.closest(selector)) || Boolean(node.querySelector(selector));
+  }
+
+  function childMutationTouchesMotionOwner(record) {
+    if (motionOwnerNode(record.target)) return true;
+    return [...record.addedNodes, ...record.removedNodes].some(motionOwnerNode);
   }
 
   function navigationSource(openButton) {
@@ -209,6 +229,11 @@
   }
 
   function install() {
+    overlayObserver = new MutationObserver(records => {
+      for (const record of records) syncOverlayVisibility(record.target);
+      scheduleSync();
+    });
+
     scanOverlays();
     syncDateCurrent();
 
@@ -226,19 +251,12 @@
       scheduleSync();
     });
 
-    const observer = new MutationObserver(records => {
-      for (const record of records) {
-        if (record.type === "attributes" && record.attributeName === "hidden") {
-          syncOverlayVisibility(record.target);
-        }
-      }
-      scheduleSync();
+    const contentObserver = new MutationObserver(records => {
+      if (records.some(childMutationTouchesMotionOwner)) scheduleSync();
     });
-    observer.observe(document.body, {
+    contentObserver.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden"]
+      subtree: true
     });
   }
 
