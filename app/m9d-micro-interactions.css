@@ -1,0 +1,94 @@
+/* M9D — Micro-interactions
+ * Small Metro touch acknowledgements layered on M9A–M9C.
+ * Keep all data, navigation and seat-map lifecycle ownership in existing runtimes.
+ */
+
+/* Movie cards should feel pressed, not shrunk. Override the older deeper Metro press. */
+html[data-skin="metro"] .movie-card {
+  touch-action: manipulation;
+}
+
+html[data-skin="metro"] .movie-card:active,
+html[data-skin="metro"] .movie-card.m9d-pressed {
+  transform: translateY(1px) scale(.985);
+  border-color: var(--metro-accent);
+  opacity: .96;
+}
+
+html[data-skin="metro"] .home-library-filter-options > button:active {
+  transform: translateY(1px) scale(.985);
+}
+
+/* A short acknowledgement after date/filter/sort controls are accepted. */
+html[data-skin="metro"] :where(
+  .home-library-filter-options > button,
+  .provider-compare-date,
+  .provider-compare-filter-toggle,
+  .phase9b3-filter-group-summary,
+  .provider-compare-control-group button,
+  .phase8d-smart-pick,
+  .movie-favorite-button
+).m9d-control-ack {
+  border-color: var(--metro-accent) !important;
+  opacity: .9;
+}
+
+html[data-skin="metro"] :where(
+  .home-movie-sort,
+  .classic-final-sort,
+  .provider-compare-cinema-control
+).m9d-control-ack {
+  outline: 1px solid var(--metro-accent);
+  outline-offset: -1px;
+}
+
+/* Smart Pick arrival keeps the existing M9C border and adds a narrow, layout-free target rail. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-show.is-recommendation-jump::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--metro-accent);
+  pointer-events: none;
+}
+
+/* Seat maps already know when horizontal scrolling is required. M9D makes that hint first-use only. */
+html[data-skin="metro"] .shared-seatmap-scroll-hint.m9d-first-use-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--metro-fg);
+  font-weight: 500;
+}
+
+html[data-skin="metro"] .shared-seatmap-scroll-hint.m9d-first-use-hint::before {
+  content: "↔";
+  display: inline-block;
+  color: var(--metro-accent);
+  font-size: .82rem;
+  animation: m9d-seat-hint-nudge 700ms var(--motion-ease-standard) 2 alternate;
+}
+
+html[data-skin="metro"][data-m9d-seat-hint-seen="true"] .shared-seatmap-scroll-hint {
+  display: none !important;
+}
+
+@keyframes m9d-seat-hint-nudge {
+  from { transform: translateX(-3px); opacity: .72; }
+  to { transform: translateX(3px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] .shared-seatmap-scroll-hint.m9d-first-use-hint::before {
+    animation: none !important;
+  }
+
+  html[data-skin="metro"] .movie-card:active,
+  html[data-skin="metro"] .movie-card.m9d-pressed,
+  html[data-skin="metro"] .home-library-filter-options > button:active {
+    transform: none;
+  }
+}
