@@ -29,6 +29,7 @@ on:
       - "scripts/m7p1f-cineart-strict-detail-validation.mjs"
       - "scripts/m7p1g-cineart-seatmap-validation.mjs"
       - "scripts/m7p1h-cineart-final-capability-audit.mjs"
+      - "scripts/m10t1c-cineart-megabox-seat-diagnostic.mjs"
       - ".github/workflows/cineart-candidate-validation.yml"
   workflow_dispatch:
     inputs:
@@ -71,6 +72,9 @@ jobs:
 
       - name: Revalidate CineArt Worker discovery adapter
         run: node scripts/m7p1b-cineart-preview-validation.mjs
+
+      - name: Diagnose reported CineArt MegaBox seat-plan shape
+        run: node scripts/m10t1c-cineart-megabox-seat-diagnostic.mjs
 
       - name: Revalidate CineArt production catalogue boundary
         run: node scripts/m7p1c-cineart-catalogue-validation.mjs
