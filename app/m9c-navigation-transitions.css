@@ -1,0 +1,205 @@
+/* M9C — Navigation & Overlay Transitions
+ * Short Metro transitions layered on top of M9A/M9B.
+ * Functional hidden/open state remains owned by the existing comparison, filter and seat-map runtimes.
+ */
+
+/* Full-screen destinations: the overlay itself fades in while M9A moves the sheet a short distance. */
+html[data-skin="metro"] .provider-compare-overlay:not([hidden]),
+html[data-skin="metro"] .shared-seatmap-overlay:not([hidden]) {
+  animation: m9c-overlay-enter var(--motion-duration-fast) var(--motion-ease-enter) both;
+}
+
+/* The source card only acknowledges navigation; it never waits for the destination. */
+html[data-skin="metro"] .movie-card.m9c-navigation-origin {
+  transform: scale(.985);
+  opacity: .86;
+}
+
+/* Filter / Smart Picks entry states are stamped only for an actual closed -> open transition. */
+html[data-skin="metro"] #providerCompareContent .m9c-panel-enter {
+  transform-origin: top center;
+  animation: m9c-panel-enter var(--motion-duration-fast) var(--motion-ease-enter) both;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-filter-toggle > em,
+html[data-skin="metro"] #providerCompareContent .phase9b3-filter-group-summary > em,
+html[data-skin="metro"] #providerCompareContent .phase8b-section-toggle > em {
+  display: inline-block;
+  transform-origin: center;
+  transition: transform var(--motion-fast), color var(--motion-fast);
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-filter-toggle[aria-expanded="true"] > em,
+html[data-skin="metro"] #providerCompareContent .phase9b3-filter-group-summary[aria-expanded="true"] > em,
+html[data-skin="metro"] #providerCompareContent .phase8b-section-toggle[aria-expanded="true"] > em {
+  transform: rotate(180deg);
+  color: var(--metro-accent);
+}
+
+/* Selected date stays Metro-flat, with a very short indicator drawing underneath. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-date {
+  position: relative;
+  overflow: hidden;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-date::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 4px;
+  height: 2px;
+  background: rgba(255, 255, 255, .92);
+  opacity: 0;
+  transform: scaleX(.18);
+  transform-origin: center;
+  transition: transform var(--motion-fast), opacity var(--motion-fast);
+  pointer-events: none;
+}
+
+html[data-skin="metro"] #providerCompareContent .provider-compare-date.active::after,
+html[data-skin="metro"] #providerCompareContent .provider-compare-date[aria-current="date"]::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Smart Pick target keeps the existing border marker but receives a short arrival pulse. */
+html[data-skin="metro"] #providerCompareContent .provider-compare-show.is-recommendation-jump {
+  animation: m9c-recommendation-arrive var(--motion-duration-slow) var(--motion-ease-enter) both;
+}
+
+/*
+ * Exit after-images.
+ * The real owner hides/aborts immediately. These surfaces are passive and exist only
+ * long enough to make the destination disappear without a single-frame cut.
+ */
+html[data-skin="metro"] .m9c-exit-ghost {
+  position: fixed;
+  z-index: 7000;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  pointer-events: none !important;
+  contain: layout paint style;
+  animation: m9c-ghost-backdrop-exit var(--motion-duration-fast) var(--motion-ease-exit) both;
+}
+
+html[data-skin="metro"] .m9c-exit-surface {
+  width: min(100%, 500px);
+  min-height: 100dvh;
+  background: var(--metro-bg);
+  border-inline: 0 solid transparent;
+  pointer-events: none !important;
+  animation: m9c-sheet-exit var(--motion-duration-fast) var(--motion-ease-exit) both;
+}
+
+html[data-skin="metro"] .m9c-exit-ghost[data-m9c-exit-kind="comparison"] .m9c-exit-surface::before,
+html[data-skin="metro"] .m9c-exit-ghost[data-m9c-exit-kind="seatmap"] .m9c-exit-surface::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 2px;
+  margin: max(16px, env(safe-area-inset-top)) 16px 0 auto;
+  background: var(--metro-border);
+  opacity: .8;
+}
+
+/* Filter and Smart Picks close snapshots are small fixed visual copies, never interactive. */
+html[data-skin="metro"] .m9c-node-exit-ghost {
+  position: fixed !important;
+  z-index: 7100 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  transform-origin: top center !important;
+  animation: m9c-node-exit var(--motion-duration-fast) var(--motion-ease-exit) both !important;
+}
+
+html[data-skin="metro"] .m9c-node-exit-ghost,
+html[data-skin="metro"] .m9c-node-exit-ghost * {
+  pointer-events: none !important;
+}
+
+/* Avoid reusing fixed-position descendants from a cloned flyout/smart-pick surface. */
+html[data-skin="metro"] .m9c-node-exit-ghost .provider-compare-cinema-portal {
+  display: none !important;
+}
+
+@keyframes m9c-overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes m9c-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-distance-small) * -1));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes m9c-recommendation-arrive {
+  0% {
+    opacity: .78;
+    transform: scale(.99);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes m9c-ghost-backdrop-exit {
+  from { background: rgba(0, 0, 0, .18); }
+  to { background: rgba(0, 0, 0, 0); }
+}
+
+@keyframes m9c-sheet-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-medium));
+  }
+}
+
+@keyframes m9c-node-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-distance-small) * -1)) scaleY(.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="metro"] .provider-compare-overlay:not([hidden]),
+  html[data-skin="metro"] .shared-seatmap-overlay:not([hidden]),
+  html[data-skin="metro"] #providerCompareContent .m9c-panel-enter,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-show.is-recommendation-jump,
+  html[data-skin="metro"] .m9c-exit-ghost,
+  html[data-skin="metro"] .m9c-exit-surface,
+  html[data-skin="metro"] .m9c-node-exit-ghost {
+    animation: none !important;
+  }
+
+  html[data-skin="metro"] #providerCompareContent .provider-compare-filter-toggle > em,
+  html[data-skin="metro"] #providerCompareContent .phase9b3-filter-group-summary > em,
+  html[data-skin="metro"] #providerCompareContent .phase8b-section-toggle > em,
+  html[data-skin="metro"] #providerCompareContent .provider-compare-date::after {
+    transition: none !important;
+  }
+
+  html[data-skin="metro"] .movie-card.m9c-navigation-origin {
+    transform: none;
+    opacity: 1;
+  }
+}
