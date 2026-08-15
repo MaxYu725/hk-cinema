@@ -73,7 +73,7 @@
         prices: true,
         seatSummary: true,
         seatMap: true,
-        booking: false
+        booking: true
       }
     })
   ]);
@@ -90,7 +90,7 @@
   }
 
   window.HKCinemaProviderRegistry = Object.freeze({
-    version: "m7p1g-1",
+    version: "m10t1b-1",
     capabilityKeys: CAPABILITY_KEYS,
     providers,
     get,

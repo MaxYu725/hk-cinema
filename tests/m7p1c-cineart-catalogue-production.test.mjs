@@ -76,7 +76,7 @@ test("M7P1C catalogue capability remains registered while later optional capabil
     "cineart"
   ]);
   assert.equal(cineart.capabilities.catalogue, true);
-  assert.equal(cineart.capabilities.booking, false);
+  assert.equal(cineart.capabilities.booking, true);
 });
 
 test("M7P1C browser adapter continues to keep catalogue refresh on the catalogue Worker route", async () => {

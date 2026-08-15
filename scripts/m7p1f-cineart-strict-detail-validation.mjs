@@ -61,7 +61,10 @@ assert.ok(detailed, "discovery sample date must expose at least one detailed Cin
 for (const session of first.payload.data.allSessions) {
   assert.equal(session?.provider, "cineart");
   assert.equal(String(session?.movieSourceId), String(sample.movieSourceId));
-  assert.equal(session?.bookingUrl, null);
+  assert.equal(
+    session?.bookingUrl,
+    `https://cinearthouse.com.hk/hk/show/${encodeURIComponent(session.sourceId)}`
+  );
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
   if (session?.price) {
@@ -76,7 +79,10 @@ for (const session of first.payload.data.allSessions) {
 }
 
 for (const session of first.payload.data.sessions) {
-  assert.equal(session?.bookingUrl, null);
+  assert.equal(
+    session?.bookingUrl,
+    `https://cinearthouse.com.hk/hk/show/${encodeURIComponent(session.sourceId)}`
+  );
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
   if (session?.seatSummary?.quality === "strict-seat-state") {
@@ -122,8 +128,8 @@ console.log(JSON.stringify({
     cacheState: first.payload.meta.cacheState,
     stale: first.payload.meta.stale
   },
-  strictSample: { sourceId: strict.sourceId, time: strict.time, cinema: strict.cinema, seatSummary: strict.seatSummary },
+  strictSample: { sourceId: strict.sourceId, time: strict.time, cinema: strict.cinema, seatSummary: strict.seatSummary, bookingUrl: strict.bookingUrl },
   detailedPriceSample: { sourceId: detailed.sourceId, time: detailed.time, price: detailed.price },
-  persistentShowtimeBoundaries: { allSessionsCoarse: true, seatStates: false, seatPlan: false, booking: false },
+  persistentShowtimeBoundaries: { allSessionsCoarse: true, seatStates: false, seatPlan: false, exactSessionBooking: true },
   methodGuard: denied.response.status
 }, null, 2));

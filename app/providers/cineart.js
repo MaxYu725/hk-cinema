@@ -192,7 +192,7 @@
       seatClass: strict ? seatClass(available, total) : "unknown",
       seatAvailable: available,
       seatTotal: total,
-      bookingUrl: null
+      bookingUrl: session?.bookingUrl || null
     };
   }
 
@@ -311,7 +311,7 @@
       id: "cineart",
       label: "CineArt",
       bookingUrl: null,
-      capabilities: { seatMap: true, booking: false }
+      capabilities: { seatMap: true, booking: true }
     };
     const sourceSections = Array.isArray(data.sections) ? data.sections : [];
     const sections = sourceSections.map((section, index) => {
@@ -385,7 +385,7 @@
       sections,
       notices: [],
       purchaseLimit: null,
-      bookingUrl: null,
+      bookingUrl: session?.bookingUrl || null,
       showtime: session || null,
       source: {
         quality: "exact",

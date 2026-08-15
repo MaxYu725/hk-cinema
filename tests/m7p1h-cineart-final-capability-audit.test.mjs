@@ -11,15 +11,19 @@ test("M7P1H starts only after M7P1G Android installed-PWA acceptance passed", as
   assert.match(checkpoint, /seat-map presentation improvements[\s\S]*deferred/i);
 });
 
-test("M7P1H keeps CineArt production booking disabled during reconnaissance", async () => {
-  const registry = await source("app/provider-registry.js");
+test("M7P1H records that CineArt booking was disabled at that checkpoint while the current Registry may advance later", async () => {
+  const [checkpoint, registry] = await Promise.all([
+    source("docs/checkpoints/m7p1h-cineart-final-capability-audit.md"),
+    source("app/provider-registry.js")
+  ]);
+  assert.match(checkpoint, /booking:\s*false/i);
   const cineartBlock = registry.match(/id:\s*"cineart"[\s\S]*?capabilities:\s*\{([\s\S]*?)\}\s*\}\)/)?.[1] || "";
   assert.match(cineartBlock, /catalogue:\s*true/);
   assert.match(cineartBlock, /showtimes:\s*true/);
   assert.match(cineartBlock, /prices:\s*true/);
   assert.match(cineartBlock, /seatSummary:\s*true/);
   assert.match(cineartBlock, /seatMap:\s*true/);
-  assert.match(cineartBlock, /booking:\s*false/);
+  assert.match(cineartBlock, /booking:\s*true/);
 });
 
 test("M7P1H audit is GET-only reconnaissance and requires route plus key evidence before claiming booking", async () => {

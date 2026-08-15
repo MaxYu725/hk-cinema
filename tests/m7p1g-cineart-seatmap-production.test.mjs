@@ -102,7 +102,7 @@ test("M7P1G refuses incomplete geometry instead of inventing a partial seat map"
   );
 });
 
-test("M7P1G Registry enables CineArt seatMap but keeps booking disabled", async () => {
+test("M7P1G Registry keeps CineArt seatMap enabled while later booking capability advances independently", async () => {
   const registrySource = await source("app/provider-registry.js");
   const window = {};
   vm.runInNewContext(registrySource, { window, Map, Object, String });
@@ -111,7 +111,7 @@ test("M7P1G Registry enables CineArt seatMap but keeps booking disabled", async 
   assert.equal(typeof registry.version, "string");
   assert.ok(registry.version.length > 0);
   assert.equal(cineart.capabilities.seatMap, true);
-  assert.equal(cineart.capabilities.booking, false);
+  assert.equal(cineart.capabilities.booking, true);
 });
 
 test("M7P1G browser adapter owns request/view-model adaptation but never direct CineArt upstream transport", async () => {

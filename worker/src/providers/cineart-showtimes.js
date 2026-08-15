@@ -169,6 +169,19 @@ function publicStrictSeatSummary(summary) {
   };
 }
 
+export function buildCineArtSessionBookingUrl(showSourceId) {
+  const sourceId = String(showSourceId || "").trim().replace(/^cineart:/, "");
+  if (!/^\d+$/.test(sourceId)) return null;
+  return `${CINEART_HOME_URL}/show/${encodeURIComponent(sourceId)}`;
+}
+
+function sessionsWithBookingUrls(sessions) {
+  return cleanArray(sessions).map(session => ({
+    ...session,
+    bookingUrl: buildCineArtSessionBookingUrl(session?.sourceId)
+  }));
+}
+
 function publicSession(session) {
   return {
     sourceId: String(session?.sourceId || ""),
@@ -184,7 +197,7 @@ function publicSession(session) {
     formats: cleanArray(session?.formats),
     price: publicPrice(session?.price),
     seatSummary: publicSeatSummary(session?.seatSummary),
-    bookingUrl: null
+    bookingUrl: buildCineArtSessionBookingUrl(session?.sourceId)
   };
 }
 
@@ -233,6 +246,7 @@ function withCacheState(snapshot, state, nowMs, upstreamError = null) {
   const parsed = Date.parse(updatedAt);
   return {
     ...snapshot,
+    sessions: sessionsWithBookingUrls(snapshot?.sessions),
     meta: {
       ...(snapshot?.meta || {}),
       provider: "cineart",

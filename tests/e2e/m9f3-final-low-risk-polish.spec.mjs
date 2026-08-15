@@ -2,6 +2,16 @@ import { test, expect } from "@playwright/test";
 
 const POSTER_DATA_URL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='60'%3E%3Crect width='40' height='60' fill='%23111111'/%3E%3C/svg%3E";
 
+async function waitForHomeCatalogueSettled(page) {
+  await expect(page.locator("#refreshButton")).toHaveAttribute("aria-busy", "false", {
+    timeout: 20_000
+  });
+  await expect(page.locator("#movieGrid")).not.toHaveAttribute("data-broadway-state", "loading");
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
 async function installSyntheticPoster(page, id) {
   await page.evaluate(testId => {
     const card = document.createElement("article");
@@ -51,6 +61,7 @@ test("M9F3 Data Health closes synchronously while a passive 140ms after-image fi
 
 test("M9F3 lazy poster reveal stays opacity-only and does not animate cached geometry", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForHomeCatalogueSettled(page);
 
   const poster = await installSyntheticPoster(page, "lazy");
   await expect(poster).toHaveClass(/m9f3-poster-media/);
@@ -102,6 +113,7 @@ test("M9F3 final Pixel 7 reduced-motion/PWA audit remains static and lifecycle-n
   expect(platform.hasPwaApi).toBe(true);
   expect(platform.reducedMotion).toBe(true);
 
+  await waitForHomeCatalogueSettled(page);
   const poster = await installSyntheticPoster(page, "reduced");
   await expect(poster).toHaveClass(/m9f3-poster-loaded/);
   const posterStyle = await poster.evaluate(element => {
