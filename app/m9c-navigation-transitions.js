@@ -73,6 +73,12 @@
     });
   }
 
+  function stampEntryAfterOwnerRender(resolveNode) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => stampEntry(resolveNode?.()));
+    });
+  }
+
   function syncDateCurrent() {
     document.querySelectorAll("#providerCompareContent [data-provider-compare-date]").forEach(button => {
       if (button.classList.contains("active")) button.setAttribute("aria-current", "date");
@@ -177,8 +183,11 @@
     if (smartToggle) {
       const section = smartToggle.closest(".provider-compare-timeline-section");
       const panel = section?.querySelector(".phase8b-recommendation-panel");
-      if (panel && !panel.hidden) spawnNodeExitGhost(panel);
-      else requestAnimationFrame(() => stampEntry(section?.querySelector(".phase8b-recommendation-panel:not([hidden])")));
+      if (panel && !panel.hidden) {
+        spawnNodeExitGhost(panel);
+      } else {
+        stampEntryAfterOwnerRender(() => section?.querySelector(".phase8b-recommendation-panel:not([hidden])"));
+      }
     }
   }
 
