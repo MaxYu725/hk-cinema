@@ -60,13 +60,14 @@ test("M9E rapid comparison close/reopen keeps one overlay and clears stale exit 
       root?.querySelector("[data-provider-compare-close]")?.click();
       return {
         hidden: Boolean(root?.hidden),
-        bodyOpen: document.body.classList.contains("provider-compare-open")
+        bodyOpen: document.body.classList.contains("provider-compare-open"),
+        exitGhosts: document.querySelectorAll(".m9c-exit-ghost").length
       };
     });
 
     expect(closeState.hidden).toBe(true);
     expect(closeState.bodyOpen).toBe(false);
-    await expect(page.locator(".m9c-exit-ghost")).toHaveCount(1);
+    expect(closeState.exitGhosts).toBe(1);
 
     await movie.click();
     await expect(overlay).toBeVisible({ timeout: 12_000 });
@@ -133,8 +134,11 @@ test("M9E reduced-motion mode stays near-static and creates no exit after-images
   const closeState = await page.evaluate(() => {
     const root = document.querySelector("#providerCompareOverlay");
     root?.querySelector("[data-provider-compare-close]")?.click();
-    return Boolean(root?.hidden);
+    return {
+      hidden: Boolean(root?.hidden),
+      exitGhosts: document.querySelectorAll(".m9c-exit-ghost").length
+    };
   });
-  expect(closeState).toBe(true);
-  await expect(page.locator(".m9c-exit-ghost")).toHaveCount(0);
+  expect(closeState.hidden).toBe(true);
+  expect(closeState.exitGhosts).toBe(0);
 });
