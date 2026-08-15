@@ -56,7 +56,13 @@ test("M9B animation remains cheap and reduced-motion safe", async () => {
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /m9b-progress-travel/);
   assert.match(css, /m9b-local-progress/);
-  assert.doesNotMatch(css, /@keyframes[\s\S]*?\b(?:width|height|top|right|bottom|left|margin|padding)\s*:/, "M9B keyframes must avoid layout properties");
+
+  const keyframes = Array.from(css.matchAll(/@keyframes\s+[^{]+\{([\s\S]*?)\n\}/g), match => match[1]);
+  assert.ok(keyframes.length >= 2, "M9B should have only lightweight progress keyframes");
+  for (const body of keyframes) {
+    assert.doesNotMatch(body, /\b(?:width|height|top|right|bottom|left|margin|padding)\s*:/, "M9B keyframes must avoid layout properties");
+  }
+
   assert.doesNotMatch(css, /\.shared-seat\s*\{[\s\S]*?animation\s*:/, "individual seats must not be animated");
   assert.doesNotMatch(css, /shimmer/i, "long shimmer effects are intentionally excluded");
 });
