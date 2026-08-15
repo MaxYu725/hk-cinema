@@ -38,10 +38,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install test dependencies
-        run: npm ci
+        run: npm install
 
       - name: Validate reconnaissance contract
         run: node --test tests/m10a-golden-harvest-reconnaissance.test.mjs
