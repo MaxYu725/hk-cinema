@@ -54,7 +54,7 @@ test("M7P1E historical coarse mode publishes base/face price plus not-sold summa
     blocked: null, unavailable: 1, notSold: 3, upstreamSeatsHold: 1,
     updatedAt: "2026-08-13T00:00:00.000Z"
   });
-  assert.equal(session.bookingUrl, null);
+  assert.equal(session.bookingUrl, "https://cinearthouse.com.hk/hk/show/9001");
   assert.equal("seatStates" in session, false);
   assert.equal("seatPlan" in session, false);
   assert.equal("ticketTypes" in session, false);
@@ -92,7 +92,7 @@ test("M7P1E prices and seatSummary remain enabled while later optional capabilit
   assert.equal(cineart.capabilities.showtimes, true);
   assert.equal(cineart.capabilities.prices, true);
   assert.equal(cineart.capabilities.seatSummary, true);
-  assert.equal(cineart.capabilities.booking, false);
+  assert.equal(cineart.capabilities.booking, true);
 });
 
 test("M7P1E CineArt comparison normalizer still labels coarse seats as not-sold, never selectable", async () => {
@@ -133,7 +133,7 @@ test("M7P1E coarse snapshot boundary remains available beneath later selected-da
   assert.match(showtimes, /quality:\s*"coarse-not-sold"/);
   assert.match(showtimes, /available:\s*null/);
   assert.match(showtimes, /held:\s*null/);
-  assert.match(showtimes, /bookingUrl:\s*null/);
+  assert.match(showtimes, /buildCineArtSessionBookingUrl/);
   assert.match(manifest, /cineart/);
   assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
   assert.match(checkpoint, /M7P1E checkpoint/i);
