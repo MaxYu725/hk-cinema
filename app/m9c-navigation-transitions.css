@@ -104,25 +104,28 @@ html[data-skin="metro"] .m9c-exit-ghost[data-m9c-exit-kind="seatmap"] .m9c-exit-
   opacity: .8;
 }
 
-/* Filter and Smart Picks close snapshots are small fixed visual copies, never interactive. */
+/* Filter and Smart Picks close snapshots are small fixed Metro surfaces, never interactive. */
 html[data-skin="metro"] .m9c-node-exit-ghost {
   position: fixed !important;
   z-index: 7100 !important;
+  box-sizing: border-box;
   margin: 0 !important;
   overflow: hidden !important;
+  border: 1px solid var(--metro-border);
+  background: #0c0c0c;
   pointer-events: none !important;
   transform-origin: top center !important;
   animation: m9c-node-exit var(--motion-duration-fast) var(--motion-ease-exit) both !important;
 }
 
+html[data-skin="metro"] .m9c-node-exit-ghost[data-m9c-node-exit-kind="filter-group"] {
+  border-color: #262626;
+  background: #101010;
+}
+
 html[data-skin="metro"] .m9c-node-exit-ghost,
 html[data-skin="metro"] .m9c-node-exit-ghost * {
   pointer-events: none !important;
-}
-
-/* Avoid reusing fixed-position descendants from a cloned flyout/smart-pick surface. */
-html[data-skin="metro"] .m9c-node-exit-ghost .provider-compare-cinema-portal {
-  display: none !important;
 }
 
 @keyframes m9c-overlay-enter {
