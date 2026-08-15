@@ -50,7 +50,7 @@ test("M7P1D historical showtime mode remains home-snapshot backed and cacheable 
   assert.equal(first.sessions[0].provider, "cineart");
   assert.equal(first.sessions[0].movieSourceId, "799");
   assert.equal(first.sessions[0].sourceId, "9001");
-  assert.equal(first.sessions[0].bookingUrl, null);
+  assert.equal(first.sessions[0].bookingUrl, "https://cinearthouse.com.hk/hk/show/9001");
   assert.equal("seatStates" in first.sessions[0], false);
   assert.equal("seatPlan" in first.sessions[0], false);
   assert.equal("ticketTypes" in first.sessions[0], false);
@@ -71,7 +71,7 @@ test("M7P1D catalogue/showtimes remain enabled while later optional capabilities
   const cineart = window.HKCinemaProviderRegistry.get("cineart");
   assert.equal(cineart.capabilities.catalogue, true);
   assert.equal(cineart.capabilities.showtimes, true);
-  assert.equal(cineart.capabilities.booking, false);
+  assert.equal(cineart.capabilities.booking, true);
 });
 
 test("M7P1D shared showtime transport remains the network owner after later CineArt normalizers", async () => {
@@ -116,7 +116,7 @@ test("M7P1D public showtime route remains GET-only while later Worker stages may
   assert.match(router, /cineArtShowtimeService\.getMovie/);
   assert.match(router, /CineArt showtimes are read-only/);
   assert.match(showtimes, /getCineArtWorkerSnapshot/);
-  assert.match(showtimes, /bookingUrl:\s*null/);
+  assert.match(showtimes, /buildCineArtSessionBookingUrl/);
   assert.match(manifest, /catalogue-showtimes/);
   assert.match(checkpoint, /M7P1D/);
   assert.match(checkpoint, /did not request individual `\/hk\/show\/<showId>` detail pages/i);
