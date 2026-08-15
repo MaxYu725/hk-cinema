@@ -1,6 +1,6 @@
-# M10A — Golden Harvest Provider Reconnaissance
+# M10A — Golden Harvest → Bestar Successor Reconnaissance
 
-Status: **reconnaissance only — current-source evidence pending Actions run**
+Status: **successor reconnaissance — current Bestar source validation in progress**
 
 ## Baseline
 
@@ -8,19 +8,44 @@ Status: **reconnaissance only — current-source evidence pending Actions run**
 - Production browser providers remain Broadway, MCL, Emperor and CineArt.
 - Production Worker provider manifest remains Broadway, MCL, Emperor and CineArt.
 
+## Candidate correction
+
+M10A started by treating Golden Harvest / 嘉禾 as the next provider candidate. Current evidence shows that this assumption is obsolete and must not become production architecture.
+
+The relevant Hong Kong business transition is:
+
+1. Golden Harvest ended its Hong Kong cinema operations in 2025 after the remaining venue leases ended.
+2. the continuing cinema operation is now branded **星達院線 / Bestarfilm**;
+3. Bestarfilm Group (HK) Company Limited publishes the current Bestarfilm mobile app;
+4. the current Google Play developer support record points to `https://www.bestarfilm.hk` as its public website;
+5. the current app describes live Hong Kong cinema/movie information, seat selection and online ticket purchase.
+
+Accordingly, M10A is now a **successor reconnaissance** checkpoint. The old Golden Harvest domain is retained only as historical transport evidence; the actual candidate for any future integration is **Bestar**.
+
+## Golden Harvest tombstone evidence
+
+GitHub Actions reconnaissance on 2026-08-15 established a transport-level result before the successor pivot:
+
+- `www.goldenharvest.com` → DNS `ENOTFOUND`;
+- `goldenharvest.com` → DNS `ENOTFOUND`;
+- Node fetch and curl independently produced the same DNS-level result;
+- no HTTP response, script or API evidence was therefore available from the legacy domain.
+
+This is not treated as a WAF/HTTP failure and is not bypassed with guessed IP addresses, archived pages or historical endpoints.
+
 ## Objective
 
-Evaluate Golden Harvest / 嘉禾 as the next provider candidate after the provider-expansion hardening and CineArt clean re-entry. This checkpoint deliberately separates **source reconnaissance** from any production integration.
+Determine whether the current official Bestar public surface exposes a stable, bounded, read-only source suitable for a provider-specific Worker adapter.
 
-M10A must answer whether the current public Golden Harvest site exposes a stable, bounded, read-only source that is suitable for a provider-specific Worker adapter. Visible HTML alone is not treated as proof of catalogue/showtime/price/seat capability.
+Visible web/app UI alone is not proof of catalogue, showtime, price or seat-map capability. Each capability requires current-source evidence.
 
 ## Production boundary
 
-M10A does **not register** Golden Harvest in `app/provider-registry.js` or `worker/src/provider-manifest.js`.
+M10A does **not register** Bestar or legacy Golden Harvest in `app/provider-registry.js` or `worker/src/provider-manifest.js`.
 
 It also adds no:
 
-- production Golden Harvest API route;
+- production Bestar API route;
 - browser provider script;
 - homepage / Data Health source;
 - comparison adapter;
@@ -31,44 +56,50 @@ It also adds no:
 
 The reconnaissance transport is GET-only and uses no account state, cookies, bearer token, CSRF token or private credential supplied by HK Cinema.
 
-## Current public-site evidence before Actions reconnaissance
+## Current Bestar reconnaissance source
 
-The official site currently exposes public film pages under `https://www.goldenharvest.com`, including film-list and film-detail routes. The current film-list surface shows a client-side loading state, so M10A does not assume that server-rendered HTML is the underlying data source.
+The default current origin is:
 
-The initial static web inspection did not establish a trustworthy catalogue/showtime API path. Therefore the repository now performs the source inspection from GitHub Actions runner networking rather than guessing route names or adding HTML scraping to production.
+- `https://www.bestarfilm.hk`
+
+The source was selected from the current Bestarfilm Google Play developer support metadata rather than inferred from a search-result cache or from the obsolete Golden Harvest website.
+
+The reconnaissance seeds only public discovery documents:
+
+- `/`
+- `/robots.txt`
+- `/sitemap.xml`
+
+If the home page declares JavaScript assets, M10A records all HTTPS script hosts but downloads only scripts hosted on `bestarfilm.hk` or its subdomains. Cross-origin script URLs remain evidence only and are not automatically followed.
 
 ## Reconnaissance tool
 
-`scripts/m10a-golden-harvest-reconnaissance.mjs` probes only representative public pages:
+`scripts/m10a-golden-harvest-reconnaissance.mjs` keeps its historical filename because this checkpoint began as Golden Harvest reconnaissance. Its runtime identity is now `providerCandidate: "bestar"` with `predecessor: "golden-harvest-hong-kong"`.
 
-- `/`
-- `/film/list?category=now`
-- `/film/list?category=coming`
-- `/cinema/index`
-
-For successful page responses it:
+For successful Bestar responses it:
 
 1. records status, final URL, content type, elapsed time, bounded byte count and SHA-256;
-2. extracts same-Golden-Harvest-domain script assets;
-3. downloads at most 16 scripts with per-file and aggregate payload limits;
-4. records request-library hints such as `fetch`, Axios, jQuery AJAX/GET and XHR usage;
-5. extracts only sanitized endpoint/path candidates related to film, cinema, showtime, session, ticket, seat or API concepts;
-6. writes a compact JSON evidence report without storing raw upstream HTML or JavaScript bodies.
+2. records current Bestar DNS evidence separately from legacy Golden Harvest DNS evidence;
+3. inventories HTTPS script assets declared by the current site;
+4. downloads at most 16 Bestar-hosted scripts with per-file and aggregate payload limits;
+5. records request-library hints such as `fetch`, Axios, jQuery AJAX/GET and XHR usage;
+6. extracts only sanitized endpoint/path candidates related to film, cinema, showtime, session, ticket, seat or API concepts;
+7. writes a compact JSON evidence report without storing raw upstream HTML or JavaScript bodies.
 
 Limits:
 
 - request timeout: 12 seconds;
-- page payload: maximum 2 MiB each;
+- document payload: maximum 2 MiB each;
 - script payload: maximum 768 KiB each;
 - aggregate script payload: maximum 6 MiB;
-- scripts: maximum 16;
+- fetched scripts: maximum 16;
 - endpoint candidates: maximum 120.
 
-A blocked/unreachable origin is valid reconnaissance evidence. It must not be converted into a guessed production adapter merely to make the provider appear supported.
+A blocked/unreachable source is valid reconnaissance evidence. It must not be converted into a guessed production adapter merely to make the provider appear supported.
 
 ## Questions M10A must resolve
 
-1. Can GitHub/Worker-like outbound networking reach the current official site reliably?
+1. Can GitHub/Worker-like outbound networking reach the current official Bestar site reliably?
 2. Which current public endpoint or embedded data source actually supplies film catalogue data?
 3. Is cinema/showtime data exposed through the same source or another stable read-only endpoint?
 4. Are stable movie, cinema, house and session identifiers present?
@@ -80,14 +111,14 @@ A blocked/unreachable origin is valid reconnaissance evidence. It must not be co
 
 ## Capability policy
 
-At M10A all Golden Harvest production capabilities remain **false / unregistered**.
+At M10A all Bestar production capabilities remain **false / unregistered**.
 
-A capability can advance only when current-source evidence proves it. Missing evidence remains unsupported rather than being inferred from UI text, film titles, route names or historical knowledge.
+A capability can advance only when current-source evidence proves it. Missing evidence remains unsupported rather than being inferred from UI text, film titles, route names, mobile-app descriptions or historical Golden Harvest knowledge.
 
 ## Next permitted checkpoint
 
-**M10B — Golden Harvest Worker adapter only**, and only if M10A proves a current public read path worth normalizing.
+**M10B — Bestar Worker adapter only**, and only if M10A proves a current public read path worth normalizing.
 
-M10B may contain provider-specific parser/transport code and candidate diagnostics, but it must still keep Golden Harvest out of the browser production Registry until its Worker adapter and live validation are complete.
+M10B may contain provider-specific parser/transport code and candidate diagnostics, but it must still keep Bestar out of the browser production Registry until its Worker adapter and live validation are complete.
 
-If M10A finds the source blocked, unstable, authenticated-only or unsuitable for bounded read-only access, M10B must not be started. The checkpoint should instead record the blocker and possible future alternatives.
+If M10A finds the current Bestar source blocked, unstable, authenticated-only or unsuitable for bounded read-only access, M10B must not be started. The checkpoint should instead record the blocker and possible future evidence sources.
