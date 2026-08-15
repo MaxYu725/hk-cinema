@@ -34,11 +34,10 @@
     return true;
   }
 
-  function stripCloneIdentity(root) {
-    if (!root) return;
-    root.removeAttribute?.("id");
-    root.querySelectorAll?.("[id]").forEach(node => node.removeAttribute("id"));
-    root.querySelectorAll?.("[autofocus]").forEach(node => node.removeAttribute("autofocus"));
+  function nodeExitKind(node) {
+    if (node?.matches?.(".phase8b-recommendation-panel")) return "smart-picks";
+    if (node?.matches?.(".phase9b3-filter-group-body")) return "filter-group";
+    return "filter-panel";
   }
 
   function spawnNodeExitGhost(node) {
@@ -46,20 +45,18 @@
     const rect = node.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return false;
 
-    const clone = node.cloneNode(true);
-    stripCloneIdentity(clone);
-    clone.hidden = false;
-    clone.classList.add("m9c-node-exit-ghost");
-    clone.setAttribute("aria-hidden", "true");
-    clone.setAttribute("inert", "");
-    Object.assign(clone.style, {
+    const ghost = document.createElement("div");
+    ghost.className = "m9c-node-exit-ghost";
+    ghost.dataset.m9cNodeExitKind = nodeExitKind(node);
+    ghost.setAttribute("aria-hidden", "true");
+    Object.assign(ghost.style, {
       top: `${Math.round(rect.top)}px`,
       left: `${Math.round(rect.left)}px`,
       width: `${Math.round(rect.width)}px`,
       height: `${Math.round(rect.height)}px`
     });
-    document.body.appendChild(clone);
-    removeSoon(clone);
+    document.body.appendChild(ghost);
+    removeSoon(ghost);
     return true;
   }
 
