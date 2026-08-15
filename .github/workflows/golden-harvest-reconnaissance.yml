@@ -1,0 +1,56 @@
+name: Golden Harvest Reconnaissance
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: Golden Harvest public origin
+        required: false
+        default: https://www.goldenharvest.com
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/golden-harvest-reconnaissance.yml"
+      - "scripts/m10a-golden-harvest-reconnaissance.mjs"
+      - "tests/m10a-golden-harvest-reconnaissance.test.mjs"
+      - "docs/checkpoints/m10a-golden-harvest-provider-reconnaissance.md"
+
+permissions:
+  contents: read
+
+jobs:
+  reconnaissance:
+    name: golden-harvest-public-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GOLDEN_HARVEST_ORIGIN: ${{ inputs.origin || 'https://www.goldenharvest.com' }}
+      GOLDEN_HARVEST_RECON_REPORT: golden-harvest-reconnaissance.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate reconnaissance contract
+        run: node --test tests/m10a-golden-harvest-reconnaissance.test.mjs
+
+      - name: Check reconnaissance script syntax
+        run: node --check scripts/m10a-golden-harvest-reconnaissance.mjs
+
+      - name: Probe Golden Harvest public source
+        run: node scripts/m10a-golden-harvest-reconnaissance.mjs
+
+      - name: Upload reconnaissance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-harvest-reconnaissance-${{ github.run_id }}
+          path: golden-harvest-reconnaissance.json
+          if-no-files-found: warn
+          retention-days: 7
