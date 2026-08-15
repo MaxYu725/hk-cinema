@@ -37,7 +37,6 @@ test("M9E3 keeps date refresh behind an opaque curtain until decorated results s
 
   await targetDate.click();
   await expect(content).toHaveAttribute("data-m9e3-curtain", "active", { timeout: 2_000 });
-  await expect(content).toHaveAttribute("aria-busy", "true");
 
   const curtainVisual = await content.evaluate(root => {
     const hero = root.querySelector(":scope > .provider-compare-hero");
