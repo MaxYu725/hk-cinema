@@ -65,5 +65,5 @@ test("M10A checkpoint permits only a later Worker-only adapter after current-sou
   assert.match(checkpoint, /reconnaissance only/i);
   assert.match(checkpoint, /M10B[^\n]*Worker adapter only/i);
   assert.match(checkpoint, /不註冊|not register/i);
-  assert.match(checkpoint, /不改[^\n]*PWA|no PWA/i);
+  assert.match(checkpoint, /adds no:[\s\S]*?PWA or Service Worker change/i);
 });
