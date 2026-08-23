@@ -1,59 +1,106 @@
-# Provider Matrix
+# Provider matrix
 
-Version: 10R2B
+Status: current production contract at cleanup checkpoint C1.
 
-This matrix documents the production data paths and reliability expectations. It is a contract/reference document; it does not treat a provider as healthy merely because a route exists.
+This matrix describes real production data paths and reliability expectations. A declared capability means that HK Cinema has an implementation for it; it does not guarantee that every upstream movie or showtime supplies the optional value.
 
-| Provider | Catalogue | Upcoming | Shows / times | Price | Seats | Official booking hand-off | Live cache boundary | Probe evidence |
-|---|---|---|---|---|---|---|---|---|
-| Broadway | Supported | Supported | Supported | Supported where exposed by show data | Supported | Supported | catalogue 300s; upcoming 1800s; shows 60s; seats 30s | ticketing catalogue page with expected Next/movie structure |
-| MCL | Aggregated movie catalogue in app | Aggregated upcoming catalogue in app | Supported through ticketing path | Supported; incomplete metadata is not cached | Supported | Supported | ticketing 60s only when metadata is complete, otherwise `no-store`; seats 30s | `MCLWebAPI2/GetCinemaDetails.aspx` returns a non-empty JSON directory |
-| Emperor | Supported | Supported | Supported | Supported where exposed by show data | Supported | Supported | catalogue 300s; upcoming 1800s; shows 60s; seats 30s | existing Emperor showing-catalogue probe |
+## Capability and transport matrix
 
-## Production Worker route chain
+| Provider | Catalogue / upcoming | Showtimes | Price | Seat summary / map | Official booking | Primary transport |
+|---|---|---|---|---|---|---|
+| Broadway | Supported | Supported | Supported where supplied | Supported | Supported | Cloudflare Worker parsing official Broadway pages |
+| MCL | Supported | Supported | Supported; incomplete metadata is not cached as complete | Supported | Supported | Official MCL WebAPI2 browser-direct, bounded Worker fallback |
+| Emperor | Supported | Supported | Supported where supplied | Supported | Supported | Cloudflare Worker using official Emperor API |
+| CineArt | Supported, including festival grouping | Supported | Supported where supplied by strict show detail | Supported, read-only official geometry | Supported where an exact official route exists | Cloudflare Worker parsing official CineArt Next/Flight data |
 
-The deployed Worker entrypoint is intentionally layered:
+The provider-neutral runtime registry is `app/provider-registry.js`. The Worker provider declaration is `worker/src/provider-manifest.js`. Both currently register `broadway`, `mcl`, `emperor` and `cineart`.
 
-1. `worker/src/index-emperor-seat.js` — provider probe routes, Emperor seat-map routes, and telemetry.
-2. `worker/src/index-emperor.js` — Emperor catalogue/detail/show routes.
-3. `worker/src/index.js` — Broadway routes, MCL ticketing/seat routes, and base `/health`.
+## Production routes
 
-`worker/wrangler.jsonc` must continue to point to `src/index-emperor-seat.js`; changing the entrypoint to either lower layer would silently remove provider capabilities.
+### Service and diagnostics
 
-## Health and probe endpoints
+| Route | Meaning | Cache |
+|---|---|---|
+| `GET /health` | Service, schema, deployment and declared provider capability information; does not contact upstreams | `no-store` |
+| `GET /api/providers/probe` | Independently probes all registered providers | `no-store` |
+| `GET /api/providers/probe/{provider}` | Probes one registered provider | `no-store` |
 
-- `/health` remains a service/capability declaration. It does not contact all upstream providers.
-- `/api/providers/probe` runs Broadway, MCL, and Emperor probes independently and in parallel.
-- `/api/providers/probe/{provider}` probes one of `broadway`, `mcl`, or `emperor`.
-- Probe responses are always `no-store`.
-- A reachable probe endpoint can return HTTP 200 while one or more providers are `unhealthy`; provider health is represented in the response body so one upstream cannot turn the entire probe service into a transport failure.
-- Probe execution is bounded to a 4.5-second orchestration deadline per provider. Broadway and MCL fetches are actively aborted at the deadline; Emperor is isolated by the same orchestration deadline while preserving its existing production probe/parser implementation.
+### Broadway
+
+| Route | Data | Cache |
+|---|---|---:|
+| `GET /api/broadway/movies` | Current catalogue | 300 seconds |
+| `GET /api/broadway/upcoming` | Upcoming catalogue | 1,800 seconds |
+| `GET /api/broadway/movies/{movieId}/shows?date=YYYY-MM-DD` | Dates and sessions | 60 seconds |
+| `GET /api/broadway/shows/{showId}/seats` | Seat map and summary | 30 seconds |
+
+### MCL
+
+The normal Hong Kong-network path reads official MCL WebAPI2 in the browser. The Worker routes below provide bounded fallback ticketing and seat-map services.
+
+| Route | Data | Cache |
+|---|---|---:|
+| `GET /api/mcl/ticketing?movieSetId={id}&date=YYYY-MM-DD` | Ticketing sessions | 60 seconds only when metadata is complete; otherwise `no-store` |
+| `GET /api/mcl/shows/{sessionId}/seats?cinemaCode={code}` | Seat map | 30 seconds |
+
+A fast HTTP 200 response with an incompatible MCL payload is the known VPN/proxy failure mode. It must fail with the explicit VPN/proxy message instead of entering a long fallback chain or presenting stale partial sessions.
+
+### Emperor
+
+| Route | Data | Cache |
+|---|---|---:|
+| `GET /api/emperor/movies` | Current catalogue | 300 seconds |
+| `GET /api/emperor/upcoming` | Upcoming catalogue | 1,800 seconds |
+| `GET /api/emperor/movies/{filmUniqueId}/detail` | Movie details | 600 seconds |
+| `GET /api/emperor/movies/{filmUniqueId}/shows?date=YYYY-MM-DD` | Dates and sessions | 60 seconds |
+| `GET /api/emperor/shows/{scheduleId}/seats?...` | Seat map | 30 seconds |
+
+### CineArt
+
+| Route | Data | Response cache contract |
+|---|---|---|
+| `GET /api/cineart/catalogue` | Current, upcoming and festival catalogue | Worker-managed fresh/stale Cache API; outer response `no-store` |
+| `GET /api/cineart/movies/{movieSourceId}/shows?date=YYYY-MM-DD` | Dates, sessions, strict detail price/seat data | Worker-managed fresh/stale Cache API; outer response `no-store` |
+| `GET /api/cineart/shows/{showId}/seats?movieSourceId={id}` | Read-only official seat geometry | Worker-managed short Cache API; outer response `no-store` |
+| `GET /api/providers/cineart/discovery` | Passive discovery evidence | `no-store` |
+
+## Health contract
+
+`GET /health` exposes:
+
+- `ok`, `service` and numeric `schemaVersion`;
+- `providers`, generated from the Worker provider manifest;
+- `freshness`, describing declared fallback boundaries;
+- `deployment.versionId`, `deployment.versionTag` and `deployment.createdAt` when Cloudflare version metadata is available;
+- `time`, generated for the current request;
+- temporary legacy `phase: "6G"` for existing validation scripts.
+
+The legacy phase is deprecated. New code must use `schemaVersion` and provider/capability fields rather than ordering releases by historical phase labels.
 
 ## Probe result contract
 
-Each provider result exposes:
+Provider probes run independently and are never called by normal homepage/comparison loading. Each result exposes:
 
-- `healthy` / `status`
-- `latencyMs`
-- `checkedAt`
-- `lastSuccessAt`
-- `failure.category`, `failure.code`, and optional status when unhealthy
-- provider-specific structural `evidence` when healthy
+- `healthy` / `status`;
+- `latencyMs`;
+- `checkedAt`;
+- best-effort `lastSuccessAt`;
+- a categorized failure with code and optional upstream HTTP status;
+- provider-specific structural evidence when healthy.
 
-Failure categories are stable diagnostic classes such as `timeout`, `blocked`, `rate_limited`, `http_error`, `invalid_payload`, `empty_payload`, `network_error`, and `upstream_error`.
-
-`lastSuccessAt` is best-effort per Worker isolate. It is useful for short-lived diagnosis but is not durable monitoring history; durable historical health would require external storage and is outside 10R2B.
+`lastSuccessAt` is kept only in the current Worker isolate. It is useful for immediate diagnosis but is not durable monitoring history.
 
 ## Reliability rules
 
-- Invalid dates and provider identifiers must be rejected before upstream requests.
-- Live show/seat data must keep short cache lifetimes.
-- Incomplete MCL ticketing metadata must remain `no-store` rather than being promoted to apparently fresh data.
-- Health and probe endpoints must remain `no-store`.
-- Worker responses should retain request tracing headers (`x-request-id`, `server-timing`) for production diagnosis.
-- Normal homepage/comparison loading must not call or depend on the provider probe routes.
-- CI must validate deterministic route/probe/cache contracts without requiring external cinema networks to be reachable.
+1. Validate provider IDs, movie/show IDs, cinema codes and dates before upstream requests.
+2. One provider failure must not convert the whole probe or comparison into a transport failure.
+3. Do not promote incomplete MCL metadata to an apparently fresh cache entry.
+4. Live showtime and seat data must keep short lifetimes.
+5. Do not infer a price, seat count, format, language or booking route without reliable provider evidence.
+6. Retain `x-request-id` and `server-timing` on Worker responses.
+7. CI contract tests must not require external cinema networks; live probes are separate candidate/production evidence.
+8. Network or DNS failure from a non-Hong-Kong environment is not by itself evidence of an MCL parser regression.
 
-## Audit boundary
+## Current cleanup boundary
 
-A provider should only be called *live healthy* after a real probe returns structurally valid provider evidence. Network or DNS failure from a non-Hong-Kong CI/assistant runtime is not, by itself, evidence of a provider regression.
+Checkpoint C1 documents the existing route chain and data behavior; it does not change provider parsers, MCL transport selection, comparison calculations or seat-map geometry. Router, cache and frontend-store consolidation belong to later independent checkpoints described in `docs/architecture.md`.
