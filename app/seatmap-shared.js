@@ -637,8 +637,6 @@
     }
   }, true);
 
-  window.addEventListener("hkcinema:movie-detail-close", () => close({ restoreFocus: false }));
-
   window.HKCinemaSeatMapShared = Object.freeze({
     version: "7b3-m8a2h1-1",
     openEvent: OPEN_EVENT,

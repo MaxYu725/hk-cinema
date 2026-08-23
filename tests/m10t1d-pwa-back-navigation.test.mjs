@@ -21,15 +21,14 @@ test("M10T1D owns only same-document History API state", async () => {
   assert.doesNotMatch(source, /preventDefault\s*\(|stopPropagation\s*\(|stopImmediatePropagation\s*\(/);
 });
 
-test("M10T1D tracks only the three full-screen app navigation layers", async () => {
+test("PWA back navigation tracks the two current full-screen layers", async () => {
   const source = await readApp("pwa-back-navigation.js");
 
   assert.match(source, /providerCompareOverlay:\s*"compare"/);
-  assert.match(source, /movieDetailOverlay:\s*"detail"/);
   assert.match(source, /sharedSeatMapOverlay:\s*"seatmap"/);
   assert.match(source, /HKCinemaSeatMapShared\?\.close/);
-  assert.match(source, /HKCinemaMovieDetail\?\.close/);
   assert.match(source, /HKCinemaProviderCompare\?\.close/);
+  assert.doesNotMatch(source, /movieDetailOverlay|HKCinemaMovieDetail|"detail"/);
   assert.doesNotMatch(source, /#dataHealth|data-provider-insights|data-provider-filter|provider-compare-recommendations|scrollLeft\s*=/);
 });
 
@@ -52,10 +51,9 @@ test("M10T1D preserves external official-link behavior by never rewriting URLs",
 test("M10T1D asset loads after existing overlay/navigation owners", async () => {
   const html = await readApp("index.html");
   const compare = html.indexOf("provider-compare-v4.js");
-  const detail = html.indexOf("movie-detail-shared.js");
   const seatmap = html.indexOf("seatmap-shared.js");
   const backNav = html.indexOf("pwa-back-navigation.js");
 
-  assert.ok(compare >= 0 && detail >= 0 && seatmap >= 0 && backNav > compare && backNav > detail && backNav > seatmap);
+  assert.ok(compare >= 0 && seatmap >= 0 && backNav > compare && backNav > seatmap);
   assert.match(html, /pwa-back-navigation\.js\?v=[^"']+/);
 });

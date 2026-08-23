@@ -20,15 +20,6 @@ const state = {
   cache: {
     now: false,
     coming: false
-  },
-  detail: {
-    open: false,
-    movie: null,
-    data: null,
-    loading: false,
-    error: null,
-    generation: 0,
-    controller: null
   }
 };
 
@@ -296,7 +287,7 @@ function renderMovieCard(movie) {
       data-home-release-date="${escapeHtml(movie.releaseDate || "")}"
       role="button"
       tabindex="0"
-      aria-label="查看 ${escapeHtml(titleZh)} 詳情"
+      aria-label="比較 ${escapeHtml(titleZh)} 院線場次"
     >
       <div class="movie-poster">
         ${poster}
@@ -524,111 +515,7 @@ async function loadMovies() {
   render();
 }
 
-function closeMovieDetail() {
-  state.detail.generation += 1;
-  state.detail.controller?.abort("close");
-  state.detail.controller = null;
-  state.detail.open = false;
-  state.detail.movie = null;
-  state.detail.data = null;
-  state.detail.loading = false;
-  state.detail.error = null;
-}
-
-function renderMovieDetail() {
-  if (!state.detail.movie) return;
-  window.HKCinemaMovieDetail?.render({
-    providerId: "broadway",
-    movie: state.detail.movie,
-    detail: state.detail.data?.movie || null,
-    shows: state.detail.data,
-    showtimesLoading: state.detail.loading,
-    showtimesError: state.detail.error
-  });
-}
-
-async function loadMovieShows(movie, date = null) {
-  const sourceId = String(movie.sourceId || "")
-    .replace(/^broadway:/, "");
-  const previousSourceId = String(state.detail.movie?.sourceId || "")
-    .replace(/^broadway:/, "");
-  const generation = state.detail.generation + 1;
-  state.detail.controller?.abort("superseded");
-  const controller = new AbortController();
-
-  state.detail.generation = generation;
-  state.detail.controller = controller;
-  state.detail.open = true;
-  state.detail.movie = movie;
-  if (sourceId !== previousSourceId) state.detail.data = null;
-  state.detail.loading = true;
-  state.detail.error = null;
-
-  renderMovieDetail();
-
-  const query = date
-    ? `?date=${encodeURIComponent(date)}`
-    : "";
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/api/broadway/movies/${encodeURIComponent(sourceId)}/shows${query}`,
-      { cache: "no-store", signal: controller.signal }
-    );
-
-    if (generation !== state.detail.generation || controller.signal.aborted) return;
-
-    if (response.status === 404) {
-      state.detail.data = null;
-      state.detail.error = null;
-      return;
-    }
-
-    const result = await response.json();
-
-    if (generation !== state.detail.generation || controller.signal.aborted) return;
-
-    if (!response.ok || !result.ok || !result.data) {
-      throw new Error(
-        result.error?.message ||
-        `API HTTP ${response.status}`
-      );
-    }
-
-    state.detail.data = result.data;
-  } catch (error) {
-    if (generation !== state.detail.generation || controller.signal.aborted) return;
-    state.detail.error =
-      error instanceof Error
-        ? error.message
-        : String(error);
-  } finally {
-    if (generation === state.detail.generation) {
-      state.detail.controller = null;
-      state.detail.loading = false;
-      renderMovieDetail();
-    }
-  }
-}
-
-function findMovieBySourceId(sourceId) {
-  const allMovies = [
-    ...state.showingMovies,
-    ...state.upcomingMovies
-  ];
-
-  return allMovies.find(movie =>
-    String(movie.sourceId || movie.id) === String(sourceId)
-  );
-}
-
 window.HKCinemaBroadwayApp = {
-  open(sourceId) {
-    const movie = findMovieBySourceId(sourceId);
-    if (!movie) return false;
-    loadMovieShows(movie);
-    return true;
-  },
   getCatalogue() {
     return {
       now: [...state.showingMovies],
@@ -636,15 +523,6 @@ window.HKCinemaBroadwayApp = {
     };
   }
 };
-
-function openMovieCard(card) {
-  const movie =
-    findMovieBySourceId(card.dataset.sourceId);
-
-  if (movie) {
-    loadMovieShows(movie);
-  }
-}
 
 function setTab(tab) {
   state.tab = tab;
@@ -668,27 +546,6 @@ elements.tabs.forEach(button => {
   });
 });
 
-elements.movieGrid.addEventListener("click", (event) => {
-  const card = event.target.closest(".movie-card");
-
-  if (card) {
-    openMovieCard(card);
-  }
-});
-
-elements.movieGrid.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-
-  const card = event.target.closest(".movie-card");
-
-  if (card) {
-    event.preventDefault();
-    openMovieCard(card);
-  }
-});
-
 elements.refreshButton.addEventListener(
   "click",
   () => {
@@ -696,24 +553,4 @@ elements.refreshButton.addEventListener(
   }
 );
 
-document.addEventListener("click", event => {
-  const dateButton = event.target.closest?.('[data-detail-provider="broadway"][data-detail-date]');
-  if (dateButton && state.detail.movie) {
-    event.preventDefault();
-    loadMovieShows(state.detail.movie, dateButton.dataset.detailDate);
-    return;
-  }
-
-  const retryButton = event.target.closest?.('[data-detail-provider="broadway"][data-detail-retry]');
-  if (retryButton && state.detail.movie) {
-    event.preventDefault();
-    loadMovieShows(state.detail.movie, state.detail.data?.selectedDate || null);
-  }
-});
-
-window.addEventListener("hkcinema:movie-detail-close", event => {
-  if (event.detail?.provider === "broadway") closeMovieDetail();
-});
-
-window.HKCinemaMovieDetail?.ensureOverlay();
 loadMovies();

@@ -1,6 +1,4 @@
 (() => {
-  if (document.documentElement.dataset.skin !== "metro") return;
-
   let syncQueued = false;
   let observer = null;
 
@@ -236,7 +234,7 @@
   }
 
   window.HKCinemaMetro = Object.freeze({
-    version: "m6b-3-m7r6-1",
+    version: "c2-1",
     refresh: scheduleSync,
     syncComparisonShell,
     syncSeatMapShell,

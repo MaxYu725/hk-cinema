@@ -8,26 +8,20 @@
   }
 
   function sessionParams(card) {
-    const stored = window.HKCinemaMovieDetail?.showtimeFor?.(card);
-    const request = stored?.seatMap?.request || {};
     try {
       const url = new URL(cardUrl(card), location.href);
       return {
-        sessionId: url.searchParams.get("si") || request.sessionId || String(card?.dataset?.showtimeId || "").replace(/^mcl:/, ""),
-        cinemaCode: url.searchParams.get("ci") || request.cinemaCode,
-        bookingUrl: stored?.bookingUrl || url.href
+        sessionId: url.searchParams.get("si") || String(card?.dataset?.showtimeId || "").replace(/^mcl:/, ""),
+        cinemaCode: url.searchParams.get("ci") || url.searchParams.get("cinemaCode"),
+        bookingUrl: url.href
       };
     } catch {
-      return request.sessionId && request.cinemaCode
-        ? { sessionId: request.sessionId, cinemaCode: request.cinemaCode, bookingUrl: stored?.bookingUrl || "" }
-        : null;
+      return null;
     }
   }
 
   function isMCLCard(card) {
-    if (!card) return false;
-    if (card.matches(".provider-compare-show")) return Boolean(card.querySelector(".provider-compare-source.mcl"));
-    return card.matches(".mcl-showtime-card");
+    return Boolean(card?.matches(".provider-compare-show") && card.querySelector(".provider-compare-source.mcl"));
   }
 
   function cardText(card, selector) {
@@ -35,8 +29,6 @@
   }
 
   function showtimeFor(card, params) {
-    const stored = window.HKCinemaMovieDetail?.showtimeFor?.(card);
-    if (stored) return stored;
     const cinema = cardText(card, ".provider-compare-show-topline strong") || "MCL 戲院";
     const secondary = cardText(card, ".provider-compare-show-main p");
     return window.HKCinemaViewModels?.showtime("mcl", {
@@ -67,7 +59,7 @@
   }
 
   function openSeatMap(trigger, force = false) {
-    const card = trigger?.closest(".mcl-showtime-card, .provider-compare-show");
+    const card = trigger?.closest(".provider-compare-show");
     const params = sessionParams(card);
     if (!card || !isMCLCard(card) || !params?.sessionId || !params?.cinemaCode) return false;
     const showtime = showtimeFor(card, params);
@@ -95,8 +87,8 @@
 
   function enhance() {
     scheduled = false;
-    document.querySelectorAll(".mcl-showtime-card .seat-pill, .provider-compare-show .provider-compare-seat").forEach(node => {
-      prepareTrigger(node, node.closest(".mcl-showtime-card, .provider-compare-show"));
+    document.querySelectorAll(".provider-compare-show .provider-compare-seat").forEach(node => {
+      prepareTrigger(node, node.closest(".provider-compare-show"));
     });
   }
 

@@ -219,19 +219,17 @@ test("Phase 7B keeps each nested provider notice intact", async () => {
   ]);
 });
 
-test("Phase 7B model loads before the shared detail and seat renderers", async () => {
+test("the shared model loads before comparison and seat-map renderers", async () => {
   const index = await source("app/index.html");
-  assertAssetOrder(index, "provider-registry.js", "showtime-metadata.js", "view-models.js", "movie-detail-shared.js");
+  assertAssetOrder(index, "provider-registry.js", "showtime-metadata.js", "view-models.js", "seatmap-shared.js");
   const modelIndex = assetPosition(index, "view-models.js");
 
   for (const script of [
-    "app.js",
-    "mcl-detail.js",
-    "emperor-detail.js",
     "seatmap-shared.js",
     "seatmap.js",
     "mcl-seatmap.js",
-    "emperor-seatmap.js"
+    "emperor-seatmap.js",
+    "provider-compare-v4.js"
   ]) {
     assertAsset(index, script);
     assert.ok(modelIndex < assetPosition(index, script), `${script} must load after the shared model`);

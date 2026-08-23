@@ -5,9 +5,6 @@ import {
   getEmperorMovieShows,
   probeEmperor
 } from "./providers/emperor.js";
-import {
-  getEmperorMovieDetail
-} from "./providers/emperor-detail.js";
 
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
@@ -91,40 +88,6 @@ export default {
         }, 200, { "cache-control": "public, max-age=1800" });
       } catch (error) {
         return errorResponse(error, "EMPEROR_UPCOMING_ERROR");
-      }
-    }
-
-    const detailMatch = url.pathname.match(
-      /^\/api\/emperor\/movies\/([^/]+)\/detail$/
-    );
-
-    if (detailMatch) {
-      const filmUniqueId = decodeURIComponent(detailMatch[1]);
-
-      if (!validFilmId(filmUniqueId)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_EMPEROR_FILM_ID",
-            message: "filmUniqueId is invalid"
-          }
-        }, 400);
-      }
-
-      try {
-        const result = await getEmperorMovieDetail(filmUniqueId);
-        return json({
-          ok: true,
-          data: result.movie,
-          meta: {
-            provider: "emperor",
-            filmUniqueId,
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "public, max-age=600" });
-      } catch (error) {
-        return errorResponse(error, "EMPEROR_DETAIL_ERROR");
       }
     }
 

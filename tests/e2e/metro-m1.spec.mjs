@@ -11,8 +11,8 @@ test("Metro preview builds the home shell and keeps homepage controls stable", a
 
   await expect(page.locator('[data-tab="now"]')).toContainText("現正在映");
   await expect(page.locator('[data-tab="coming"]')).toContainText("即將上映");
-  await expect(page.locator('[data-classic-final-tab-count="now"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
-  await expect(page.locator('[data-classic-final-tab-count="coming"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
+  await expect(page.locator('[data-shared-tab-count="now"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
+  await expect(page.locator('[data-shared-tab-count="coming"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
 
   const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });

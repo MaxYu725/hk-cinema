@@ -2,7 +2,7 @@
 
 /* M9E1 defensive Metro baseline: recommendation owners can briefly recreate the panel
    before Phase 8B adds its final layout class. Never allow that transient DOM to fall
-   back to the old Classic white recommendation surface. */
+   back to the retired light recommendation surface. */
 html[data-skin="metro"] #providerCompareContent .provider-compare-recommendations.phase8d-smart-picks {
   margin: -6px 0 14px;
   padding: 12px;
@@ -192,7 +192,7 @@ html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading h2 {
   overflow-wrap: normal;
 }
 
-html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading .classic-final-sort {
+html[data-skin="metro"] #providerCompareContent .phase8b-showtime-heading .shared-sort-control {
   grid-column: 3;
   justify-self: end;
 }

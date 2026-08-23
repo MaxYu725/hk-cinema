@@ -81,7 +81,6 @@ async function loadRuntime() {
   for (const path of [
     "app/showtime-metadata.js",
     "app/view-models.js",
-    "app/movie-detail-shared.js",
     "app/seatmap-shared.js"
   ]) {
     vm.runInContext(await source(path), context, { filename: path });
@@ -142,30 +141,6 @@ test("M7R3 registered fourth provider uses generic movie and showtime normalizat
   }, fixtureShowtime()), null);
 });
 
-test("M7R3 shared detail renders fourth provider without Broadway or seat-map fallback", async () => {
-  const context = await loadRuntime();
-  const renderer = context.window.HKCinemaMovieDetail;
-  const view = renderer.createView({
-    providerId: "fixture",
-    movie: fixtureMovie(),
-    shows: {
-      availableDates: ["2026-08-13"],
-      selectedDate: "2026-08-13",
-      sessions: [fixtureShowtime()]
-    }
-  });
-  const html = renderer.renderHtml(view);
-
-  assert.match(html, /data-detail-provider="fixture"/);
-  assert.match(html, /Fixture Cinema/);
-  assert.match(html, /fixture-showtime-card/);
-  assert.match(html, /不提供座位資料/);
-  assert.match(html, /href="https:\/\/fixture\.example\/session-1"[^>]*>官方購票<\/a>/);
-  assert.doesNotMatch(html, /shared-seatmap-button/);
-  assert.doesNotMatch(html, /broadway-showtime-card/);
-  assert.doesNotMatch(html, /SHOULD-NOT-BECOME-EMPEROR/);
-});
-
 test("M7R3 shared seat-map capability gate stops unsupported provider before load or adapt", async () => {
   const context = await loadRuntime();
   const shared = context.window.HKCinemaSeatMapShared;
@@ -200,15 +175,14 @@ test("M7R3 shared seat-map capability gate stops unsupported provider before loa
   assert.equal(node.dataset.seatmapProvider, undefined);
 });
 
-test("M7R3 shared runtimes remain independently cache-busted without pinning historical tokens", async () => {
-  const [index, models, detail, seatmap] = await Promise.all([
+test("M7R3 shared model and seat-map runtimes remain independently cache-busted", async () => {
+  const [index, models, seatmap] = await Promise.all([
     source("app/index.html"),
     source("app/view-models.js"),
-    source("app/movie-detail-shared.js"),
     source("app/seatmap-shared.js")
   ]);
 
-  for (const script of ["view-models.js", "movie-detail-shared.js", "seatmap-shared.js"]) {
+  for (const script of ["view-models.js", "seatmap-shared.js"]) {
     assertAsset(index, script);
   }
   assert.match(models, /unsupportedSeatMap\("unsupported"\)/);
@@ -218,6 +192,5 @@ test("M7R3 shared runtimes remain independently cache-busted without pinning his
   assert.doesNotMatch(models, /if\s*\(providerId\s*===\s*"(?:broadway|mcl|emperor)"\)/);
   assert.match(models, /unsupportedSeatMap\("adapter-missing"\)/);
   assert.doesNotMatch(models, /Unsupported cinema provider/);
-  assert.doesNotMatch(detail, /Unsupported detail provider/);
   assert.doesNotMatch(seatmap, /Unsupported seat-map provider/);
 });

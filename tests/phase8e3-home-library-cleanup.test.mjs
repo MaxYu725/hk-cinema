@@ -14,11 +14,13 @@ test("Phase 8E3 loads the slim home library runtime and syntax-checks it", async
     read("app/index.html"),
     read("package.json")
   ]);
+  const syntaxScript = JSON.parse(packageJson).scripts["test:syntax"];
 
   assertAsset(index, "home-library-core.js");
   assertAsset(index, "home-library.js");
-  assert.match(packageJson, /node --check app\/home-library-core\.js/);
-  assert.match(packageJson, /node --check app\/home-library\.js/);
+  assert.match(syntaxScript, /find app worker\/src scripts/);
+  assert.match(syntaxScript, /-name '\*\.js'/);
+  assert.match(syntaxScript, /xargs -0 -n 1 node --check/);
 });
 
 test("retired homepage facet, provider and hidden region plumbing is gone", async () => {

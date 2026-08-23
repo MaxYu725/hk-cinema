@@ -148,7 +148,7 @@ html[data-skin="metro"] .tab:active {
   transform: scale(.97);
 }
 
-html[data-skin="metro"] .classic-final-tab-count {
+html[data-skin="metro"] .shared-tab-count {
   display: inline;
   min-width: 0;
   height: auto;
@@ -162,7 +162,7 @@ html[data-skin="metro"] .classic-final-tab-count {
   line-height: 1;
 }
 
-html[data-skin="metro"] .tab.active .classic-final-tab-count {
+html[data-skin="metro"] .tab.active .shared-tab-count {
   background: transparent;
   color: var(--metro-accent);
 }

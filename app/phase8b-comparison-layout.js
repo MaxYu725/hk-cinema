@@ -44,29 +44,6 @@
     return [facts.classification, facts.duration, facts.releaseDate].filter(Boolean);
   }
 
-  function movieDetailsBody(facts) {
-    const rows = [];
-    if (facts.releaseDate) rows.push(["上映日期", facts.releaseDate]);
-    if (facts.duration) rows.push(["片長", facts.duration]);
-    if (facts.classification) rows.push(["級別", facts.classification]);
-    if (!rows.length) return null;
-
-    return {
-      signature: JSON.stringify(rows),
-      html: `
-        <summary>
-          <span>電影資料</span>
-          <small>${rows.length} 項基本資料</small>
-        </summary>
-        <dl>
-          ${rows.map(([label, value]) => `
-            <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>
-          `).join("")}
-        </dl>
-      `
-    };
-  }
-
   function placeAfter(anchor, element) {
     if (!anchor || !element || anchor.nextElementSibling === element) return;
     anchor.insertAdjacentElement("afterend", element);
@@ -107,29 +84,8 @@
       if (status.innerHTML !== html) status.innerHTML = html;
     }
 
-    const detailModel = movieDetailsBody(facts);
-    let details = root.querySelector("[data-phase8b-movie-details]");
-    if (!detailModel) {
-      details?.remove();
-      details = null;
-    } else {
-      if (!details) {
-        details = document.createElement("details");
-        details.className = "phase8b-movie-details";
-        details.dataset.phase8bMovieDetails = "true";
-        hero.insertAdjacentElement("afterend", details);
-      }
-      if (details.dataset.signature !== detailModel.signature) {
-        const wasOpen = details.open;
-        details.innerHTML = detailModel.html;
-        details.dataset.signature = detailModel.signature;
-        details.open = wasOpen;
-      }
-      placeAfter(hero, details);
-    }
-
     const versionRail = root.querySelector("[data-phase8a-version-rail]");
-    if (versionRail) placeAfter(details || hero, versionRail);
+    if (versionRail) placeAfter(hero, versionRail);
   }
 
   function recommendationSummary(panel) {
@@ -261,7 +217,7 @@
           ? record.target
           : record.target?.parentElement;
         if (!target?.closest?.("#providerCompareContent")) return false;
-        if (target.closest?.("[data-phase8b-recommendation-toggle], [data-phase8b-movie-details]")) return false;
+        if (target.closest?.("[data-phase8b-recommendation-toggle]")) return false;
         return true;
       });
       if (relevant) schedule();

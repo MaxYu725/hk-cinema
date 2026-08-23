@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const source = path => readFile(new URL(path, ROOT), "utf8");
 
-const [providerCss, viewCss, sharedJs] = await Promise.all([
-  source("app/emperor-detail.css"),
+const [index, viewCss, sharedJs] = await Promise.all([
+  source("app/index.html"),
   source("app/emperor-seatmap-view.css"),
   source("app/seatmap-shared.js")
 ]);
 
-test("M8A3 loads Emperor seat-map presentation through the existing provider stylesheet", () => {
-  assert.match(providerCss, /@import url\([^)]*emperor-seatmap-view\.css/);
+test("C2 loads Emperor seat-map presentation directly without the retired detail stylesheet", () => {
+  assertAsset(index, "emperor-seatmap-view.css");
+  assert.doesNotMatch(index, /emperor-detail\.css/);
 });
 
 test("M8A3 keeps Emperor positioned seats at a fixed 20px visual size", () => {

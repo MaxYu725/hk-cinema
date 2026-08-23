@@ -20,12 +20,6 @@ test("HK Cinema icon follows blue-background white-pictogram app-family branding
   assert.doesNotMatch(generator, /GREEN\s*=/);
 });
 
-test("Classic home section no longer repeats the active tab label", () => {
-  const css = fs.readFileSync(path.join(app, "phase9d0-home-sticky-scroll.css"), "utf8");
-  assert.match(css, /html\[data-skin="classic"\] #sectionTitle::after/);
-  assert.match(css, /content:\s*"全部電影"/);
-});
-
 test("branding refresh keeps a versioned PWA shell cache without changing live-data boundary", () => {
   const sw = fs.readFileSync(path.join(app, "sw.js"), "utf8");
   assert.match(sw, /const CACHE_NAME = `\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);

@@ -33,7 +33,8 @@ test("Phase 6M separates seat-map and official booking actions", async () => {
   assert.match(broadwaySeats, /dataset\?\.bookingUrl \|\| card\?\.getAttribute\("href"\)/);
   assert.match(mclSeats, /dataset\?\.bookingUrl \|\| card\?\.getAttribute\("href"\)/);
   assert.match(broadwaySeats, /\.provider-compare-show \.provider-compare-seat/);
-  assert.match(mclSeats, /\.mcl-showtime-card, \.provider-compare-show/);
+  assert.match(mclSeats, /closest\("\.provider-compare-show"\)/);
+  assert.doesNotMatch(mclSeats, /mcl-showtime-card|HKCinemaMovieDetail/);
   assert.match(emperorSeats, /\.provider-compare-show/);
 });
 

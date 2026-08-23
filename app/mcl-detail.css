@@ -1,7 +1,0 @@
-.provider-mcl[data-mcl-open] {
-  cursor: pointer;
-}
-
-.provider-mcl[data-mcl-open]:active {
-  transform: translateY(1px);
-}

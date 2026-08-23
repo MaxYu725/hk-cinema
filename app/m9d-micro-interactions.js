@@ -1,6 +1,4 @@
 (() => {
-  if (document.documentElement.dataset.skin !== "metro") return;
-
   const ACK_MS = 180;
   const PRESS_CANCEL_DISTANCE = 10;
   const SEAT_HINT_KEY = "hkcinema:m9d-seat-scroll-hint-seen";
@@ -104,9 +102,9 @@
       return;
     }
 
-    const comparisonSort = event.target.closest?.(".classic-final-sort select");
+    const comparisonSort = event.target.closest?.(".shared-sort-control select");
     if (comparisonSort) {
-      pulseAck(comparisonSort.closest(".classic-final-sort"));
+      pulseAck(comparisonSort.closest(".shared-sort-control"));
       return;
     }
 

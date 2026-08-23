@@ -82,13 +82,13 @@ test("movie-first search, favorites and recent activity stay wired", async () =>
   assert.match(styles, /\.movie-favorite-button/);
 });
 
-test("catalogue and detail metadata continue feeding movie aggregates", async () => {
-  const [app, multiProvider, mclDetail, health, style, providerStyle, compare, library] = await Promise.all([
+test("catalogue metadata continues feeding movie aggregates without detail-side events", async () => {
+  const [app, multiProvider, health, libraryStyle, metroStyle, providerStyle, compare, library] = await Promise.all([
     source("app/app.js"),
     source("app/multi-provider.js"),
-    source("app/mcl-detail.js"),
     source("app/data-health.js"),
     source("app/home-library.css"),
+    source("app/metro-theme.css"),
     source("app/multi-provider.css"),
     source("app/provider-compare-v4.js"),
     source("app/home-library.js")
@@ -98,11 +98,11 @@ test("catalogue and detail metadata continue feeding movie aggregates", async ()
   assert.match(app, /data-home-formats/);
   assert.match(app, /hkcinema:home-tab/);
   assert.match(multiProvider, /mergeMovieMetadata/);
-  assert.match(multiProvider, /hkcinema:movie-metadata/);
+  assert.doesNotMatch(multiProvider, /hkcinema:movie-metadata/);
   assert.match(multiProvider, /HKCinemaMovieGroups/);
-  assert.match(mclDetail, /reportMovieMetadata/);
   assert.match(health, /syncRefreshButton/);
-  assert.match(style, /\.home-library-tools\.is-stuck/);
+  assert.doesNotMatch(libraryStyle, /\.home-library-tools\.is-stuck/);
+  assert.match(metroStyle, /\.home-library-tools\.is-stuck/);
   assert.doesNotMatch(providerStyle, /\.home-provider-filters/);
   assert.match(providerStyle, /\.movie-group-member/);
   assert.match(compare, /hkcinema:provider-compare-open/);
