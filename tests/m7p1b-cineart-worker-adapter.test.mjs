@@ -190,6 +190,6 @@ test("M7P1B checkpoint records Worker-only production boundary before M7P1C", as
   assert.match(checkpoint, /Next checkpoint after a successful M7P1B merge: \*\*M7P1C/);
   assert.equal(WORKER_PROVIDER_IDS.includes("cineart"), true);
   assert.equal(PROVIDER_MANIFEST.filter(entry => entry.id === "cineart").length, 1);
-  assert.match(workerIndex, /phase:\s*["']6G["']/);
+  assert.match(workerIndex, /const LEGACY_HEALTH_PHASE = ["']6G["']/);
   assert.match(topRouter, /\/api\/providers\/cineart\/discovery/);
 });

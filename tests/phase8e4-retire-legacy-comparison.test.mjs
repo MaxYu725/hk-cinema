@@ -5,6 +5,11 @@ import { assertAsset } from "./index-assets.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const RETIRED = [
+  "app/provider-compare.js",
+  "app/provider-compare-insights.js",
+  "app/provider-compare-main-cache.js",
+  "app/provider-compare-recommendations-v2.js",
+  "app/provider-compare-resilience.js",
   "app/provider-compare-v3.js",
   "app/provider-compare-insights-v3.js",
   "app/provider-compare-preferences.js",

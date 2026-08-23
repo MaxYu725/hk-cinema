@@ -23,6 +23,9 @@ import {
   providerHealthMap
 } from "./provider-manifest.js";
 
+const HEALTH_SCHEMA_VERSION = 1;
+const LEGACY_HEALTH_PHASE = "6G";
+
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
@@ -42,17 +45,30 @@ const finiteNumberOrNull = value => {
   return Number.isFinite(number) ? number : null;
 };
 
+const textOrNull = value => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || null;
+};
+
+const deploymentMetadata = env => ({
+  versionId: textOrNull(env?.CF_VERSION_METADATA?.id),
+  versionTag: textOrNull(env?.CF_VERSION_METADATA?.tag),
+  createdAt: textOrNull(env?.CF_VERSION_METADATA?.timestamp)
+});
+
 export default {
-  async fetch(request) {
+  async fetch(request, env = {}) {
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
       return json({
         ok: true,
         service: "hk-cinema-api",
-        phase: "6G",
+        schemaVersion: HEALTH_SCHEMA_VERSION,
+        phase: LEGACY_HEALTH_PHASE,
         status: "operational",
         providers: providerHealthMap(),
+        deployment: deploymentMetadata(env),
         freshness: {
           catalogueFallbackMaxAgeSeconds: 86400,
           comparisonFreshSeconds: 900,
