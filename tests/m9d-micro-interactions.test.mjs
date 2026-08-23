@@ -43,7 +43,7 @@ test("M9D gives shallow card press and date/filter/sort acknowledgements", async
   assert.match(source, /data-provider-filter-toggle/);
   assert.match(source, /provider-compare-control-group button/);
   assert.match(source, /home-movie-sort select/);
-  assert.match(source, /classic-final-sort select/);
+  assert.match(source, /shared-sort-control select/);
   assert.match(css, /movie-card\.m9d-pressed[\s\S]*?scale\(\.985\)/);
   assert.match(css, /\.m9d-control-ack/);
 });

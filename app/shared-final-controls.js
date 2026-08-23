@@ -73,12 +73,11 @@
   function ensureTabCount(tab) {
     const button = document.querySelector(`[data-tab="${tab}"]`);
     if (!button) return null;
-    let badge = button.querySelector(`[data-classic-final-tab-count="${tab}"]`);
+    let badge = button.querySelector(`[data-shared-tab-count="${tab}"]`);
     if (!badge) {
       badge = document.createElement("span");
-      badge.className = "classic-final-tab-count";
-      badge.dataset.classicFinalTabCount = tab;
-      badge.dataset.sharedFinalTabCount = tab;
+      badge.className = "shared-tab-count";
+      badge.dataset.sharedTabCount = tab;
       badge.setAttribute("aria-hidden", "true");
       button.appendChild(badge);
     }
@@ -112,15 +111,14 @@
     const headingMain = heading?.querySelector(":scope > div");
     if (!headingMain) return;
 
-    let control = headingMain.querySelector("[data-shared-final-sort], [data-classic-final-sort]");
+    let control = headingMain.querySelector("[data-shared-sort]");
     if (!control) {
       control = document.createElement("label");
-      control.className = "classic-final-sort shared-final-sort";
-      control.dataset.classicFinalSort = "true";
-      control.dataset.sharedFinalSort = "true";
+      control.className = "shared-sort-control";
+      control.dataset.sharedSort = "true";
       control.innerHTML = `
         <span>排序</span>
-        <select data-classic-final-sort-select data-shared-final-sort-select aria-label="場次排序">
+        <select data-shared-sort-select aria-label="場次排序">
           <option value="time">時間</option>
           <option value="price">價格</option>
           <option value="seats">座位</option>
@@ -130,10 +128,6 @@
       control.querySelector("select")?.addEventListener("change", event => {
         window.HKCinemaProviderCompareFilters?.setFilter?.("sort", event.target.value || "time");
       });
-    } else {
-      control.classList.add("shared-final-sort");
-      control.dataset.sharedFinalSort = "true";
-      control.querySelector("select")?.setAttribute("data-shared-final-sort-select", "");
     }
 
     const select = control.querySelector("select");
@@ -181,7 +175,7 @@
   }
 
   window.HKCinemaSharedFinalControls = Object.freeze({
-    version: "m6b-1",
+    version: "c2-1",
     refresh: scheduleSync,
     ensureSortControl,
     getTabCounts() { return Object.fromEntries(tabCounts); }

@@ -1,10 +1,9 @@
 (() => {
   const NAV_KEY = "__hkCinemaNavigation";
-  const VERSION = "m10t1d-1";
+  const VERSION = "c2-1";
   const SESSION = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const LAYERS = Object.freeze({
     providerCompareOverlay: "compare",
-    movieDetailOverlay: "detail",
     sharedSeatMapOverlay: "seatmap"
   });
 
@@ -57,18 +56,7 @@
   }
 
   function visibleStack() {
-    const current = navigationState()?.stack || [];
-    let base = null;
-
-    if (overlayVisible("providerCompareOverlay") && overlayVisible("movieDetailOverlay")) {
-      base = current.includes("detail") ? "detail" : "compare";
-    } else if (overlayVisible("movieDetailOverlay")) {
-      base = "detail";
-    } else if (overlayVisible("providerCompareOverlay")) {
-      base = "compare";
-    }
-
-    const stack = base ? [base] : [];
+    const stack = overlayVisible("providerCompareOverlay") ? ["compare"] : [];
     if (overlayVisible("sharedSeatMapOverlay")) stack.push("seatmap");
     return stack;
   }
@@ -155,10 +143,6 @@
   function closeLayer(layer) {
     if (layer === "seatmap") {
       window.HKCinemaSeatMapShared?.close?.();
-      return;
-    }
-    if (layer === "detail") {
-      window.HKCinemaMovieDetail?.close?.();
       return;
     }
     if (layer === "compare") {

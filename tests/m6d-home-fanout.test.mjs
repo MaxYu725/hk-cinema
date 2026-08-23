@@ -31,7 +31,7 @@ test("M6D home success-path provider fan-out remains five catalogue requests", a
     source("app/providers/emperor.js")
   ]);
 
-  const broadwayLoad = functionBody(app, "async function loadMovies()", "function closeMovieDetail");
+  const broadwayLoad = functionBody(app, "async function loadMovies()", "window.HKCinemaBroadwayApp =");
   assert.equal(occurrences(broadwayLoad, /fetchMovieEndpoint\(/g), 2);
   assert.match(broadwayLoad, /fetchMovieEndpoint\("\/api\/broadway\/movies"\)/);
   assert.match(broadwayLoad, /fetchMovieEndpoint\("\/api\/broadway\/upcoming"\)/);

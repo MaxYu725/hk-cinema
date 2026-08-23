@@ -35,7 +35,7 @@ html[data-skin="metro"] :where(
 
 html[data-skin="metro"] :where(
   .home-movie-sort,
-  .classic-final-sort,
+  .shared-sort-control,
   .provider-compare-cinema-control
 ).m9d-control-ack {
   outline: 1px solid var(--metro-accent);

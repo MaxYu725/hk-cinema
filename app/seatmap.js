@@ -15,11 +15,7 @@
   }
 
   function isBroadwayCard(card) {
-    if (!card) return false;
-    if (card.matches(".provider-compare-show")) {
-      return Boolean(card.querySelector(".provider-compare-source.broadway"));
-    }
-    return card.matches(".showtime-card:not(.mcl-showtime-card):not(.emperor-showtime-card)") && Boolean(getShowId(card));
+    return Boolean(card?.matches(".provider-compare-show") && card.querySelector(".provider-compare-source.broadway"));
   }
 
   function cardText(card, selector) {
@@ -27,8 +23,6 @@
   }
 
   function showtimeFor(card, showId) {
-    const stored = window.HKCinemaMovieDetail?.showtimeFor?.(card);
-    if (stored) return stored;
     const cinema = cardText(card, ".provider-compare-show-topline strong") || "Broadway 戲院";
     const secondary = cardText(card, ".provider-compare-show-main p");
     return window.HKCinemaViewModels?.showtime("broadway", {
@@ -60,7 +54,7 @@
   }
 
   function openSeatMap(trigger, force = false) {
-    const card = trigger?.closest(".showtime-card, .provider-compare-show");
+    const card = trigger?.closest(".provider-compare-show");
     const showId = getShowId(card);
     if (!card || !showId || !isBroadwayCard(card)) return false;
     const showtime = showtimeFor(card, showId);
@@ -87,8 +81,8 @@
 
   function enhance() {
     scheduled = false;
-    document.querySelectorAll(".showtime-card .seat-pill, .provider-compare-show .provider-compare-seat").forEach(node => {
-      prepareTrigger(node, node.closest(".showtime-card, .provider-compare-show"));
+    document.querySelectorAll(".provider-compare-show .provider-compare-seat").forEach(node => {
+      prepareTrigger(node, node.closest(".provider-compare-show"));
     });
   }
 

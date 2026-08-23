@@ -24,6 +24,8 @@ The application has two deployment surfaces:
 1. `app/` — static HTML, CSS and JavaScript deployed to GitHub Pages.
 2. `worker/` — Cloudflare Worker adapters for provider pages and APIs that should not be fetched directly by the browser.
 
+The production frontend has one Metro runtime. Movie cards open the unified comparison directly; there is no separate Classic skin or provider-specific movie-detail drawer.
+
 Broadway, Emperor and CineArt use Worker-backed provider routes. MCL catalogue and its primary showtime path use the official MCL browser API directly; the Worker path remains a bounded fallback. This is intentional: MCL is fast and reliable on a normal Hong Kong connection, while VPN or proxy routing can return an incompatible payload. Do not add longer retry chains for that known VPN/proxy case.
 
 Current runtime ownership and the staged cleanup target are documented in [docs/architecture.md](docs/architecture.md). Provider routes, cache boundaries and health semantics are documented in [docs/provider-matrix.md](docs/provider-matrix.md).

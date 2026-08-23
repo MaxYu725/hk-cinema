@@ -205,11 +205,6 @@ html[data-skin="metro"] .provider-compare-status.phase8b-movie-facts span:first-
   font-weight: 600;
 }
 
-/* Basic facts already live in the hero; do not duplicate them in an expandable block. */
-html[data-skin="metro"] #providerCompareContent .phase8b-movie-details {
-  display: none !important;
-}
-
 /* Keep the homepage metadata visually unchanged while preserving separators in textContent
    for the comparison facts parser. */
 html[data-skin="metro"] .movie-meta .metro-meta-separator {
@@ -536,7 +531,7 @@ html[data-skin="metro"] .provider-compare-section-heading small {
   line-height: 1.4;
 }
 
-html[data-skin="metro"] .classic-final-sort {
+html[data-skin="metro"] .shared-sort-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -545,7 +540,7 @@ html[data-skin="metro"] .classic-final-sort {
   font-weight: 400;
 }
 
-html[data-skin="metro"] .classic-final-sort select {
+html[data-skin="metro"] .shared-sort-control select {
   min-height: 34px;
   padding: 5px 26px 5px 9px;
   border: 1px solid var(--metro-border);

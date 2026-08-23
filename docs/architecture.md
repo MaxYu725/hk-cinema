@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C1.
+Status: current production architecture at cleanup checkpoint C2.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -8,9 +8,9 @@ This document is the canonical description of the running system. Historical pha
 
 ### GitHub Pages application
 
-`app/index.html` is the production entrypoint. It loads a static PWA implemented with classic browser scripts and CSS. The Service Worker caches same-origin static assets only; all cinema catalogue, showtime, price and seat requests stay outside the PWA cache.
+`app/index.html` is the production entrypoint. It loads a static PWA implemented with browser scripts and CSS. The Service Worker caches same-origin static assets only; all cinema catalogue, showtime, price and seat requests stay outside the PWA cache.
 
-The active interface is the Metro skin. Classic remains present in the current checkpoint as an explicit rollback surface and will be retired in a separate behavior-changing cleanup PR.
+Metro is the only production interface. The retired `skin=classic` query no longer changes runtime or presentation.
 
 ### Cloudflare Worker
 
@@ -43,6 +43,8 @@ This DOM-based aggregation is current behavior, not the target architecture. The
 
 `app/provider-compare-v4.js` requests each matched provider independently, normalizes the selected-date sessions and renders a unified timeline. It already owns the closest representation of a comparison domain model.
 
+Movie cards open this surface directly. Movie facts, provider availability, dates, showtimes, price/seat enrichment, official booking links and seat-map launch points all live in the comparison flow; the old provider-specific movie-detail drawer and its duplicate showtime requests were removed at C2.
+
 Several later modules currently parse that rendered timeline again:
 
 - rich filters and sorting;
@@ -74,6 +76,17 @@ The behavior is intentionally optimized for a normal Hong Kong network. Cleanup 
 - CineArt: official read-only geometry.
 
 Provider-specific layout information is part of the data contract and must not be discarded during consolidation.
+
+## C2 retirement boundary
+
+C2 removed only paths that had no production entry after direct comparison became the accepted interaction:
+
+- the Classic query switch, Classic-only CSS and its observers;
+- the shared movie-detail drawer plus Broadway, MCL and Emperor detail loaders;
+- the unused Emperor movie-detail Worker route and parser;
+- detail-only branches inside seat-map adapters and PWA back navigation.
+
+The comparison overlay, movie-fact disclosure, official booking links, provider-isolated loading, date selection, filters, Smart Picks, seat summaries, four provider seat maps and Android/PWA back behavior remain in place. Historical checkpoint documents still describe the retired implementations but are not runtime contracts.
 
 ## Canonical data rules
 
@@ -118,8 +131,8 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 
 ## Staged cleanup order
 
-1. C1 — establish current-truth documentation, deployment metadata and remove repository-only legacy comparison files.
-2. C2 — retire dead movie-detail and Classic runtime paths after focused interaction validation.
+1. C1 — completed: establish current-truth documentation, deployment metadata and remove repository-only legacy comparison files.
+2. C2 — completed: retire dead movie-detail and Classic runtime paths after focused interaction validation.
 3. C3 — create catalogue/domain stores and remove Broadway base-provider ownership.
 4. C4 — move filters, sorting and recommendations from DOM parsing to selectors.
 5. C5 — consolidate Worker clients/router and define one cache owner per resource.

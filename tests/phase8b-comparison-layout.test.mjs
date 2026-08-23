@@ -37,8 +37,8 @@ test('old summary insight grid is removed from the primary browsing hierarchy', 
 test('comparison hero is movie-first rather than provider-match-first', () => {
   assert.ok(layout.includes('eyebrow.textContent = "MOVIE"'));
   assert.ok(layout.includes('phase8b-secondary-title'));
-  assert.ok(layout.includes('電影資料'));
-  assert.ok(layout.includes('上映日期'));
-  assert.ok(layout.includes('片長'));
-  assert.ok(layout.includes('級別'));
+  assert.ok(layout.includes('visibleFactChips'));
+  assert.ok(layout.includes('phase8b-movie-facts'));
+  assert.doesNotMatch(layout, /phase8b-movie-details|data-phase8b-movie-details/);
+  assert.doesNotMatch(css, /phase8b-movie-details/);
 });

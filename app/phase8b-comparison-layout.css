@@ -1,4 +1,4 @@
-/* Phase 8B: movie detail -> date -> filters -> recommendations -> showtimes */
+/* Phase 8B: movie header -> date -> filters -> recommendations -> showtimes */
 
 #providerCompareContent .provider-compare-hero {
   margin-bottom: 12px;
@@ -33,79 +33,6 @@
   color: #5e646d;
   font-size: .72rem;
   font-weight: 750;
-}
-
-#providerCompareContent .phase8b-movie-details {
-  margin: 0 0 14px;
-  border: 1px solid #e3e6e9;
-  border-radius: 18px;
-  background: #fff;
-  overflow: hidden;
-}
-
-#providerCompareContent .phase8b-movie-details summary {
-  min-height: 52px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  cursor: pointer;
-  list-style: none;
-}
-
-#providerCompareContent .phase8b-movie-details summary::-webkit-details-marker {
-  display: none;
-}
-
-#providerCompareContent .phase8b-movie-details summary span {
-  color: #202328;
-  font-weight: 850;
-}
-
-#providerCompareContent .phase8b-movie-details summary small {
-  color: #858b93;
-  font-size: .72rem;
-  font-weight: 700;
-}
-
-#providerCompareContent .phase8b-movie-details summary::after {
-  content: "⌄";
-  color: #757b84;
-  font-size: 1rem;
-  transition: transform .18s ease;
-}
-
-#providerCompareContent .phase8b-movie-details[open] summary::after {
-  transform: rotate(180deg);
-}
-
-#providerCompareContent .phase8b-movie-details dl {
-  margin: 0;
-  padding: 0 16px 14px;
-}
-
-#providerCompareContent .phase8b-movie-details dl > div {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 12px;
-  padding: 9px 0;
-  border-top: 1px solid #eef0f2;
-}
-
-#providerCompareContent .phase8b-movie-details dt {
-  color: #8a9098;
-  font-size: .76rem;
-  font-weight: 750;
-}
-
-#providerCompareContent .phase8b-movie-details dd {
-  margin: 0;
-  color: #34383e;
-  font-size: .8rem;
-  font-weight: 700;
-  text-align: right;
 }
 
 #providerCompareContent .phase8b-timeline-section {
@@ -242,10 +169,6 @@
   #providerCompareContent .provider-compare-hero h1 {
     font-size: clamp(1.35rem, 6vw, 1.7rem);
     line-height: 1.08;
-  }
-
-  #providerCompareContent .phase8b-movie-details {
-    border-radius: 15px;
   }
 
   #providerCompareContent .phase8b-date-section {

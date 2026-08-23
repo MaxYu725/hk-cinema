@@ -10,11 +10,10 @@ const [index, manifestText, sw] = await Promise.all([
 ]);
 const manifest = JSON.parse(manifestText);
 
-test("Metro is the production default while Classic remains an explicit fallback", () => {
+test("Metro is the single production runtime", () => {
   assert.match(index, /<html lang="zh-HK" data-skin="metro">/);
-  assert.match(index, /const resolved = skin === "classic" \? "classic" : "metro"/);
-  assert.match(index, /applySkin\(new URLSearchParams\(window\.location\.search\)\.get\("skin"\)\)/);
-  assert.match(index, /resolved === "classic" \? "#17191d" : "#000000"/);
+  assert.doesNotMatch(index, /applySkin|URLSearchParams|skin=classic/);
+  assert.match(index, /<meta name="theme-color" content="#000000">/);
 });
 
 test("PWA install metadata now matches the Metro shell", () => {
@@ -24,8 +23,8 @@ test("PWA install metadata now matches the Metro shell", () => {
   assert.match(index, /manifest\.json\?v=m5-1/);
 });
 
-test("M5 rotates the controlled shell cache without restoring automatic activation", () => {
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}m5-1`/);
+test("C2 rotates the controlled shell cache without restoring automatic activation", () => {
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}c2-1`/);
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
   assert.doesNotMatch(installBlock, /skipWaiting\(\)/);

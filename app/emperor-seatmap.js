@@ -61,50 +61,19 @@
     return response;
   };
 
-  function activeDateFor(card) {
-    if (card.matches(".emperor-showtime-card")) {
-      return document.querySelector('[data-detail-provider="emperor"][data-detail-date].active')?.dataset?.detailDate || null;
-    }
+  function activeDateFor() {
     return document.querySelector("[data-provider-compare-date].active")?.dataset?.providerCompareDate || null;
   }
 
   function cardParts(card) {
-    const date = activeDateFor(card);
+    const date = activeDateFor();
     const time = card.querySelector(".showtime-time, .provider-compare-show-time")?.textContent?.trim() || "";
-    let cinema = "";
-    let secondary = "";
-    if (card.matches(".emperor-showtime-card")) {
-      cinema = card.closest(".cinema-group")?.querySelector(".cinema-group-heading h3")?.textContent?.trim() || "";
-      secondary = Array.from(card.querySelectorAll("p"))
-        .find(node => !node.classList.contains("emperor-ticket-prices"))
-        ?.textContent?.trim() || "";
-    } else {
-      cinema = card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "";
-      secondary = card.querySelector(".provider-compare-show-main p")?.textContent?.trim() || "";
-    }
+    const cinema = card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "";
+    const secondary = card.querySelector(".provider-compare-show-main p")?.textContent?.trim() || "";
     return { date, time, cinema, house: secondary.split(" · ")[0]?.trim() || "" };
   }
 
   function findSession(card) {
-    const stored = window.HKCinemaMovieDetail?.showtimeFor?.(card);
-    if (stored?.seatMap?.request) {
-      const request = stored.seatMap.request;
-      return {
-        sourceId: request.scheduleId || stored.sourceId,
-        date: stored.date,
-        time: stored.time,
-        cinema: {
-          sourceId: request.cinemaLinkId || stored.cinema?.sourceId,
-          name: { zh: stored.cinema?.name?.zh || stored.cinema?.name?.display, en: stored.cinema?.name?.en }
-        },
-        house: { sourceId: request.hallId || stored.house?.sourceId, name: stored.house?.name },
-        format: stored.metadata?.formats?.[0],
-        language: stored.metadata?.languages?.[0],
-        bookingUrl: stored.bookingUrl,
-        purchase: { ...stored.purchase, scheduleKey: request.scheduleKey }
-      };
-    }
-
     const parts = cardParts(card);
     const exact = `${parts.date || ""}|${normalize(parts.cinema)}|${parts.time}|${normalize(parts.house)}`;
     if (sessionStore.has(exact)) return sessionStore.get(exact);
@@ -140,10 +109,6 @@
 
   function enhance() {
     scheduled = false;
-    document.querySelectorAll(".emperor-showtime-card").forEach(card => {
-      const session = findSession(card);
-      if (session) prepareTrigger(card.querySelector(".seat-pill"), session);
-    });
     document.querySelectorAll(".provider-compare-show").forEach(card => {
       if (!card.querySelector(".provider-compare-source.emperor")) return;
       const session = findSession(card);

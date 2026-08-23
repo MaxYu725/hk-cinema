@@ -1,6 +1,6 @@
 # Provider matrix
 
-Status: current production contract at cleanup checkpoint C1.
+Status: current production contract at cleanup checkpoint C2.
 
 This matrix describes real production data paths and reliability expectations. A declared capability means that HK Cinema has an implementation for it; it does not guarantee that every upstream movie or showtime supplies the optional value.
 
@@ -51,7 +51,6 @@ A fast HTTP 200 response with an incompatible MCL payload is the known VPN/proxy
 |---|---|---:|
 | `GET /api/emperor/movies` | Current catalogue | 300 seconds |
 | `GET /api/emperor/upcoming` | Upcoming catalogue | 1,800 seconds |
-| `GET /api/emperor/movies/{filmUniqueId}/detail` | Movie details | 600 seconds |
 | `GET /api/emperor/movies/{filmUniqueId}/shows?date=YYYY-MM-DD` | Dates and sessions | 60 seconds |
 | `GET /api/emperor/shows/{scheduleId}/seats?...` | Seat map | 30 seconds |
 
@@ -103,4 +102,4 @@ Provider probes run independently and are never called by normal homepage/compar
 
 ## Current cleanup boundary
 
-Checkpoint C1 documents the existing route chain and data behavior; it does not change provider parsers, MCL transport selection, comparison calculations or seat-map geometry. Router, cache and frontend-store consolidation belong to later independent checkpoints described in `docs/architecture.md`.
+Checkpoint C2 removes the unused provider-specific movie-detail surface and Emperor detail route. It does not change catalogue/showtime parsers, MCL transport selection, comparison calculations or seat-map geometry. Router, cache and frontend-store consolidation belong to later independent checkpoints described in `docs/architecture.md`.

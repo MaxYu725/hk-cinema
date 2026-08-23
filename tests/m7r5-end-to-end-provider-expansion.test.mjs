@@ -261,7 +261,7 @@ async function settle(turns = 24) {
   }
 }
 
-test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, comparison, filters and detail capabilities", async () => {
+test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, comparison, filters and seat capability gates", async () => {
   const harness = createHarness();
   const { context, window, content, fetchUrls } = harness;
 
@@ -271,7 +271,6 @@ test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, compar
     "app/provider-shared-core.js",
     "app/showtime-metadata.js",
     "app/view-models.js",
-    "app/movie-detail-shared.js",
     "app/seatmap-shared.js"
   );
 
@@ -341,23 +340,6 @@ test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, compar
   assert.equal(normalizedShowtime.seats.quality, "unknown");
   assert.equal(normalizedShowtime.seatMap.supported, false);
   assert.equal(normalizedShowtime.bookingUrl, "https://fixture.example/book");
-
-  const detail = window.HKCinemaMovieDetail.createView({
-    providerId: "fixture",
-    movie: fixtureMovie(),
-    shows: {
-      availableDates: ["2026-08-15"],
-      selectedDate: "2026-08-15",
-      sessions: [fixtureShowtime()]
-    }
-  });
-  const detailHtml = window.HKCinemaMovieDetail.renderHtml(detail);
-  assert.match(detailHtml, /data-detail-provider="fixture"/);
-  assert.match(detailHtml, /Fixture Cinema/);
-  assert.match(detailHtml, /不提供座位資料/);
-  assert.match(detailHtml, /href="https:\/\/fixture\.example\/book"[^>]*>官方購票<\/a>/);
-  assert.doesNotMatch(detailHtml, /shared-seatmap-button/);
-  assert.doesNotMatch(detailHtml, /MUST-NOT-BECOME-EMPEROR/);
 
   assert.equal(models.seatMap("fixture", { sections: [{ seats: [] }] }, fixtureShowtime()), null);
 });

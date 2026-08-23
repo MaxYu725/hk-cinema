@@ -822,37 +822,6 @@
 
   window.addEventListener("hkcinema:home-tab", scheduleCatalogue);
 
-  window.addEventListener("hkcinema:movie-metadata", event => {
-    const detail = event.detail || {};
-    const provider = sharedCore.registeredProviderId?.(detail.provider);
-    const sourceId = provider ? normalizeSourceId(provider, detail.sourceId) : "";
-    if (!provider || !sourceId) return;
-
-    for (const card of grid.querySelectorAll(".movie-card")) {
-      const sources = cardProviderSources(card);
-      if (sources[provider] !== sourceId) continue;
-
-      mergeMovieMetadata(card, {
-        language: detail.languages,
-        formats: detail.formats,
-        releaseDate: detail.releaseDate
-      });
-
-      if (card.dataset.groupMemberOf) {
-        const primary = grid.querySelector(
-          `[data-movie-group-id='${CSS.escape(card.dataset.groupMemberOf)}']`
-        );
-        mergeMovieMetadata(primary, {
-          language: detail.languages,
-          formats: detail.formats,
-          releaseDate: detail.releaseDate
-        });
-      }
-    }
-
-    window.HKCinemaHomeLibrary?.apply?.();
-  });
-
   window.HKCinemaMultiProvider = Object.freeze({
     version: "m7r2-1",
     refresh: scheduleCatalogue,

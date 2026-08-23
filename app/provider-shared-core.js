@@ -51,10 +51,8 @@
     if (!node || typeof node !== "object") return null;
     const candidates = [
       node.dataset?.provider,
-      node.dataset?.detailProvider,
       node.dataset?.seatmapProvider,
       node.closest?.("[data-provider]")?.dataset?.provider,
-      node.closest?.("[data-detail-provider]")?.dataset?.detailProvider,
       node.closest?.("[data-seatmap-provider]")?.dataset?.seatmapProvider
     ];
     for (const candidate of candidates) {
