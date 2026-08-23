@@ -8,12 +8,16 @@ async function read(path) {
   return readFile(new URL(path, APP), "utf8");
 }
 
-test("Phase 8A refreshes cached card aggregates after provider catalogues change", async () => {
-  const source = await read("phase8a-movie-navigation-refresh.js");
-  assert.match(source, /delete card\.dataset\.phase8aAggregateId/);
-  assert.match(source, /hkcinema:provider-matches/);
-  assert.match(source, /hkcinema:provider-catalogue/);
-  assert.doesNotMatch(source, /hkcinema:mcl-catalogue/);
-  assert.doesNotMatch(source, /hkcinema:emperor-catalogue/);
-  assert.match(source, /HKCinemaMovieAggregates\?\.refresh/);
+test("C3 rebuilds aggregates from catalogue-store publication before rendering", async () => {
+  const [store, domain, renderer] = await Promise.all([
+    read("catalogue-store.js"),
+    read("catalogue-domain.js"),
+    read("multi-provider.js")
+  ]);
+  assert.match(store, /dispatchEvent\(new CustomEvent\("hkcinema:catalogue-store"/);
+  assert.match(renderer, /addEventListener\("hkcinema:catalogue-store", scheduleRender\)/);
+  assert.match(renderer, /const model = domain\.build\(activeSection\)/);
+  assert.match(domain, /HKCinemaMovieAggregates = Object\.freeze/);
+  assert.match(domain, /window\.HKCinemaMultiProvider\?\.refresh\?\.\(\)/);
+  assert.doesNotMatch(`${store}\n${domain}\n${renderer}`, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);
 });

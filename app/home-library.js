@@ -151,7 +151,7 @@
   }
 
   function currentCards() {
-    return Array.from(grid.querySelectorAll(".movie-card:not(.movie-group-member)"));
+    return Array.from(grid.querySelectorAll(".movie-card"));
   }
 
   function cardTitle(card) {
@@ -337,7 +337,7 @@
   }
 
   function recordCard(card) {
-    if (!card || card.classList.contains("movie-group-member")) return false;
+    if (!card) return false;
     const key = cardKey(card);
     recent.delete(key);
     recent.set(key, {
@@ -352,7 +352,7 @@
   }
 
   window.HKCinemaHomeLibrary = Object.freeze({
-    version: "8e3",
+    version: "c3-1",
     apply,
     recordCard,
     getState() {
@@ -420,14 +420,14 @@
       return;
     }
 
-    const card = event.target.closest?.(".movie-card:not(.movie-group-member)");
+    const card = event.target.closest?.(".movie-card");
     if (card) recordCard(card);
   }, true);
 
   document.addEventListener("keydown", event => {
     if (event.key !== "Enter" && event.key !== " ") return;
     if (event.target.closest?.("[data-movie-favorite]")) return;
-    const card = event.target.closest?.(".movie-card:not(.movie-group-member)");
+    const card = event.target.closest?.(".movie-card");
     if (card) recordCard(card);
   }, true);
 

@@ -1,6 +1,6 @@
 # Provider matrix
 
-Status: current production contract at cleanup checkpoint C2.
+Status: current production contract at cleanup checkpoint C3.
 
 This matrix describes real production data paths and reliability expectations. A declared capability means that HK Cinema has an implementation for it; it does not guarantee that every upstream movie or showtime supplies the optional value.
 
@@ -102,4 +102,4 @@ Provider probes run independently and are never called by normal homepage/compar
 
 ## Current cleanup boundary
 
-Checkpoint C2 removes the unused provider-specific movie-detail surface and Emperor detail route. It does not change catalogue/showtime parsers, MCL transport selection, comparison calculations or seat-map geometry. Router, cache and frontend-store consolidation belong to later independent checkpoints described in `docs/architecture.md`.
+Checkpoint C3 gives all four providers the same publication path: provider adapter/status owner → `CatalogueStore` → `CatalogueDomain` → neutral home renderer. It removes Broadway as the base renderer and removes adapter/global snapshot mirrors. It does not change catalogue/showtime parsers, MCL transport selection, comparison cancellation, official booking logic or seat-map geometry. DOM-selector consolidation belongs to C4; Worker router/cache consolidation belongs to C5 as independent checkpoints described in `docs/architecture.md`.

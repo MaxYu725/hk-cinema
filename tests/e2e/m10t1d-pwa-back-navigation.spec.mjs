@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 async function waitHomeStable(page) {
-  await expect(page.locator("#movieGrid .movie-card:not(.movie-group-member)").first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("#movieGrid .movie-card").first()).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("#refreshButton")).toHaveAttribute("aria-busy", "false", { timeout: 30_000 });
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 async function openComparison(page) {
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const firstMovie = page.locator("#movieGrid .movie-card").first();
   await expect(firstMovie).toHaveAttribute("data-phase8a-direct-compare", "true", { timeout: 10_000 });
   await firstMovie.click();
   const overlay = page.locator("#providerCompareOverlay");

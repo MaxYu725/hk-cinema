@@ -24,7 +24,7 @@
   function decorateHomeLoading() {
     const grid = document.querySelector("#movieGrid");
     if (!grid) return;
-    const loading = grid.dataset.broadwayState === "loading";
+    const loading = grid.dataset.homeState === "loading";
     const existing = grid.querySelector(":scope > .m9b-home-skeleton");
     if (!loading) {
       existing?.remove();
@@ -209,7 +209,7 @@
   }
 
   function bindTargetObservers() {
-    observeTarget("#movieGrid", ["data-broadway-state"]);
+    observeTarget("#movieGrid", ["data-home-state"]);
     observeTarget("#refreshButton", ["class"]);
     observeTarget("#providerCompareOverlay", ["hidden"]);
     observeTarget("#sharedSeatMapOverlay", ["hidden"]);

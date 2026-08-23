@@ -12,7 +12,7 @@ test("mobile release smoke keeps the movie-first comparison flow usable", async 
   await expect(page.locator('[data-tab="coming"]')).toBeVisible();
   await expect(page.locator("#movieGrid")).toBeVisible();
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const firstMovie = page.locator("#movieGrid .movie-card").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
   await expect(firstMovie).toHaveAttribute("data-phase8a-direct-compare", "true", { timeout: 10_000 });
 
@@ -52,7 +52,7 @@ test("home tabs remain interactive on the mobile viewport", async ({ page }) => 
 test("Metro filter dropdown stays anchored without moving neighboring matrix tiles", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const firstMovie = page.locator("#movieGrid .movie-card").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
   await firstMovie.click();
 
@@ -169,7 +169,7 @@ test("the retired Classic query resolves to the same Metro comparison flow", asy
   await expect(page.locator("html")).toHaveAttribute("data-skin", "metro");
   await expect(page.locator("#movieDetailOverlay")).toHaveCount(0);
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const firstMovie = page.locator("#movieGrid .movie-card").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
   await expect(firstMovie).toHaveAttribute("data-phase8a-direct-compare", "true", { timeout: 10_000 });
   await firstMovie.click();

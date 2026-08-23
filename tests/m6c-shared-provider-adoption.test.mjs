@@ -39,8 +39,9 @@ async function loadSharedCoreWithFixture() {
   });
 
   vm.runInContext(await source("app/provider-contract.js"), context, { filename: "provider-contract.js" });
+  vm.runInContext(await source("app/catalogue-store.js"), context, { filename: "catalogue-store.js" });
   vm.runInContext(await source("app/provider-shared-core.js"), context, { filename: "provider-shared-core.js" });
-  return { window, sample };
+  return { context, window, sample };
 }
 
 test("M6C Checkpoint 3 shared provider core enumerates a future registry provider beyond production", async () => {
@@ -88,53 +89,18 @@ test("provider without price or seat capability keeps a valid showtime and booki
   assert.equal(supportedButMissing.booking.availability, "unknown");
 });
 
-test("Phase 8A movie aggregation accepts a registry provider card without a provider-name branch", async () => {
-  const { window, sample } = await loadSharedCoreWithFixture();
-  window.addEventListener = () => {};
+test("catalogue domain accepts a registry provider without a provider-name branch", async () => {
+  const { context, window, sample } = await loadSharedCoreWithFixture();
+  vm.runInContext(await source("app/home-discovery-core.js"), context, { filename: "home-discovery-core.js" });
+  vm.runInContext(await source("app/showtime-metadata.js"), context, { filename: "showtime-metadata.js" });
+  vm.runInContext(await source("app/catalogue-domain.js"), context, { filename: "catalogue-domain.js" });
 
-  class MutationObserver {
-    observe() {}
-  }
-
-  const document = {
-    body: {},
-    querySelectorAll() { return []; }
-  };
-  const context = vm.createContext({
-    window,
-    document,
-    MutationObserver,
-    requestAnimationFrame(callback) { callback(); }
+  window.HKCinemaProviderSharedCore.publishCatalogue("fixture", {
+    now: [sample.catalogueEntry],
+    coming: []
   });
-
-  vm.runInContext(await source("app/phase8a-movie-navigation.js"), context, {
-    filename: "phase8a-movie-navigation.js"
-  });
-
-  const classes = new Set();
-  const title = { textContent: sample.movieAggregate.title.display };
-  const secondary = { textContent: sample.movieAggregate.title.secondary };
-  const card = {
-    dataset: {
-      provider: "fixture",
-      sourceId: "fixture-movie-1",
-      homeReleaseDate: "2026-08-12"
-    },
-    classList: {
-      contains(value) { return classes.has(value); },
-      add(...values) { values.forEach(value => classes.add(value)); }
-    },
-    querySelector(selector) {
-      if (selector === ".movie-info h3" || selector === "h3") return title;
-      if (selector === ".movie-title-en") return secondary;
-      return null;
-    },
-    setAttribute() {},
-    hasAttribute() { return false; },
-    tabIndex: -1
-  };
-
-  const aggregate = window.HKCinemaMovieAggregates.forCard(card);
+  const model = window.HKCinemaCatalogueDomain.build("now");
+  const aggregate = model.aggregates[0];
   const match = window.HKCinemaProviderMatches.get(aggregate.id);
 
   assert.equal(aggregate.providerCount, 1);
@@ -148,23 +114,27 @@ test("Phase 8A movie aggregation accepts a registry provider card without a prov
 });
 
 test("production shared home/comparison paths load and consume registry capability ownership", async () => {
-  const [index, phase8a, compare] = await Promise.all([
+  const [index, domain, navigation, compare] = await Promise.all([
     source("app/index.html"),
+    source("app/catalogue-domain.js"),
     source("app/phase8a-movie-navigation.js"),
     source("app/provider-compare-v4.js")
   ]);
 
-  assertAssetOrder(index, "provider-registry.js", "provider-contract.js", "provider-shared-core.js");
+  assertAssetOrder(index, "provider-registry.js", "provider-contract.js", "catalogue-store.js");
+  assertAssetOrder(index, "catalogue-store.js", "provider-shared-core.js");
   const coreIndex = assetPosition(index, "provider-shared-core.js");
   for (const asset of ["multi-provider.js", "provider-compare-v4.js", "phase8a-movie-navigation.js"]) {
     assertAsset(index, asset);
     assert.ok(assetPosition(index, asset) > coreIndex, `${asset} must load after provider-shared-core.js`);
   }
 
-  assert.match(phase8a, /sharedCore\?\.providerIds\?\.\(\)/);
-  assert.match(phase8a, /card\?\.dataset\?\.provider/);
-  assert.match(phase8a, /providerEntries = Object\.fromEntries\(PROVIDERS\.map/);
-  assert.doesNotMatch(phase8a, /const PROVIDERS = \["broadway", "mcl", "emperor"\];/);
+  assert.match(domain, /sharedCore\?\.providers\?\.\(\)/);
+  assert.match(domain, /store\?\.entries\?\.\(section\)/);
+  assert.match(domain, /Object\.fromEntries\(PROVIDER_IDS\.map/);
+  assert.doesNotMatch(domain, /const PROVIDERS = \["broadway", "mcl", "emperor"\];/);
+  assert.match(navigation, /data-movie-aggregate-id/);
+  assert.doesNotMatch(navigation, /MutationObserver|querySelectorAll/);
 
   assert.match(compare, /sharedCore\?\.providers\?\.\(\)/);
   assert.match(compare, /availableDates: providerMap\(\(\) => \[\]\)/);

@@ -335,9 +335,9 @@ test("Phase 7A keeps unresolved MCL dates until enriched sessions settle the lan
 });
 
 test("Phase 7A comparison contract links MCL general sessions and dynamic facets", async () => {
-  const [index, multiProvider, compare, insights, preferences, phase6m, fixture, browserMcl, hybridMcl, workerMcl, workerIndex] = await Promise.all([
+  const [index, catalogueDomain, compare, insights, preferences, phase6m, fixture, browserMcl, hybridMcl, workerMcl, workerIndex] = await Promise.all([
     source("app/index.html"),
-    source("app/multi-provider.js"),
+    source("app/catalogue-domain.js"),
     source("app/provider-compare-v4.js"),
     source("app/provider-compare-insights-v4.js"),
     source("app/provider-compare-preferences-v2.js"),
@@ -361,11 +361,11 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   const metadataIndex = assetPosition(index, "showtime-metadata.js");
   assert.ok(metadataIndex < assetPosition(index, "multi-provider.js"));
   assert.ok(metadataIndex < assetPosition(index, "provider-compare-v4.js"));
-  assert.match(multiProvider, /genericMCL/);
-  assert.match(multiProvider, /isGenericBridgeSource/);
-  assert.match(multiProvider, /comparisonMclSourceId/);
-  assert.match(multiProvider, /sessionCriteria/);
-  assert.doesNotMatch(multiProvider, /MCL 會按每場語言加入此版本比較/);
+  assert.match(catalogueDomain, /genericMCL/);
+  assert.match(catalogueDomain, /isGenericBridgeSource/);
+  assert.match(catalogueDomain, /comparisonMclSourceId/);
+  assert.match(catalogueDomain, /sessionCriteria/);
+  assert.doesNotMatch(catalogueDomain, /MCL 會按每場語言加入此版本比較/);
   assert.match(compare, /filteredRawSessions/);
   assert.match(compare, /availableDatesFor/);
   assert.match(compare, /criteriaDateDecisions/);

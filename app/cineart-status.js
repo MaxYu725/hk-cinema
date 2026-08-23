@@ -12,8 +12,6 @@
   }
 
   function publishCatalogue(catalogue) {
-    const provider = window.HKCinemaProviders?.cineart;
-    if (provider) provider.catalogue = catalogue;
     window.HKCinemaProviderSharedCore?.publishCatalogue?.("cineart", catalogue, {
       publisher: "cineart-status",
       phase: "M7P1C"
@@ -40,7 +38,7 @@
       return;
     }
 
-    const cached = provider.getCachedCatalogue?.() || provider.catalogue || null;
+    const cached = provider.getCachedCatalogue?.() || null;
     if (cached) {
       publishCatalogue(cached);
       report("loading", "cache", cached, `${summary(cached)} · 顯示備用資料並更新中`);

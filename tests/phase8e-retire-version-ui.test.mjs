@@ -27,14 +27,14 @@ test('Phase 8E keeps a single movie entry and retires the temporary top-level ve
 });
 
 test('merged variant data remains available to the Phase 8C comparison engine', async () => {
-  const [navigation, compare] = await Promise.all([
-    read('phase8a-movie-navigation.js'),
+  const [domain, compare] = await Promise.all([
+    read('catalogue-domain.js'),
     read('provider-compare-v4.js')
   ]);
 
-  assert.match(navigation, /sources: Object\.fromEntries\(PROVIDERS\.map/);
-  assert.match(navigation, /variants: variantModels/);
-  assert.match(navigation, /primaryMatchId: primary\.matchId/);
+  assert.match(domain, /sources: Object\.fromEntries\(PROVIDER_IDS\.map/);
+  assert.match(domain, /variants: variantModels/);
+  assert.match(domain, /primaryMatchId: primary\.matchId/);
   assert.match(compare, /aggregate\.sources\?\.\[provider\]/);
   assert.match(compare, /variantTagsForSource/);
 });

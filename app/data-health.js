@@ -270,6 +270,7 @@
       ...state.records[provider],
       ...next
     };
+    window.HKCinemaCatalogueStore?.report?.(provider, next);
     render();
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       window.dispatchEvent(new CustomEvent("hkcinema:data-health", {

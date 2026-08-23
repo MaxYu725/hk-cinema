@@ -9,37 +9,25 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-test("home aggregation waits for the base renderer while preserving alternate provider failures independently", async () => {
-  const [app, multi, index] = await Promise.all([
-    source("app/app.js"),
+test("home aggregation preserves provider failures without a base renderer", async () => {
+  const [store, domain, multi, index] = await Promise.all([
+    source("app/catalogue-store.js"),
+    source("app/catalogue-domain.js"),
     source("app/multi-provider.js"),
     source("app/index.html")
   ]);
 
-  // Broadway is still the current stable base renderer and continues to publish its
-  // local grid lifecycle. The shared aggregator must consume that lifecycle neutrally.
-  assert.match(app, /setBroadwayGridState\("loading"\)/);
-  assert.match(app, /setBroadwayGridState\("error"\)/);
-  assert.match(app, /setBroadwayGridState\("empty"\)/);
-  assert.match(app, /setBroadwayGridState\("ready"\)/);
+  assert.match(store, /const fallback = Boolean\(value\?\.meta\?\.fallbackSections\?\.\[section\]\);/);
+  assert.match(store, /const usable = Boolean\(value\) && \(!error \|\| fallback\);/);
+  assert.match(store, /failed: \(!usable && record\?\.status === "error"\)/);
+  assert.match(domain, /summary = store\?\.summary\?\.\(activeSection\)/);
+  assert.match(multi, /model\.summary\.loading > 0/);
+  assert.match(multi, /summary\.failed === summary\.total/);
+  assert.match(multi, /hkcinema:catalogue-store/);
+  assert.doesNotMatch(`${domain}\n${multi}`, /baseProvider|alternateProviders|data-broadway-state/);
 
-  assert.match(multi, /const base = baseProvider\(\);/);
-  assert.match(multi, /if \(baseState === "loading"\) return;/);
-  assert.match(multi, /const alternateProviders = PROVIDERS\.filter\(provider => provider\.key !== base\);/);
-  assert.match(multi, /const sectionStates = new Map\(alternateProviders\.map/);
-  assert.match(multi, /const alternateMovies = new Map\(alternateProviders\.map/);
-  assert.match(multi, /const error = catalogue\.meta\?\.errors\?\.\[section\];/);
-  assert.match(multi, /const fallback = Boolean\(catalogue\.meta\?\.fallbackSections\?\.\[section\]\);/);
-  assert.match(multi, /failed: Boolean\(error\) && !fallback/);
-  assert.match(multi, /Array\.from\(sectionStates\.values\(\)\)\.some\(state => state\.usable\)/);
-  assert.match(multi, /Array\.from\(sectionStates\.values\(\)\)\.some\(state => state\.failed\)/);
-  assert.match(multi, /Array\.from\(alternateMovies\.values\(\)\)\.some\(movies => movies\.length > 0\)/);
-  assert.match(multi, /grid\.querySelector\("\.empty-state"\)\?\.remove\(\);/);
-  assert.match(multi, /renderCombinedEmptyState\(baseState, hasAlternateFailure\);/);
-  assert.match(multi, /hkcinema:data-health/);
-  assert.doesNotMatch(multi, /if \(count\.textContent\.trim\(\) === "—"\) return;/);
-
-  assertAsset(index, "app.js");
+  assertAsset(index, "catalogue-store.js");
+  assertAsset(index, "catalogue-domain.js");
   assertAsset(index, "multi-provider.js");
 });
 

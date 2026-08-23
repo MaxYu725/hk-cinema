@@ -41,16 +41,16 @@ test("M6C Checkpoint 2 defines one shared data surface contract", async () => {
   assert.deepEqual(Array.from(contract.contracts.showtime.required), ["sourceId", "cinema", "date", "time"]);
 });
 
-test("movie aggregate contract follows the active Phase 8A runtime shape", async () => {
-  const [phase8a, sample, loaded] = await Promise.all([
-    source("app/phase8a-movie-navigation.js"),
+test("movie aggregate contract follows the active catalogue domain shape", async () => {
+  const [domain, sample, loaded] = await Promise.all([
+    source("app/catalogue-domain.js"),
     fixture(),
     loadContract()
   ]);
 
-  assert.match(phase8a, /kind: "movie-aggregate",\s*schemaVersion: 1,\s*id,/);
-  assert.match(phase8a, /title: \{\s*display:/);
-  assert.match(phase8a, /sources: Object\.fromEntries\(PROVIDERS\.map/);
+  assert.match(domain, /kind: "movie-aggregate",\s*schemaVersion: 1,\s*id,/);
+  assert.match(domain, /title: \{ display:/);
+  assert.match(domain, /sources: Object\.fromEntries\(PROVIDER_IDS\.map/);
   assert.equal(sample.movieAggregate.kind, "movie-aggregate");
   assert.equal(sample.movieAggregate.schemaVersion, 1);
   assert.equal(sample.movieAggregate.id.startsWith("phase8a:"), true);

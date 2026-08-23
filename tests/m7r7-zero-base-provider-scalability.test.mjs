@@ -88,7 +88,7 @@ test("M7R7 shared provider core scales catalogue state and maps to eight registe
     window
   });
 
-  await load(context, "app/provider-shared-core.js");
+  await load(context, "app/catalogue-store.js", "app/provider-shared-core.js");
   const core = window.HKCinemaProviderSharedCore;
 
   assert.equal(core.providerIds().length, 8);

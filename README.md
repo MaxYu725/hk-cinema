@@ -24,7 +24,7 @@ The application has two deployment surfaces:
 1. `app/` — static HTML, CSS and JavaScript deployed to GitHub Pages.
 2. `worker/` — Cloudflare Worker adapters for provider pages and APIs that should not be fetched directly by the browser.
 
-The production frontend has one Metro runtime. Movie cards open the unified comparison directly; there is no separate Classic skin or provider-specific movie-detail drawer.
+The production frontend has one Metro runtime. Provider catalogues publish into one canonical store, a provider-neutral domain layer builds movie aggregates before rendering, and movie cards open the unified comparison directly. There is no Broadway base renderer, separate Classic skin or provider-specific movie-detail drawer.
 
 Broadway, Emperor and CineArt use Worker-backed provider routes. MCL catalogue and its primary showtime path use the official MCL browser API directly; the Worker path remains a bounded fallback. This is intentional: MCL is fast and reliable on a normal Hong Kong connection, while VPN or proxy routing can return an incompatible payload. Do not add longer retry chains for that known VPN/proxy case.
 
@@ -36,7 +36,9 @@ The current provider-neutral contracts live in:
 
 - `app/provider-registry.js` — registered providers and declared capabilities.
 - `app/provider-contract.js` — `available`, `unknown` and `unsupported` semantics.
-- `app/provider-shared-core.js` — shared catalogue and capability helpers.
+- `app/catalogue-store.js` — canonical provider catalogue snapshots and load state.
+- `app/catalogue-domain.js` — provider matches, grouped variants and `MovieAggregate` records.
+- `app/provider-shared-core.js` — registry/capability helpers and a compatibility façade over the catalogue store.
 - `app/view-models.js` — movie, showtime and seat-map presentation models.
 - `worker/src/provider-manifest.js` — Worker provider identity and service declarations.
 

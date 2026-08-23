@@ -22,19 +22,22 @@ function occurrences(text, pattern) {
   return (text.match(pattern) || []).length;
 }
 
-test("M6D home success-path provider fan-out remains five catalogue requests", async () => {
-  const [app, mclStatus, emperorStatus, mclProvider, emperorProvider] = await Promise.all([
-    source("app/app.js"),
+test("C3 home success-path provider fan-out remains six bounded catalogue requests", async () => {
+  const [broadwayProvider, broadwayStatus, mclStatus, emperorStatus, cineartStatus, mclProvider, emperorProvider, cineartProvider] = await Promise.all([
+    source("app/providers/broadway.js"),
+    source("app/broadway-status.js"),
     source("app/mcl-status.js"),
     source("app/emperor-status.js"),
+    source("app/cineart-status.js"),
     source("app/providers/mcl.js"),
-    source("app/providers/emperor.js")
+    source("app/providers/emperor.js"),
+    source("app/providers/cineart.js")
   ]);
 
-  const broadwayLoad = functionBody(app, "async function loadMovies()", "window.HKCinemaBroadwayApp =");
-  assert.equal(occurrences(broadwayLoad, /fetchMovieEndpoint\(/g), 2);
-  assert.match(broadwayLoad, /fetchMovieEndpoint\("\/api\/broadway\/movies"\)/);
-  assert.match(broadwayLoad, /fetchMovieEndpoint\("\/api\/broadway\/upcoming"\)/);
+  const broadwayRefresh = functionBody(broadwayProvider, "async function refreshCatalogue()", "window.HKCinemaProviders =");
+  assert.equal(occurrences(broadwayRefresh, /fetchEndpoint\(/g), 2);
+  assert.match(broadwayRefresh, /fetchEndpoint\("\/api\/broadway\/movies"\)/);
+  assert.match(broadwayRefresh, /fetchEndpoint\("\/api\/broadway\/upcoming"\)/);
 
   const mclRefresh = functionBody(mclProvider, "async function refreshCatalogue()", "async function getCatalogue()");
   assert.equal(occurrences(mclRefresh, /fetchJsonWithRetry\(/g), 1);
@@ -47,25 +50,32 @@ test("M6D home success-path provider fan-out remains five catalogue requests", a
 
   const mclStatusLoad = functionBody(mclStatus, "async function loadMCLStatus()", "if (document.readyState");
   const emperorStatusLoad = functionBody(emperorStatus, "async function loadEmperorStatus()", "if (document.readyState");
+  const broadwayStatusLoad = functionBody(broadwayStatus, "async function loadBroadwayCatalogue()", "if (document.readyState");
+  const cineartStatusLoad = functionBody(cineartStatus, "async function loadCineArtCatalogue()", "if (document.readyState");
+  const cineartRefresh = functionBody(cineartProvider, "async function refreshCatalogue()", "async function getCatalogue()");
   assert.equal(occurrences(mclStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
   assert.equal(occurrences(emperorStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
+  assert.equal(occurrences(broadwayStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
+  assert.equal(occurrences(cineartStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
+  assert.equal(occurrences(cineartRefresh, /await fetch\(/g), 1);
+  assert.match(broadwayStatusLoad, /if \(refreshInFlight\)/);
   assert.match(mclStatusLoad, /if \(refreshInFlight\)/);
   assert.match(emperorStatusLoad, /if \(refreshInFlight\)/);
+  assert.match(cineartStatusLoad, /if \(refreshInFlight\)/);
 
-  // Success path: Broadway 2 + MCL 1 + Emperor 2. MCL's second attempt is
+  // Success path: Broadway 2 + MCL 1 + Emperor 2 + CineArt 1. MCL's second attempt is
   // failure-only retry behavior and therefore is not part of normal fan-out.
-  assert.equal(2 + 1 + 2, 5);
+  assert.equal(2 + 1 + 2 + 1, 6);
 });
 
-test("Phase 8A aggregate decoration never invokes an async generic catalogue loader", async () => {
+test("catalogue domain never invokes an async provider catalogue loader", async () => {
   let getCatalogueCalls = 0;
+  const providers = [{ id: "fixture", displayName: "Fixture Cinema", capabilities: {} }];
   const window = {
-    HKCinemaProviderSharedCore: {
-      providerIds() {
-        return ["broadway", "mcl", "emperor", "fixture"];
-      },
-      normalizeSourceId(provider, value) {
-        return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+    HKCinemaProviderRegistry: {
+      providers,
+      get(id) {
+        return providers.find(provider => provider.id === String(id || "").toLowerCase()) || null;
       }
     },
     HKCinemaProviders: {
@@ -79,63 +89,35 @@ test("Phase 8A aggregate decoration never invokes an async generic catalogue loa
         }
       }
     },
-    addEventListener() {}
+    addEventListener() {},
+    dispatchEvent() {}
   };
-
-  class MutationObserver {
-    observe() {}
-  }
-
-  const document = {
-    body: {},
-    querySelectorAll() { return []; }
-  };
-
-  const context = vm.createContext({
-    window,
-    document,
-    MutationObserver,
-    requestAnimationFrame(callback) { callback(); }
+  const context = vm.createContext({ window });
+  for (const path of [
+    "app/catalogue-store.js",
+    "app/provider-shared-core.js",
+    "app/home-discovery-core.js",
+    "app/showtime-metadata.js",
+    "app/catalogue-domain.js"
+  ]) vm.runInContext(await source(path), context, { filename: path });
+  window.HKCinemaCatalogueStore.publish("fixture", {
+    now: [{ sourceId: "fixture-1", title: { zh: "Fixture Movie" }, releaseDate: "2026-08-12" }],
+    coming: []
   });
-  vm.runInContext(await source("app/phase8a-movie-navigation.js"), context, {
-    filename: "phase8a-movie-navigation.js"
-  });
-
-  const classes = new Set();
-  const card = {
-    dataset: {
-      provider: "fixture",
-      sourceId: "fixture-1",
-      homeReleaseDate: "2026-08-12"
-    },
-    classList: {
-      contains(value) { return classes.has(value); },
-      add(...values) { values.forEach(value => classes.add(value)); }
-    },
-    querySelector(selector) {
-      if (selector === ".movie-info h3" || selector === "h3") return { textContent: "Fixture Movie" };
-      return null;
-    },
-    setAttribute() {},
-    hasAttribute() { return false; },
-    tabIndex: -1
-  };
-
-  const aggregate = window.HKCinemaMovieAggregates.forCard(card);
+  const aggregate = window.HKCinemaCatalogueDomain.build("now").aggregates[0];
   assert.equal(getCatalogueCalls, 0);
   assert.equal(aggregate.providerCount, 1);
   assert.equal(aggregate.facts.releaseDate, "2026-08-12");
 });
 
-test("generic provider synchronous catalogue snapshots can enrich facts without network fan-out", async () => {
+test("only the canonical catalogue store can enrich aggregate facts", async () => {
   let getCatalogueCalls = 0;
+  const providers = [{ id: "fixture", displayName: "Fixture Cinema", capabilities: {} }];
   const window = {
-    HKCinemaProviderSharedCore: {
-      providerIds() {
-        return ["broadway", "mcl", "emperor", "fixture"];
-      },
-      normalizeSourceId(provider, value) {
-        return String(value || "").replace(new RegExp(`^${provider}:`), "").trim();
+    HKCinemaProviderRegistry: {
+      providers,
+      get(id) {
+        return providers.find(provider => provider.id === String(id || "").toLowerCase()) || null;
       }
     },
     HKCinemaProviders: {
@@ -155,36 +137,29 @@ test("generic provider synchronous catalogue snapshots can enrich facts without 
         }
       }
     },
-    addEventListener() {}
+    addEventListener() {},
+    dispatchEvent() {}
   };
-
-  class MutationObserver {
-    observe() {}
-  }
-  const document = { body: {}, querySelectorAll() { return []; } };
-  const context = vm.createContext({
-    window,
-    document,
-    MutationObserver,
-    requestAnimationFrame(callback) { callback(); }
+  const context = vm.createContext({ window });
+  for (const path of [
+    "app/catalogue-store.js",
+    "app/provider-shared-core.js",
+    "app/home-discovery-core.js",
+    "app/showtime-metadata.js",
+    "app/catalogue-domain.js"
+  ]) vm.runInContext(await source(path), context, { filename: path });
+  assert.equal(window.HKCinemaCatalogueDomain.build("now").aggregates.length, 0);
+  window.HKCinemaCatalogueStore.publish("fixture", {
+    now: [{
+      sourceId: "fixture-2",
+      title: { zh: "Fixture Snapshot Movie" },
+      rating: "IIA",
+      durationMinutes: 109,
+      releaseDate: "2026-08-13"
+    }],
+    coming: []
   });
-  vm.runInContext(await source("app/phase8a-movie-navigation.js"), context, {
-    filename: "phase8a-movie-navigation.js"
-  });
-
-  const card = {
-    dataset: { provider: "fixture", sourceId: "fixture-2" },
-    classList: { contains() { return false; }, add() {} },
-    querySelector(selector) {
-      if (selector === ".movie-info h3" || selector === "h3") return { textContent: "Fixture Snapshot Movie" };
-      return null;
-    },
-    setAttribute() {},
-    hasAttribute() { return false; },
-    tabIndex: -1
-  };
-
-  const aggregate = window.HKCinemaMovieAggregates.forCard(card);
+  const aggregate = window.HKCinemaCatalogueDomain.build("now").aggregates[0];
   assert.equal(getCatalogueCalls, 0);
   assert.deepEqual(
     {

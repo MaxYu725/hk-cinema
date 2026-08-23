@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 async function firstMovie(page) {
-  const movie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const movie = page.locator("#movieGrid .movie-card").first();
   await expect(movie).toBeVisible({ timeout: 30_000 });
   await expect(movie).toHaveAttribute("data-phase8a-direct-compare", "true", { timeout: 10_000 });
   return movie;

@@ -268,8 +268,11 @@ test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, compar
   await load(
     context,
     "app/provider-contract.js",
+    "app/catalogue-store.js",
     "app/provider-shared-core.js",
     "app/showtime-metadata.js",
+    "app/home-discovery-core.js",
+    "app/catalogue-domain.js",
     "app/view-models.js",
     "app/seatmap-shared.js"
   );
@@ -278,9 +281,7 @@ test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, compar
   assert.equal(window.HKCinemaProviderSharedCore.publishCatalogue("fixture", catalogue, { publisher: "m7r5-fixture" }), true);
   assert.equal(window.HKCinemaProviderSharedCore.catalogue("fixture"), catalogue);
 
-  await load(context, "app/phase8a-movie-navigation.js");
-  const card = homeCard();
-  const aggregate = window.HKCinemaMovieAggregates.forCard(card);
+  const aggregate = window.HKCinemaCatalogueDomain.build("now").aggregates[0];
 
   assert.ok(aggregate);
   assert.equal(aggregate.providerCount, 1);
@@ -368,8 +369,9 @@ test("M7R5 comparison bootstrap falls back to Provider Registry, never to a bake
 });
 
 test("M7R5 removes the remaining fixed-three-provider bootstrap paths and isolates changed assets", async () => {
-  const [compare, navigation, multiProvider, index] = await Promise.all([
+  const [compare, domain, navigation, multiProvider, index] = await Promise.all([
     source("app/provider-compare-v4.js"),
+    source("app/catalogue-domain.js"),
     source("app/phase8a-movie-navigation.js"),
     source("app/multi-provider.js"),
     source("app/index.html")
@@ -381,15 +383,15 @@ test("M7R5 removes the remaining fixed-three-provider bootstrap paths and isolat
   assert.match(compare, /function posterForMatch\(match, aggregate\)/);
   assert.doesNotMatch(compare, /sharedCore\?\.providers\?\.\(\) \|\| \[\s*\{ key: "broadway"/);
 
-  assert.match(navigation, /window\.HKCinemaProviderRegistry\?\.providers/);
-  assert.match(navigation, /const HOME_BASE_PROVIDER = PROVIDERS\[0\] \|\| null/);
-  assert.match(navigation, /sharedCore\?\.catalogue\?\.\(provider\)/);
-  assert.doesNotMatch(navigation, /\["broadway", "mcl", "emperor"\]/);
-  assert.doesNotMatch(navigation, /mcl-only-card|emperor-only-card/);
-  assert.doesNotMatch(navigation, /HKCinemaMCLCatalogue|HKCinemaEmperorCatalogue/);
+  assert.match(domain, /sharedCore\?\.providers\?\.\(\)/);
+  assert.match(domain, /store\?\.entries\?\.\(section\)/);
+  assert.doesNotMatch(domain, /HOME_BASE_PROVIDER|\["broadway", "mcl", "emperor"\]/);
+  assert.doesNotMatch(navigation, /mcl-only-card|emperor-only-card|HKCinemaMCLCatalogue|HKCinemaEmperorCatalogue/);
+  assert.doesNotMatch(navigation, /MutationObserver|catalogue/);
 
-  assert.match(multiProvider, /const alternateProviders = PROVIDERS\.filter/);
+  assert.match(multiProvider, /domain\.build\(activeSection\)/);
   assert.match(multiProvider, /data-provider-sources/);
   assertAsset(index, "provider-compare-v4.js");
+  assertAsset(index, "catalogue-domain.js");
   assertAsset(index, "phase8a-movie-navigation.js");
 });

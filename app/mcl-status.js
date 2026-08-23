@@ -30,15 +30,9 @@
   }
 
   function publishCatalogue(catalogue) {
-    window.HKCinemaMCLCatalogue = catalogue;
-    const provider = window.HKCinemaProviders?.mcl;
-    if (provider) provider.catalogue = catalogue;
     window.HKCinemaProviderSharedCore?.publishCatalogue?.("mcl", catalogue, {
       publisher: "mcl-status"
     });
-    window.dispatchEvent(new CustomEvent("hkcinema:mcl-catalogue", {
-      detail: catalogue
-    }));
   }
 
   function catalogueSummary(catalogue) {

@@ -14,7 +14,7 @@ test("Metro preview builds the home shell and keeps homepage controls stable", a
   await expect(page.locator('[data-shared-tab-count="now"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
   await expect(page.locator('[data-shared-tab-count="coming"]')).toHaveText(/^\d+$/, { timeout: 30_000 });
 
-  const firstMovie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const firstMovie = page.locator("#movieGrid .movie-card").first();
   await expect(firstMovie).toBeVisible({ timeout: 30_000 });
 
   const tools = page.locator("#homeLibraryTools");
@@ -31,7 +31,7 @@ test("Metro preview builds the home shell and keeps homepage controls stable", a
     const app = document.querySelector(".app-shell");
     const tabs = document.querySelector(".tabs");
     const grid = document.querySelector("#movieGrid");
-    const card = document.querySelector("#movieGrid .movie-card:not(.movie-group-member)");
+    const card = document.querySelector("#movieGrid .movie-card");
     const controls = document.querySelector(".home-library-filter-options");
     const toolsNode = document.querySelector("#homeLibraryTools");
     const health = document.querySelector("#dataHealth");
