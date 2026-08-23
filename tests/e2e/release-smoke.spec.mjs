@@ -65,6 +65,10 @@ test("Metro filter dropdown stays anchored without moving neighboring matrix til
   const controls = overlay.locator(".phase8c-controls");
   await expect(controls).toBeVisible();
   await expect(controls).toHaveAttribute("data-phase9b3-compact", "true", { timeout: 5_000 });
+  await controls.evaluate(async element => {
+    const animations = element.getAnimations({ subtree: true });
+    await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
+  });
 
   const provider = controls.locator('[data-phase9b3-group="provider"]');
   const language = controls.locator('[data-phase9b3-group="language"]');
