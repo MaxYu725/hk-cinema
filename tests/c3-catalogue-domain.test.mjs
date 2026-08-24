@@ -31,6 +31,54 @@ async function runtime() {
   return { window, events };
 }
 
+async function renderEmptyState(summary) {
+  const grid = { dataset: {}, innerHTML: "" };
+  const count = { textContent: "", title: "" };
+  const title = { textContent: "" };
+  const document = {
+    querySelector(selector) {
+      if (selector === "#movieGrid") return grid;
+      if (selector === "#movieCount") return count;
+      if (selector === "#sectionTitle") return title;
+      return null;
+    },
+    querySelectorAll() { return []; }
+  };
+  const window = {
+    HKCinemaCatalogueStore: {},
+    HKCinemaCatalogueDomain: {
+      build() {
+        return {
+          aggregates: [],
+          summary,
+          section: "now",
+          crossProviderCount: 0,
+          maxProviderCount: 0
+        };
+      },
+      getModel() { return null; }
+    },
+    addEventListener() {},
+    dispatchEvent() {}
+  };
+  class CustomEvent {
+    constructor(type, init = {}) {
+      this.type = type;
+      this.detail = init.detail;
+    }
+  }
+  const context = vm.createContext({
+    CustomEvent,
+    document,
+    queueMicrotask(callback) { callback(); },
+    window
+  });
+  vm.runInContext(await read("app/multi-provider.js"), context, {
+    filename: "app/multi-provider.js"
+  });
+  return { grid, count, title };
+}
+
 function movie(provider, sourceId, title, extras = {}) {
   return {
     id: `${provider}:${sourceId}`,
@@ -81,6 +129,58 @@ test("CatalogueStore is the only provider snapshot owner and preserves failure i
   assert.equal(model.aggregates.length, 1);
   assert.equal(model.aggregates[0].title.display, "只在 MCL");
   assert.deepEqual(Array.from(model.aggregates[0].sources.mcl), ["10"]);
+});
+
+test("settled degraded catalogue sections fail without remaining loading", async () => {
+  const { window } = await runtime();
+  const store = window.HKCinemaCatalogueStore;
+
+  store.publish("broadway", {
+    now: [],
+    coming: [],
+    festival: [],
+    meta: {
+      provider: "broadway",
+      partial: true,
+      errors: { now: "fixture section failure" }
+    }
+  });
+
+  const state = store.sectionState("broadway", "now");
+  assert.equal(state.record.status, "degraded");
+  assert.equal(state.usable, false);
+  assert.equal(state.failed, true);
+  assert.equal(state.loading, false);
+
+  const summary = store.summary("now");
+  assert.equal(summary.failed, 1);
+  assert.equal(summary.loading, summary.total - 1);
+});
+
+test("empty home results disclose partial provider failures", async () => {
+  const partial = await renderEmptyState({
+    total: 4,
+    usable: 0,
+    failed: 1,
+    loading: 0,
+    fallback: 0,
+    states: []
+  });
+
+  assert.equal(partial.grid.dataset.homeState, "empty");
+  assert.equal(partial.count.textContent, "0 部");
+  assert.match(partial.grid.innerHTML, /部分院線暫時無法更新/);
+  assert.match(partial.grid.innerHTML, /結果可能不完整/);
+
+  const clean = await renderEmptyState({
+    total: 4,
+    usable: 4,
+    failed: 0,
+    loading: 0,
+    fallback: 0,
+    states: []
+  });
+  assert.doesNotMatch(clean.grid.innerHTML, /結果可能不完整/);
 });
 
 test("CatalogueDomain matches providers and builds MovieAggregate records before DOM rendering", async () => {
