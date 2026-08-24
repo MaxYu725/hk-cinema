@@ -89,7 +89,11 @@ test("M9E slow seat-map load keeps header/loading state visible and close remain
       provider: "broadway",
       key: "m9e-slow-seat-map",
       showtime: model.showtime,
-      load: () => new Promise(resolve => window.setTimeout(() => resolve({}), 900)),
+      load: signal => new Promise((resolve, reject) => {
+        signal.addEventListener("abort", () => reject(
+          new DOMException("Aborted", "AbortError")
+        ), { once: true });
+      }),
       adapt: () => model
     });
   }, seatModel());
