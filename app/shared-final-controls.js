@@ -10,16 +10,7 @@
   }
 
   function providerCatalogue(provider) {
-    const published = sharedCore?.catalogue?.(provider) || null;
-    if (published) return published;
-
-    const adapterSnapshot = window.HKCinemaProviders?.[provider]?.catalogue || null;
-    if (adapterSnapshot) return adapterSnapshot;
-
-    if (provider === PROVIDERS[0]?.key) {
-      return window.HKCinemaBroadwayApp?.getCatalogue?.() || null;
-    }
-    return null;
+    return sharedCore?.catalogue?.(provider) || null;
   }
 
   function catalogueMovies(tab) {
@@ -175,7 +166,7 @@
   }
 
   window.HKCinemaSharedFinalControls = Object.freeze({
-    version: "c2-1",
+    version: "c3-1",
     refresh: scheduleSync,
     ensureSortControl,
     getTabCounts() { return Object.fromEntries(tabCounts); }

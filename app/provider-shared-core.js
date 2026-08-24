@@ -1,6 +1,4 @@
 (() => {
-  const catalogueSnapshots = new Map();
-
   function registry() {
     return window.HKCinemaProviderRegistry || null;
   }
@@ -69,38 +67,16 @@
     return null;
   }
 
-  function validCatalogue(value) {
-    return Boolean(value && typeof value === "object" && ["now", "coming", "festival"].some(
-      section => Array.isArray(value?.[section])
-    ));
-  }
-
   function publishCatalogue(providerOrId, value, meta = {}) {
-    const provider = registeredProviderId(
-      typeof providerOrId === "object" ? providerOrId?.id : providerOrId
-    );
-    if (!provider || !validCatalogue(value)) return false;
-    catalogueSnapshots.set(provider, value);
-    if (typeof window?.dispatchEvent === "function" && typeof CustomEvent === "function") {
-      window.dispatchEvent(new CustomEvent("hkcinema:provider-catalogue", {
-        detail: { provider, catalogue: value, meta: { ...meta } }
-      }));
-    }
-    return true;
+    return window.HKCinemaCatalogueStore?.publish?.(providerOrId, value, meta) === true;
   }
 
   function catalogue(providerOrId) {
-    const provider = registeredProviderId(
-      typeof providerOrId === "object" ? providerOrId?.id : providerOrId
-    );
-    return provider ? catalogueSnapshots.get(provider) || null : null;
+    return window.HKCinemaCatalogueStore?.catalogue?.(providerOrId) || null;
   }
 
   function catalogueMap() {
-    return Object.fromEntries(providers().map(provider => [
-      provider.key,
-      catalogueSnapshots.get(provider.key) || null
-    ]));
+    return window.HKCinemaCatalogueStore?.catalogueMap?.() || providerMap(() => null);
   }
 
   function normalizeSourceId(provider, value) {
@@ -152,7 +128,7 @@
   }
 
   window.HKCinemaProviderSharedCore = Object.freeze({
-    version: "m6c-3",
+    version: "c3-1",
     providers,
     providerIds,
     providerMap,

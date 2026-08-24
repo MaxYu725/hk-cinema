@@ -50,17 +50,17 @@ test("C2 removes retired source files and all Classic-only production selectors"
 });
 
 test("movie cards have one direct comparison interaction without a duplicate detail request", async () => {
-  const [index, app, navigation, layout, layoutStyle, sharedCore] = await Promise.all([
+  const [index, renderer, navigation, layout, layoutStyle, sharedCore] = await Promise.all([
     read("app/index.html"),
-    read("app/app.js"),
+    read("app/multi-provider.js"),
     read("app/phase8a-movie-navigation.js"),
     read("app/phase8b-comparison-layout.js"),
     read("app/phase8b-comparison-layout.css"),
     read("app/provider-shared-core.js")
   ]);
 
-  assert.match(app, /aria-label="比較 \$\{escapeHtml\(titleZh\)\} 院線場次"/);
-  assert.doesNotMatch(app, /state\.detail|loadMovieShows|openMovieCard|HKCinemaMovieDetail/);
+  assert.match(renderer, /aria-label="比較 \$\{escapeHtml\(displayTitle\)\} 院線場次"/);
+  assert.doesNotMatch(renderer, /state\.detail|loadMovieShows|openMovieCard|HKCinemaMovieDetail/);
   assert.match(navigation, /window\.HKCinemaProviderCompare\?\.open\?\.\(aggregate\.id\)/);
   assert.match(navigation, /window\.addEventListener\("click",[\s\S]*stopImmediatePropagation\(\)[\s\S]*}, true\)/);
   assert.doesNotMatch(index, /movie-detail-shared|mcl-detail|emperor-detail/);
@@ -111,7 +111,7 @@ test("the orphan Emperor detail route is gone while showtime routing remains", a
   assert.doesNotMatch(worker, /emperor-detail|getEmperorMovieDetail|\/detail\$/);
   assert.match(worker, /\/shows\$/);
   assert.doesNotMatch(matrix, /\/api\/emperor\/movies\/\{filmUniqueId\}\/detail/);
-  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}c2-1`/);
+  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}c3-1`/);
 });
 
 test("the retired Emperor detail URL now falls through to the API 404 contract", async () => {

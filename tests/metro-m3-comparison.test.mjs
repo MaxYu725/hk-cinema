@@ -39,7 +39,7 @@ test("Phase M3 comparison shell follows the supplied Metro structure without for
 
 test("Phase M3 comparison remains compatible with the current controlled shell cache", async () => {
   const worker = await read("app/sw.js");
-  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}c2-1`/);
+  assert.match(worker, /CACHE_NAME = `\$\{CACHE_PREFIX\}c3-1`/);
   assert.match(worker, /event\.data\?\.type === "SKIP_WAITING"/);
   const installBlock = worker.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);

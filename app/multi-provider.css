@@ -1,7 +1,6 @@
-/* Phase 8E2 — catalogue aggregation only */
+/* C3 — provider-neutral catalogue rendering */
 
-.movie-card[hidden],
-.movie-group-member {
+.movie-card[hidden] {
   display: none !important;
 }
 

@@ -17,18 +17,20 @@ test("movie-first navigation loads after the active comparison engine", async ()
   assert.ok(assetPosition(index, "phase8a-movie-navigation.js") > assetPosition(index, "provider-compare-v4.js"));
 });
 
-test("movie-first home keeps aggregate navigation without migration UI", async () => {
+test("movie-first home keeps data-backed aggregate navigation without migration UI", async () => {
   const source = await read("phase8a-movie-navigation.js");
+  const domain = await read("catalogue-domain.js");
   const css = await read("phase8a-movie-navigation.css");
 
-  assert.match(source, /window\.HKCinemaMovieAggregates = Object\.freeze/);
-  assert.match(source, /kind: "movie-aggregate"/);
-  assert.match(source, /window\.HKCinemaProviderMatches =/);
-  assert.match(source, /#movieGrid \.movie-card:not\(\.movie-group-member\)/);
+  assert.match(domain, /window\.HKCinemaMovieAggregates = Object\.freeze/);
+  assert.match(domain, /kind: "movie-aggregate"/);
+  assert.match(domain, /window\.HKCinemaProviderMatches =/);
+  assert.match(source, /closest\?\.\("#movieGrid \[data-movie-aggregate-id\]"\)/);
   assert.match(source, /HKCinemaProviderCompare\?\.open/);
   assert.match(source, /version:\s*["'][^"']+["']/);
   assert.doesNotMatch(source, /data-phase8a-variant-open/);
   assert.doesNotMatch(source, /phase8a-version-rail/);
+  assert.doesNotMatch(source, /MutationObserver|querySelectorAll/);
   assert.doesNotMatch(css, /homeProviderFilters/);
   assert.doesNotMatch(css, /provider-badges/);
   assert.doesNotMatch(css, /movie-variant-summary/);

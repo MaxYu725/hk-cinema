@@ -34,6 +34,9 @@ test("M7R2 shared catalogue bus stores and broadcasts a fourth registered provid
     dispatchEvent(event) { events.push(event); }
   };
   const context = vm.createContext({ window, CustomEvent });
+  vm.runInContext(await source("app/catalogue-store.js"), context, {
+    filename: "catalogue-store.js"
+  });
   vm.runInContext(await source("app/provider-shared-core.js"), context, {
     filename: "provider-shared-core.js"
   });
@@ -47,44 +50,53 @@ test("M7R2 shared catalogue bus stores and broadcasts a fourth registered provid
   assert.equal(core.publishCatalogue("fixture", catalogue, { source: "test" }), true);
   assert.equal(core.catalogue("fixture"), catalogue);
   assert.equal(core.catalogueMap().fixture, catalogue);
-  assert.equal(events.length, 1);
-  assert.equal(events[0].type, "hkcinema:provider-catalogue");
-  assert.equal(events[0].detail.provider, "fixture");
-  assert.equal(events[0].detail.catalogue, catalogue);
+  const storeEvent = events.find(event => event.type === "hkcinema:catalogue-store");
+  const compatibilityEvent = events.find(event => event.type === "hkcinema:provider-catalogue");
+  assert.equal(storeEvent.detail.provider, "fixture");
+  assert.equal(storeEvent.detail.record.catalogue, catalogue);
+  assert.equal(compatibilityEvent.detail.provider, "fixture");
+  assert.equal(compatibilityEvent.detail.catalogue, catalogue);
   assert.equal(core.publishCatalogue("not-registered", catalogue), false);
 });
 
 test("M7R2 home aggregation owns provider sources and catalogue loops generically", async () => {
-  const multi = await source("app/multi-provider.js");
+  const [domain, multi] = await Promise.all([
+    source("app/catalogue-domain.js"),
+    source("app/multi-provider.js")
+  ]);
 
-  assert.match(multi, /sharedCore\?\.providers\?\.\(\)/);
+  assert.match(domain, /sharedCore\?\.providers\?\.\(\)/);
+  assert.match(domain, /store\?\.entries\?\.\(section\)/);
   assert.match(multi, /data-provider-sources=/);
-  assert.match(multi, /function cardProviderSources/);
-  assert.match(multi, /function writeProviderSources/);
-  assert.match(multi, /const alternateProviders = PROVIDERS\.filter/);
-  assert.match(multi, /for \(const provider of alternateProviders\)/);
-  assert.match(multi, /hkcinema:provider-catalogue/);
-  assert.match(multi, /maxProviderCount/);
+  assert.match(domain, /function sourceIdsFor/);
+  assert.match(domain, /for \(const provider of PROVIDER_IDS\)/);
+  assert.match(multi, /hkcinema:catalogue-store/);
+  assert.match(multi, /model\.maxProviderCount/);
 
-  assert.equal(multi.includes("const PROVIDER_OPTIONS"), false);
-  assert.equal(multi.includes("let mclCatalogue"), false);
-  assert.equal(multi.includes("let emperorCatalogue"), false);
-  assert.equal(multi.includes("tripleMatched"), false);
-  assert.equal(multi.includes("function getMCLMovies"), false);
-  assert.equal(multi.includes("function getEmperorMovies"), false);
-  assert.equal(multi.includes('addEventListener("hkcinema:mcl-catalogue"'), false);
-  assert.equal(multi.includes('addEventListener("hkcinema:emperor-catalogue"'), false);
+  const combined = `${domain}\n${multi}`;
+  assert.equal(combined.includes("const PROVIDER_OPTIONS"), false);
+  assert.equal(combined.includes("let mclCatalogue"), false);
+  assert.equal(combined.includes("let emperorCatalogue"), false);
+  assert.equal(combined.includes("tripleMatched"), false);
+  assert.equal(combined.includes("function getMCLMovies"), false);
+  assert.equal(combined.includes("function getEmperorMovies"), false);
+  assert.equal(combined.includes('addEventListener("hkcinema:mcl-catalogue"'), false);
+  assert.equal(combined.includes('addEventListener("hkcinema:emperor-catalogue"'), false);
 });
 
 test("M7R2 current provider loaders publish through the neutral catalogue bus", async () => {
-  const [mclStatus, emperorStatus, controls] = await Promise.all([
+  const [broadwayStatus, mclStatus, emperorStatus, cineartStatus, controls] = await Promise.all([
+    source("app/broadway-status.js"),
     source("app/mcl-status.js"),
     source("app/emperor-status.js"),
+    source("app/cineart-status.js"),
     source("app/shared-final-controls.js")
   ]);
 
+  assert.match(broadwayStatus, /HKCinemaProviderSharedCore\?\.publishCatalogue\?\.\("broadway", catalogue/);
   assert.match(mclStatus, /HKCinemaProviderSharedCore\?\.publishCatalogue\?\.\("mcl", catalogue/);
   assert.match(emperorStatus, /HKCinemaProviderSharedCore\?\.publishCatalogue\?\.\("emperor", catalogue/);
+  assert.match(cineartStatus, /HKCinemaProviderSharedCore\?\.publishCatalogue\?\.\("cineart", catalogue/);
   assert.match(controls, /sharedCore\?\.providers\?\.\(\)/);
   assert.match(controls, /PROVIDERS\.flatMap/);
   assert.match(controls, /hkcinema:provider-catalogue/);

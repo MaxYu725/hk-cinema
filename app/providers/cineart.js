@@ -96,7 +96,6 @@
       };
 
       saveCachedCatalogue(catalogue);
-      adapter.catalogue = catalogue;
       return catalogue;
     } finally {
       clearTimeout(timer);
@@ -396,7 +395,6 @@
   }
 
   const adapter = {
-    catalogue: getCachedCatalogue(),
     getCatalogue,
     refreshCatalogue,
     getCachedCatalogue,

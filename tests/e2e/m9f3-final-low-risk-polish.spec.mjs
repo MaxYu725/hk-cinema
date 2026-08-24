@@ -6,7 +6,7 @@ async function waitForHomeCatalogueSettled(page) {
   await expect(page.locator("#refreshButton")).toHaveAttribute("aria-busy", "false", {
     timeout: 20_000
   });
-  await expect(page.locator("#movieGrid")).not.toHaveAttribute("data-broadway-state", "loading");
+  await expect(page.locator("#movieGrid")).not.toHaveAttribute("data-home-state", "loading");
   await page.evaluate(() => new Promise(resolve => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   }));

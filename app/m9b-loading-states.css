@@ -18,11 +18,11 @@ html[data-skin="metro"][data-m9b-refreshing="true"] body::before {
 }
 
 /* Home: replace the first-load text block visually with movie-card-shaped skeletons. */
-html[data-skin="metro"] .movie-grid[data-broadway-state="loading"] {
+html[data-skin="metro"] .movie-grid[data-home-state="loading"] {
   position: relative;
 }
 
-html[data-skin="metro"] .movie-grid[data-broadway-state="loading"] > .m9b-home-loading-copy {
+html[data-skin="metro"] .movie-grid[data-home-state="loading"] > .m9b-home-loading-copy {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;

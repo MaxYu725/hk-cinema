@@ -32,15 +32,9 @@
   }
 
   function publishCatalogue(catalogue) {
-    window.HKCinemaEmperorCatalogue = catalogue;
-    const provider = window.HKCinemaProviders?.emperor;
-    if (provider) provider.catalogue = catalogue;
     window.HKCinemaProviderSharedCore?.publishCatalogue?.("emperor", catalogue, {
       publisher: "emperor-status"
     });
-    window.dispatchEvent(new CustomEvent("hkcinema:emperor-catalogue", {
-      detail: catalogue
-    }));
   }
 
   function summary(catalogue) {

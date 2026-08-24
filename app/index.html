@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="./data-health.css?v=6j2">
   <link rel="stylesheet" href="./seatmap-shared.css?v=c2-1">
   <link rel="stylesheet" href="./emperor-seatmap-view.css?v=m8a3-1">
-  <link rel="stylesheet" href="./multi-provider.css?v=8e2">
+  <link rel="stylesheet" href="./multi-provider.css?v=c3-1">
   <link rel="stylesheet" href="./home-library.css?v=c2-1">
   <link rel="stylesheet" href="./provider-compare.css?v=5b1">
   <link rel="stylesheet" href="./provider-compare-insights.css?v=5d3b">
@@ -51,7 +51,7 @@
   <link rel="stylesheet" href="./metro-m3-smart-picks.css?v=c2-1">
   <link rel="stylesheet" href="./metro-m4-seat-view.css?v=m6gate-1-m8a4-1">
   <link rel="stylesheet" href="./motion-foundation.css?v=m9a-1">
-  <link rel="stylesheet" href="./m9b-loading-states.css?v=m9b-1-m9e3">
+  <link rel="stylesheet" href="./m9b-loading-states.css?v=c3-1">
   <link rel="stylesheet" href="./m9c-navigation-transitions.css?v=m9c-1">
   <link rel="stylesheet" href="./m9d-micro-interactions.css?v=c2-1">
   <link rel="stylesheet" href="./m9e3-comparison-curtain.css?v=m9e3-1">
@@ -142,11 +142,13 @@
 
   <script src="./provider-registry.js?v=m10t1b-1"></script>
   <script src="./provider-contract.js?v=m6c-2.1"></script>
-  <script src="./provider-shared-core.js?v=c2-1"></script>
-  <script src="./data-health.js?v=m6c-1"></script>
+  <script src="./catalogue-store.js?v=c3-1"></script>
+  <script src="./provider-shared-core.js?v=c3-1"></script>
+  <script src="./data-health.js?v=c3-1"></script>
+  <script src="./providers/broadway.js?v=c3-1"></script>
   <script src="./providers/mcl.js"></script>
   <script src="./providers/emperor.js?v=6b1"></script>
-  <script src="./providers/cineart.js?v=m10t1c-1"></script>
+  <script src="./providers/cineart.js?v=c3-1"></script>
   <script src="./mcl-ticketing-worker.js?v=7a1"></script>
   <script src="./mcl-ticketing-hybrid.js?v=7a2"></script>
   <script src="./mcl-ticketing-bulk-enrichment.js?v=8d2-m6d2c"></script>
@@ -156,14 +158,14 @@
   <script src="./view-models.js?v=7b3-m7r3-1-m7r7-1-m7r7-2"></script>
   <script src="./seatmap-shared.js?v=c2-1"></script>
   <script src="./emperor-seatmap.js?v=c2-1"></script>
-  <script src="./app.js?v=c2-1"></script>
   <script src="./seatmap.js?v=c2-1"></script>
   <script src="./mcl-seatmap.js?v=c2-1"></script>
   <script src="./cineart-seatmap.js?v=m7p1g-1"></script>
   <script src="./home-discovery-core.js?v=6i3"></script>
-  <script src="./multi-provider.js?v=c2-1"></script>
+  <script src="./catalogue-domain.js?v=c3-1"></script>
+  <script src="./multi-provider.js?v=c3-1"></script>
   <script src="./home-library-core.js?v=8e3"></script>
-  <script src="./home-library.js?v=8e3"></script>
+  <script src="./home-library.js?v=c3-1"></script>
   <script src="./provider-compare-lifecycle.js?v=5e2a"></script>
   <script src="./provider-compare-v4.js?v=m6c-3-m7r5-1-m7r7-1-m7p1g-1"></script>
   <script src="./provider-compare-prefetch.js?v=m6d2b-m7r6-1"></script>
@@ -179,20 +181,20 @@
   <script src="./provider-compare-seat-normalizer.js?v=5c2-fix1"></script>
   <script src="./provider-compare-recommendations-v4.js?v=10r3b-m7r4-1"></script>
   <script src="./provider-compare-accessibility.js?v=5e5-a11y2"></script>
-  <script src="./mcl-status.js?v=6h2-m7r2-1"></script>
-  <script src="./emperor-status.js?v=6h2-m7r2-1"></script>
-  <script src="./cineart-status.js?v=m7p1c-1"></script>
+  <script src="./broadway-status.js?v=c3-1"></script>
+  <script src="./mcl-status.js?v=c3-1"></script>
+  <script src="./emperor-status.js?v=c3-1"></script>
+  <script src="./cineart-status.js?v=c3-1"></script>
   <script src="./provider-compare-phase6m.js?v=7a1-m7r4-1"></script>
-  <script src="./phase8a-movie-navigation.js?v=m6c-3-m6d2a-m7r5-1"></script>
-  <script src="./phase8a-movie-navigation-refresh.js?v=8a1-m7r6-1"></script>
-  <script src="./phase8b-comparison-layout.js?v=c2-1"></script>
+  <script src="./phase8a-movie-navigation.js?v=c3-1"></script>
+  <script src="./phase8b-comparison-layout.js?v=c3-1"></script>
   <script src="./phase8d1-filter-scroll-stability.js?v=8d1"></script>
   <script src="./phase9b3-filter-compact.js?v=m6b-3"></script>
   <script src="./pwa-runtime.js?v=9c3-2"></script>
-  <script src="./shared-final-controls.js?v=c2-1"></script>
+  <script src="./shared-final-controls.js?v=c3-1"></script>
   <script src="./comparison-date-scroll.js?v=c2-1"></script>
   <script src="./metro-runtime.js?v=c2-1"></script>
-  <script src="./m9b-loading-states.js?v=m9b-1-m9e2"></script>
+  <script src="./m9b-loading-states.js?v=c3-1"></script>
   <script src="./m9c-navigation-transitions.js?v=m9c-1-m9e1"></script>
   <script src="./m9d-micro-interactions.js?v=c2-1"></script>
   <script src="./m9e3-comparison-curtain.js?v=m9e3-1"></script>

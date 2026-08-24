@@ -29,7 +29,7 @@ test("M9E keeps M9 presentation runtimes parseable and lifecycle-passive", async
 test("M9E scopes loading observers away from unrelated class micro-interactions", async () => {
   const source = await readApp("m9b-loading-states.js");
 
-  assert.match(source, /observeTarget\("#movieGrid", \["data-broadway-state"\]\)/);
+  assert.match(source, /observeTarget\("#movieGrid", \["data-home-state"\]\)/);
   assert.match(source, /observeTarget\("#refreshButton", \["class"\]\)/);
   assert.match(source, /observeTarget\("#providerCompareOverlay", \["hidden"\]\)/);
   assert.match(source, /contentObserver\.observe\(document\.body, \{\s*childList: true,\s*subtree: true\s*\}\)/s);

@@ -72,9 +72,10 @@ test("overall health keeps partial and offline data usable", async () => {
 });
 
 test("Phase 6G cache, comparison freshness and Worker observability stay wired", async () => {
-  const [index, app, mcl, emperorStatus, emperorProvider, compare, resilience, worker, config] = await Promise.all([
+  const [index, broadwayProvider, broadwayStatus, mcl, emperorStatus, emperorProvider, compare, resilience, worker, config] = await Promise.all([
     source("app/index.html"),
-    source("app/app.js"),
+    source("app/providers/broadway.js"),
+    source("app/broadway-status.js"),
     source("app/mcl-status.js"),
     source("app/emperor-status.js"),
     source("app/providers/emperor.js"),
@@ -85,10 +86,10 @@ test("Phase 6G cache, comparison freshness and Worker observability stay wired",
   ]);
 
   assert.ok(index.indexOf("provider-registry.js") < index.indexOf("data-health.js"));
-  assert.ok(index.indexOf("data-health.js") < index.indexOf("app.js"));
-  assert.match(app, /BROADWAY_CACHE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
-  assert.match(app, /writeBroadwayCache\(cacheEntries\)/);
-  assert.match(app, /reportBroadway\("degraded"/);
+  assert.ok(index.indexOf("data-health.js") < index.indexOf("broadway-status.js"));
+  assert.match(broadwayProvider, /CACHE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
+  assert.match(broadwayProvider, /writeCacheEntries\(entries\)/);
+  assert.match(broadwayStatus, /report\("degraded"/);
   assert.match(mcl, /HKCinemaDataHealth\?\.report\?\.\("mcl"/);
   assert.match(emperorStatus, /HKCinemaDataHealth\?\.report\?\.\("emperor"/);
   assert.match(emperorProvider, /fallbackSections/);

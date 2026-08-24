@@ -212,12 +212,13 @@ test("M7R6 cinema registry never falls an unknown provider back to Broadway", as
 });
 
 test("M7R6 shared owners contain no old three-provider universe/event gates", async () => {
-  const [cache, prefetch, resilience, metro, refresh, cinema] = await Promise.all([
+  const [cache, prefetch, resilience, metro, domain, renderer, cinema] = await Promise.all([
     read("app/provider-compare-main-cache-v3.js"),
     read("app/provider-compare-prefetch.js"),
     read("app/provider-compare-resilience-v3.js"),
     read("app/metro-runtime.js"),
-    read("app/phase8a-movie-navigation-refresh.js"),
+    read("app/catalogue-domain.js"),
+    read("app/multi-provider.js"),
     read("app/cinema-registry.js")
   ]);
 
@@ -227,7 +228,7 @@ test("M7R6 shared owners contain no old three-provider universe/event gates", as
   assert.match(cache, /\/api\\\/\(\[\^\/\]\+\)\\\/movies/);
   assert.doesNotMatch(metro, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);
   assert.match(metro, /hkcinema:provider-catalogue/);
-  assert.doesNotMatch(refresh, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);
-  assert.match(refresh, /hkcinema:provider-catalogue/);
+  assert.doesNotMatch(`${domain}\n${renderer}`, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);
+  assert.match(renderer, /hkcinema:catalogue-store/);
   assert.doesNotMatch(cinema, /provider\s*===\s*["']mcl["']\s*\?\s*["']mcl["']\s*:\s*["']broadway["']/);
 });

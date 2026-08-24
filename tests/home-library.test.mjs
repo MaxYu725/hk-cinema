@@ -56,16 +56,15 @@ test("home sorting stays movie-first with release, title and activity ordering",
 });
 
 test("movie-first search, favorites and recent activity stay wired", async () => {
-  const [index, app, multiProvider, library, styles] = await Promise.all([
+  const [index, multiProvider, library, styles] = await Promise.all([
     source("app/index.html"),
-    source("app/app.js"),
     source("app/multi-provider.js"),
     source("app/home-library.js"),
     source("app/home-library.css")
   ]);
 
   assertAssetOrder(index, "multi-provider.js", "home-library-core.js", "home-library.js");
-  assert.match(app, /data-movie-favorite/);
+  assert.match(multiProvider, /data-movie-favorite/);
   assert.match(multiProvider, /HKCinemaHomeLibrary/);
   assert.match(library, /placeholder="搜尋電影"/);
   assert.match(library, /data-home-movie-search/);
@@ -83,8 +82,8 @@ test("movie-first search, favorites and recent activity stay wired", async () =>
 });
 
 test("catalogue metadata continues feeding movie aggregates without detail-side events", async () => {
-  const [app, multiProvider, health, libraryStyle, metroStyle, providerStyle, compare, library] = await Promise.all([
-    source("app/app.js"),
+  const [domain, multiProvider, health, libraryStyle, metroStyle, providerStyle, compare, library] = await Promise.all([
+    source("app/catalogue-domain.js"),
     source("app/multi-provider.js"),
     source("app/data-health.js"),
     source("app/home-library.css"),
@@ -94,17 +93,17 @@ test("catalogue metadata continues feeding movie aggregates without detail-side 
     source("app/home-library.js")
   ]);
 
-  assert.match(app, /data-home-languages/);
-  assert.match(app, /data-home-formats/);
-  assert.match(app, /hkcinema:home-tab/);
-  assert.match(multiProvider, /mergeMovieMetadata/);
+  assert.match(multiProvider, /data-home-languages/);
+  assert.match(multiProvider, /data-home-formats/);
+  assert.match(multiProvider, /hkcinema:home-tab/);
+  assert.match(domain, /function homeMetadata/);
   assert.doesNotMatch(multiProvider, /hkcinema:movie-metadata/);
-  assert.match(multiProvider, /HKCinemaMovieGroups/);
+  assert.match(domain, /HKCinemaMovieGroups/);
   assert.match(health, /syncRefreshButton/);
   assert.doesNotMatch(libraryStyle, /\.home-library-tools\.is-stuck/);
   assert.match(metroStyle, /\.home-library-tools\.is-stuck/);
   assert.doesNotMatch(providerStyle, /\.home-provider-filters/);
-  assert.match(providerStyle, /\.movie-group-member/);
+  assert.doesNotMatch(providerStyle, /\.movie-group-member/);
   assert.match(compare, /hkcinema:provider-compare-open/);
   assert.doesNotMatch(library, /restoreRegionPreferenceToCompare/);
 });

@@ -83,9 +83,6 @@
       status.classList.add("phase8b-movie-facts");
       if (status.innerHTML !== html) status.innerHTML = html;
     }
-
-    const versionRail = root.querySelector("[data-phase8a-version-rail]");
-    if (versionRail) placeAfter(hero, versionRail);
   }
 
   function recommendationSummary(panel) {

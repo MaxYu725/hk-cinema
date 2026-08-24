@@ -1,10 +1,10 @@
 # HK Cinema 共用展示契約
 
-Version: 1（Phase 7B）
+Version: 1（current through cleanup C3）
 
-`app/view-models.js` 是來源正規化與共用 UI 之間的唯一展示契約。Broadway、MCL、Emperor 的原始欄位先經 provider adapter 轉換；共用 renderer 不應直接讀取院線原始 JSON。
+`app/view-models.js` 是場次及座位來源正規化與共用 UI 之間的展示契約。Broadway、MCL、Emperor、CineArt 及日後註冊的 provider 原始欄位先經 provider adapter 轉換；共用 renderer 不應直接讀取院線原始 JSON。
 
-Phase 7B 的電影詳情及全屏座位介面均只讀取這份契約。三個 provider client 只負責識別場次及取得官方資料，不再各自輸出畫面。
+C3 的首頁 catalogue 契約另由 `app/catalogue-store.js` 及 `app/catalogue-domain.js` 擁有。前者保存 provider snapshot／狀態，後者輸出 `MovieAggregate`、provider match 及 variant group；`multi-provider.js` 只 render domain 輸出，不從 DOM 重建業務資料。
 
 ## 公開 API
 
@@ -14,7 +14,9 @@ window.HKCinemaViewModels.showtime(providerId, session)
 window.HKCinemaViewModels.seatMap(providerId, seatMap, showtime?)
 ```
 
-三個 provider ID 固定為 `broadway`、`mcl`、`emperor`。輸出分別以 `kind` 標示 `movie-detail`、`showtime`、`seat-map`，並帶有 `schemaVersion: 1`。
+Provider ID 由 `provider-registry.js` 決定，目前為 `broadway`、`mcl`、`emperor`、`cineart`；共用程式不得以固定三院線清單作 fallback。輸出分別以 `kind` 標示 `movie-detail`、`showtime`、`seat-map`，並帶有 `schemaVersion: 1`。
+
+`movie-detail` normalizer 仍是可重用資料契約，但 C2 起 production 已沒有 provider-specific 電影詳情 drawer；首頁直接以 `MovieAggregate` 開啟統一場次比較。
 
 ## MovieDetailViewModel
 
@@ -54,7 +56,7 @@ window.HKCinemaViewModels.seatMap(providerId, seatMap, showtime?)
 
 | 值 | 意義 | 現時來源 |
 |---|---|---|
-| `exact` | 已讀取完整官方座位圖 | 三院線座位圖 endpoint |
+| `exact` | 已讀取完整官方座位圖 | Broadway、MCL、Emperor、CineArt 座位圖 endpoint |
 | `provider-summary` | 院線在場次層提供的座位數字 | Broadway、Emperor 場次 |
 | `estimated` | 只有比例或近似資訊 | MCL `OccupiedSeatsInPercent` |
 | `unknown` | 沒有可用座位資料 | 缺少摘要的場次 |
@@ -85,6 +87,7 @@ Adapter 不會由 MCL 百分比推算總座位或可選座位，也不會把 Emp
 | Broadway | `grid` | 行、座位編號、空格 |
 | MCL | `area-grid` | 多分區、表格 cell、區域偏移、跨格座位 |
 | Emperor | `positioned` | `left/top`、相對偏移、旋轉、分區與票價 |
+| CineArt | `positioned` | 官方 parametric geometry、嚴格座位狀態、唯讀顯示 |
 
 每個 section 都固定包含 `bounds`、`metrics`、`areas`、`rows`、`seats`；`seatmap-shared.js` 只按 `layoutMode` 選擇定位方式，共用全屏外殼、標題、摘要、圖例、載入、錯誤及官方購票操作。
 

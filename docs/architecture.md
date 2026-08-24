@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C2.
+Status: current production architecture at cleanup checkpoint C3.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -17,27 +17,31 @@ Metro is the only production interface. The retired `skin=classic` query no long
 `worker/wrangler.jsonc` deploys `worker/src/index-emperor-seat.js`. The current router is historically layered:
 
 1. `index-emperor-seat.js` — telemetry, provider probes, CineArt routes and Emperor seat-map routes.
-2. `index-emperor.js` — Emperor catalogue, detail and showtime routes.
+2. `index-emperor.js` — Emperor catalogue and showtime routes.
 3. `index.js` — `/health`, Broadway routes and MCL ticketing/seat routes.
 
 The layers are operational but are not the desired final ownership model. A later checkpoint will consolidate them into one route table without changing public URLs.
 
 ## Current data flow
 
-### 1. Catalogue loading
+### 1. Catalogue loading and publication
 
-- Broadway catalogue and upcoming movies are requested from the Worker by `app/app.js`.
+- Broadway catalogue and upcoming movies are requested from the Worker by `app/providers/broadway.js`.
 - MCL catalogue is requested directly from the official MCL browser API by `app/providers/mcl.js`.
 - Emperor catalogue and upcoming movies are requested from the Worker by `app/providers/emperor.js`.
 - CineArt catalogue is requested from the Worker by `app/providers/cineart.js`.
 
-Provider loads fail independently. Each successful provider publishes a synchronous catalogue snapshot through `app/provider-shared-core.js`.
+The four status owners start and refresh those adapters independently. Each successful result is published into `app/catalogue-store.js`; Data Health also reports provider loading, degraded and error state into that same store. Provider adapters retain transport and local fallback policy but no longer retain a second public catalogue snapshot.
 
-### 2. Home aggregation
+`app/provider-shared-core.js` remains a thin registry/capability façade. Its catalogue methods delegate to `CatalogueStore` and do not own data.
 
-The current home renderer is still Broadway-owned. `app/multi-provider.js` reads its rendered cards, combines them with the other provider catalogue snapshots and records provider source IDs on card data attributes. `app/phase8a-movie-navigation.js` then creates movie aggregates and opens the comparison surface.
+### 2. Home aggregation and rendering
 
-This DOM-based aggregation is current behavior, not the target architecture. The target is to build `MovieAggregate` records from catalogue data before rendering, with no base provider.
+`app/catalogue-domain.js` reads provider snapshots from `CatalogueStore` and builds `MovieAggregate`, provider-match and grouped-variant records before any movie card exists. Matching, primary metadata selection, structured movie facts and the bounded generic-MCL variant bridge are data operations; they never read rendered DOM.
+
+`app/multi-provider.js` is now one provider-neutral renderer. It renders the domain model once and writes aggregate/source IDs only as interaction handles. `app/phase8a-movie-navigation.js` is a small delegated click/keyboard bridge that resolves the aggregate ID and opens comparison; it no longer observes, scans or decorates cards.
+
+There is no base provider. A Broadway-only, MCL-only, Emperor-only or CineArt-only catalogue can independently produce home cards while failed providers remain visible through health state.
 
 ### 3. Showtime comparison
 
@@ -77,16 +81,24 @@ The behavior is intentionally optimized for a normal Hong Kong network. Cleanup 
 
 Provider-specific layout information is part of the data contract and must not be discarded during consolidation.
 
-## C2 retirement boundary
+## C3 catalogue boundary
 
-C2 removed only paths that had no production entry after direct comparison became the accepted interaction:
+C2 removed paths that had no production entry after direct comparison became the accepted interaction:
 
 - the Classic query switch, Classic-only CSS and its observers;
 - the shared movie-detail drawer plus Broadway, MCL and Emperor detail loaders;
 - the unused Emperor movie-detail Worker route and parser;
 - detail-only branches inside seat-map adapters and PWA back navigation.
 
-The comparison overlay, movie-fact disclosure, official booking links, provider-isolated loading, date selection, filters, Smart Picks, seat summaries, four provider seat maps and Android/PWA back behavior remain in place. Historical checkpoint documents still describe the retired implementations but are not runtime contracts.
+C3 then replaced the Broadway-first home pipeline:
+
+- removed `app/app.js` as fetch, cache, tab and base-card owner;
+- moved Broadway transport/cache behavior into the same provider-adapter pattern as the other providers;
+- made `CatalogueStore` the only public catalogue snapshot and provider-state owner;
+- moved matching, variant grouping, movie facts and aggregate construction into `CatalogueDomain`;
+- replaced DOM re-aggregation with one neutral renderer and removed the refresh/decorating observer.
+
+Catalogue/showtime parsers, comparison cancellation and stale-response guards, MCL transport selection, filters, Smart Picks, seat summaries, four provider seat maps, official booking and Android/PWA back behavior are unchanged. Historical checkpoint documents still describe their original implementations but are not runtime contracts.
 
 ## Canonical data rules
 
@@ -133,7 +145,7 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 
 1. C1 — completed: establish current-truth documentation, deployment metadata and remove repository-only legacy comparison files.
 2. C2 — completed: retire dead movie-detail and Classic runtime paths after focused interaction validation.
-3. C3 — create catalogue/domain stores and remove Broadway base-provider ownership.
+3. C3 — completed: create catalogue/domain stores and remove Broadway base-provider ownership.
 4. C4 — move filters, sorting and recommendations from DOM parsing to selectors.
 5. C5 — consolidate Worker clients/router and define one cache owner per resource.
 6. C6 — bundle production assets and generate the Service Worker asset manifest.

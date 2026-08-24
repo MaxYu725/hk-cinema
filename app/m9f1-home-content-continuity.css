@@ -1,5 +1,5 @@
 /* M9F1 — Home Content Continuity
- * Keep home data/render ownership in app.js and home-library.js.
+ * Keep home data/render ownership in catalogue-domain.js, multi-provider.js and home-library.js.
  * This layer only smooths stable Metro control state and focus feedback.
  */
 

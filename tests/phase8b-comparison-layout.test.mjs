@@ -8,7 +8,7 @@ const css = await readFile(new URL('../app/phase8b-comparison-layout.css', impor
 const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 
 test('Phase 8B loads after Phase 8A navigation', () => {
-  assertAssetOrder(index, 'phase8a-movie-navigation-refresh.js', 'phase8b-comparison-layout.js');
+  assertAssetOrder(index, 'phase8a-movie-navigation.js', 'phase8b-comparison-layout.js');
   assertAsset(index, 'phase8b-comparison-layout.css');
 });
 

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 async function firstMovie(page) {
-  const movie = page.locator("#movieGrid .movie-card:not(.movie-group-member)").first();
+  const movie = page.locator("#movieGrid .movie-card").first();
   await expect(movie).toBeVisible({ timeout: 30_000 });
   await expect(movie).toHaveAttribute("data-phase8a-direct-compare", "true", { timeout: 10_000 });
   return movie;
@@ -89,7 +89,11 @@ test("M9E slow seat-map load keeps header/loading state visible and close remain
       provider: "broadway",
       key: "m9e-slow-seat-map",
       showtime: model.showtime,
-      load: () => new Promise(resolve => window.setTimeout(() => resolve({}), 900)),
+      load: signal => new Promise((resolve, reject) => {
+        signal.addEventListener("abort", () => reject(
+          new DOMException("Aborted", "AbortError")
+        ), { once: true });
+      }),
       adapt: () => model
     });
   }, seatModel());

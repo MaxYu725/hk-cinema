@@ -44,7 +44,9 @@ test("M9F2 reveals the real seat map after the loading skeleton without changing
       provider: "broadway",
       key: "m9f2-loaded-seat-map",
       showtime: model.showtime,
-      load: () => new Promise(resolve => window.setTimeout(() => resolve({}), 650)),
+      load: () => new Promise(resolve => {
+        window.__m9f2ResolveSeatLoad = () => resolve({});
+      }),
       adapt: () => model
     });
   }, seatModel());
@@ -54,6 +56,7 @@ test("M9F2 reveals the real seat map after the loading skeleton without changing
   await expect(overlay.locator(".m9b-seatmap-skeleton")).toBeVisible();
   await expect(overlay.locator(".shared-seatmap-header")).toBeVisible();
 
+  await page.evaluate(() => window.__m9f2ResolveSeatLoad());
   const loaded = overlay.locator('.shared-seatmap-content[data-m9f2-loaded="true"]');
   await expect(loaded).toBeVisible({ timeout: 4_000 });
   await expect(overlay.locator(".m9b-seatmap-skeleton")).toHaveCount(0);
