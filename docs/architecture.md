@@ -51,7 +51,7 @@ Movie cards open this surface directly. Movie facts, provider availability, date
 
 `ComparisonStore` is the comparison snapshot and filter-state owner. Its selectors operate on canonical session records for provider, metadata, region, district, cinema, period, price and reliable-seat filtering plus time/price/seat sorting. Rich Filters and Smart Picks subscribe to explicit store revisions; neither reads rendered time, cinema, price or seat text as business data. Saved preferences persist explicit filter changes instead of observing DOM mutations.
 
-Price and seat-summary enrichment still locate their presentation node by the stable session handle, but their result events address the same comparison record explicitly. The store patches that record and publishes a revision before filters and recommendations recompute.
+Price and seat-summary enrichment still schedule lazy work from rendered cards and booking handles, but their result events address the same comparison record through its stable session handle. The store patches that record and publishes a revision before filters and recommendations recompute.
 
 Later presentation modules may still decorate the rendered timeline:
 

@@ -108,6 +108,15 @@
   }
 
   function cloneSession(session) {
+    const metadata = session.metadata ? {
+      ...session.metadata,
+      languages: Array.isArray(session.metadata.languages) ? [...session.metadata.languages] : session.metadata.languages,
+      subtitles: Array.isArray(session.metadata.subtitles) ? [...session.metadata.subtitles] : session.metadata.subtitles,
+      formats: Array.isArray(session.metadata.formats) ? [...session.metadata.formats] : session.metadata.formats,
+      languageLabels: Array.isArray(session.metadata.languageLabels) ? [...session.metadata.languageLabels] : session.metadata.languageLabels,
+      subtitleLabels: Array.isArray(session.metadata.subtitleLabels) ? [...session.metadata.subtitleLabels] : session.metadata.subtitleLabels,
+      formatLabels: Array.isArray(session.metadata.formatLabels) ? [...session.metadata.formatLabels] : session.metadata.formatLabels
+    } : session.metadata;
     return {
       ...session,
       languages: [...session.languages],
@@ -115,7 +124,7 @@
       formats: [...session.formats],
       cinemaMeta: { ...session.cinemaMeta },
       seats: session.seats ? { ...session.seats } : null,
-      metadata: session.metadata ? { ...session.metadata } : session.metadata,
+      metadata,
       pricePayload: session.pricePayload ? { ...session.pricePayload } : session.pricePayload,
       seatSummary: session.seatSummary ? { ...session.seatSummary } : session.seatSummary
     };
@@ -225,30 +234,31 @@
     return match ? Number(match[1]) : null;
   }
 
-  function matchesSession(session, filters, context = {}, ignore = new Set()) {
+  function matchesSession(session, filters = DEFAULT_FILTERS, context = {}, ignore = new Set()) {
+    const criteria = { ...DEFAULT_FILTERS, ...filters };
     const clock = context.clock || hongKongClock(context.now);
-    const period = filters.period;
+    const period = criteria.period;
     let periodMatches = true;
     if (period === "morning") periodMatches = Number.isFinite(session.timeMinutes) && session.timeMinutes < 12 * 60;
     else if (period === "afternoon") periodMatches = Number.isFinite(session.timeMinutes) && session.timeMinutes >= 12 * 60 && session.timeMinutes < 18 * 60;
     else if (period === "evening") periodMatches = Number.isFinite(session.timeMinutes) && session.timeMinutes >= 18 * 60;
     else if (period === "next2h") periodMatches = context.selectedDate === clock.date && Number.isFinite(session.timeMinutes) && session.timeMinutes >= clock.minutes && session.timeMinutes <= clock.minutes + 120;
 
-    const limit = priceLimit(filters);
+    const limit = priceLimit(criteria);
     const priceMatches = !Number.isFinite(limit) || (Number.isFinite(session.price) && session.price <= limit);
     let seatsMatch = true;
-    if (filters.seats === "known") seatsMatch = Boolean(session.seats);
-    else if (filters.seats === "available") seatsMatch = Boolean(session.seats && session.seats.available > 0);
-    else if (filters.seats === "roomy") seatsMatch = Boolean(session.seats && session.seats.available > 0 && session.seats.ratio >= 0.5);
+    if (criteria.seats === "known") seatsMatch = Boolean(session.seats);
+    else if (criteria.seats === "available") seatsMatch = Boolean(session.seats && session.seats.available > 0);
+    else if (criteria.seats === "roomy") seatsMatch = Boolean(session.seats && session.seats.available > 0 && session.seats.ratio >= 0.5);
 
     return (
-      (ignore.has("provider") || filters.provider === "all" || session.provider === filters.provider) &&
-      (ignore.has("language") || filters.language === "all" || session.languages.includes(filters.language)) &&
-      (ignore.has("subtitle") || filters.subtitle === "all" || session.subtitles.includes(filters.subtitle)) &&
-      (ignore.has("format") || filters.format === "all" || session.formats.includes(filters.format)) &&
-      (ignore.has("region") || filters.region === "all" || session.region === filters.region) &&
-      (ignore.has("district") || filters.district === "all" || session.district === filters.district) &&
-      (ignore.has("cinema") || filters.cinema === "all" || session.cinemaKey === filters.cinema) &&
+      (ignore.has("provider") || criteria.provider === "all" || session.provider === criteria.provider) &&
+      (ignore.has("language") || criteria.language === "all" || session.languages.includes(criteria.language)) &&
+      (ignore.has("subtitle") || criteria.subtitle === "all" || session.subtitles.includes(criteria.subtitle)) &&
+      (ignore.has("format") || criteria.format === "all" || session.formats.includes(criteria.format)) &&
+      (ignore.has("region") || criteria.region === "all" || session.region === criteria.region) &&
+      (ignore.has("district") || criteria.district === "all" || session.district === criteria.district) &&
+      (ignore.has("cinema") || criteria.cinema === "all" || session.cinemaKey === criteria.cinema) &&
       (ignore.has("period") || periodMatches) &&
       (ignore.has("price") || priceMatches) &&
       (ignore.has("seats") || seatsMatch)

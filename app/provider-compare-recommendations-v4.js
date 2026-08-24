@@ -17,16 +17,17 @@
 
   function providerOf(value) {
     const sessionId = value?.dataset?.comparisonSessionId;
-    const stored = sessionId ? comparisonState().sessions.find(session => session.id === sessionId) : null;
-    const explicit = String(stored?.provider || value?.provider || value?.dataset?.provider || "").trim().toLowerCase();
+    const stored = value?.provider ? value : sessionId ? comparisonState().sessions.find(session => session.id === sessionId) : null;
+    const explicit = String(stored?.provider || "").trim().toLowerCase();
     const key = sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
     return { key, label: sharedCore?.label?.(key) || key || "院線" };
   }
 
   function item(value, index = 0) {
     const sessionId = value?.dataset?.comparisonSessionId || value?.id || value?.comparisonId;
-    const stored = comparisonState().sessions.find(session => session.id === sessionId);
-    const session = stored || (value?.provider ? value : null);
+    const session = value?.provider
+      ? value
+      : comparisonState().sessions.find(stored => stored.id === sessionId);
     if (!session) return null;
     return {
       ...session,
