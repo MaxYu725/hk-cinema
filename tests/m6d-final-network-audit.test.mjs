@@ -65,8 +65,9 @@ test("M6D 2D avoids generic global request coalescing and keeps bounded provider
   assert.match(cache, /PROVIDER_TTL_OVERRIDES = Object\.freeze\(\{ mcl: 90 \* 1000 \}\)/);
   assert.match(cache, /Object\.fromEntries\(PROVIDERS\.map\(provider => \[provider, new Map\(\)\]\)\)/);
   assert.match(cache, /function ttlForProvider\(provider\)/);
-  assert.match(cache, /isCacheableWorkerSnapshot/);
-  assert.match(cache, /payload\?\.ok === true/);
-  assert.match(cache, /deleteIfCurrent\(cache, key, snapshotPromise\)/);
+  assert.match(cache, /function rememberWorkerShows\(/);
+  assert.match(cache, /payload\?\.ok !== true/);
+  assert.match(cache, /async function getWorkerShows\(/);
+  assert.doesNotMatch(cache, /window\.fetch\s*=/);
   assert.doesNotMatch(cache, /const\s+(?:inFlight|inflight|pendingRequests)\s*=\s*new Map/);
 });

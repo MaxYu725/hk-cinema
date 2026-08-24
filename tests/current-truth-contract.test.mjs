@@ -44,7 +44,7 @@ test("Worker health exposes a versioned schema and Cloudflare deployment identit
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal(payload.schemaVersion, 1);
+  assert.equal(payload.schemaVersion, 2);
   assert.equal(payload.phase, "6G");
   assert.deepEqual(payload.deployment, {
     versionId: "worker-version-123",

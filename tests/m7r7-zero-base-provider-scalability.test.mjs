@@ -168,6 +168,7 @@ test("M7R7 comparison loads and renders eight providers without fixed provider-n
     HKCinemaProviderRegistry: registry(),
     HKCinemaProviderMatches: new Map([[match.id, match]]),
     HKCinemaProviders: {},
+    fetch,
     addEventListener() {},
     dispatchEvent() {}
   };
@@ -191,7 +192,7 @@ test("M7R7 comparison loads and renders eight providers without fixed provider-n
     window
   });
 
-  await load(context, "app/provider-compare-v4.js");
+  await load(context, "app/api-client.js", "app/provider-compare-v4.js");
   assert.equal(window.HKCinemaProviderCompare.open(match.id), true);
   await settle();
 
@@ -320,7 +321,7 @@ test("M7R7 comparison cache allocates independent buckets for eight providers wi
     window
   });
 
-  await load(context, "app/provider-compare-main-cache-v3.js");
+  await load(context, "app/api-client.js", "app/provider-compare-main-cache-v3.js");
   const cache = window.HKCinemaProviderCompareMainCache;
   assert.deepEqual(Object.keys(cache.getStats().providers), PROVIDER_IDS);
   assert.equal("broadwayEntries" in cache.getStats(), false);
@@ -401,7 +402,7 @@ test("M7R7 zero-base static guard rejects shared three-provider dispatch and fix
     source("app/provider-compare-v4.js"),
     source("app/view-models.js"),
     source("app/provider-compare-main-cache-v3.js"),
-    source("worker/src/index.js"),
+    source("worker/src/router.js"),
     source("worker/src/provider-manifest.js"),
     source("app/index.html")
   ]);
@@ -414,7 +415,8 @@ test("M7R7 zero-base static guard rejects shared three-provider dispatch and fix
   assert.match(viewModels, /const SEAT_MAP_REQUEST_BUILDERS = Object\.freeze/);
   assert.doesNotMatch(viewModels, /if \(providerId === ["'](?:broadway|mcl|emperor)["']\)/);
 
-  assert.match(cache, /const CACHE_ADAPTERS = Object\.freeze/);
+  assert.match(cache, /function registeredProvider\(provider\)/);
+  assert.match(cache, /function cacheForProvider\(provider\)/);
   assert.doesNotMatch(cache, /broadwayEntries|mclEntries|emperorEntries/);
 
   assert.match(worker, /providers: providerHealthMap\(\)/);

@@ -66,7 +66,7 @@ test('Phase 10R2D separates invalid payloads from short network failures', () =>
 });
 
 test('Phase 10R2D keeps the public MCL error code stable while exposing diagnostics', async () => {
-  const workerSource = await read('worker/src/index.js');
+  const workerSource = await read('worker/src/router.js');
 
   assert.match(workerSource, /code: "MCL_TICKETING_ERROR"/);
   assert.match(workerSource, /category: error\?\.category \|\| "upstream_error"/);

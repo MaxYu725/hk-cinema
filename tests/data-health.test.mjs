@@ -81,7 +81,7 @@ test("Phase 6G cache, comparison freshness and Worker observability stay wired",
     source("app/providers/emperor.js"),
     source("app/provider-compare-v4.js"),
     source("app/provider-compare-resilience-v3.js"),
-    source("worker/src/index-emperor-seat.js"),
+    source("worker/src/index.js"),
     source("worker/wrangler.jsonc")
   ]);
 
@@ -138,7 +138,20 @@ test("Emperor partial refresh preserves the failed catalogue section", async () 
     setItem(key, value) { writes++; storage.set(key, value); },
     removeItem(key) { storage.delete(key); }
   };
-  const window = {};
+  const window = {
+    HKCinemaApiClient: {
+      async get(path) {
+        if (String(path).endsWith("/api/emperor/upcoming")) {
+          throw new Error("upcoming unavailable");
+        }
+        return {
+          ok: true,
+          data: [{ sourceId: "new-now", title: { zh: "即時上映" } }],
+          meta: { updatedAt: new Date().toISOString() }
+        };
+      }
+    }
+  };
   const context = vm.createContext({
     AbortController,
     clearTimeout,

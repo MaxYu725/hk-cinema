@@ -200,7 +200,7 @@ test("M7P1F public showtime boundary remains seat-map-free after M7P1G enables a
     source("app/provider-registry.js"),
     source("app/providers/cineart.js"),
     source("worker/src/providers/cineart-showtimes.js"),
-    source("worker/src/index-emperor-seat.js"),
+    source("worker/src/router.js"),
     source("worker/src/provider-manifest.js"),
     source("app/index.html"),
     source("docs/checkpoints/m7p1f-cineart-strict-detail.md")

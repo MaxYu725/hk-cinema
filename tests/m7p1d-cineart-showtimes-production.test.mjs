@@ -79,7 +79,31 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
     source("app/providers/cineart.js"), source("app/provider-compare-v4.js"), source("app/index.html")
   ]);
   const calls = [];
-  const window = {};
+  const window = {
+    HKCinemaApiClient: {
+      async get(path, options = {}) {
+        calls.push({
+          url: new URL(path, "https://hk-cinema-api.max-yu-jp.workers.dev").toString(),
+          options: { method: "GET", ...options }
+        });
+        return {
+          ok: true,
+          data: {
+            now: [{ provider: "cineart", sourceId: "799", title: { zh: "測試電影" } }],
+            coming: [],
+            festival: [],
+            meta: { updatedAt: "2026-08-13T00:00:00.000Z" }
+          },
+          meta: {
+            phase: "M7P1C",
+            cacheState: "network",
+            stale: false,
+            updatedAt: "2026-08-13T00:00:00.000Z"
+          }
+        };
+      }
+    }
+  };
   const context = vm.createContext({
     AbortController, Date, Error, JSON, Map, Math, Object, Set, String, clearTimeout,
     localStorage: localStorageStub(), setTimeout, window,
@@ -101,7 +125,7 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/api\/cineart\/catalogue$/);
   assert.doesNotMatch(adapterSource, /cinearthouse\.com\.hk|MutationObserver|IntersectionObserver/);
-  assert.match(compareSource, /\/api\/\$\{provider\}\/movies\/\$\{encodeURIComponent\(sourceId\)\}\/shows/);
+  assert.match(compareSource, /comparisonCache\?\.getWorkerShows/);
   assert.match(compareSource, /comparisonAdapter\(provider\)\?\.fetchShows \|\| fetchWorkerShows/);
   assert.ok(index.indexOf("provider-registry.js?v=") >= 0);
   assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
@@ -109,7 +133,7 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
 
 test("M7P1D public showtime route remains GET-only while later Worker stages may enrich selected-date detail internally", async () => {
   const [router, showtimes, manifest, checkpoint] = await Promise.all([
-    source("worker/src/index-emperor-seat.js"), source("worker/src/providers/cineart-showtimes.js"),
+    source("worker/src/router.js"), source("worker/src/providers/cineart-showtimes.js"),
     source("worker/src/provider-manifest.js"), source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
   ]);
   assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
