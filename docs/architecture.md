@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C4.
+Status: current production architecture at cleanup checkpoint C5.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -14,13 +14,7 @@ Metro is the only production interface. The retired `skin=classic` query no long
 
 ### Cloudflare Worker
 
-`worker/wrangler.jsonc` deploys `worker/src/index-emperor-seat.js`. The current router is historically layered:
-
-1. `index-emperor-seat.js` — telemetry, provider probes, CineArt routes and Emperor seat-map routes.
-2. `index-emperor.js` — Emperor catalogue and showtime routes.
-3. `index.js` — `/health`, Broadway routes and MCL ticketing/seat routes.
-
-The layers are operational but are not the desired final ownership model. A later checkpoint will consolidate them into one route table without changing public URLs.
+`worker/wrangler.jsonc` deploys `worker/src/index.js`. That entry owns telemetry and delegates every public URL to the single declarative table in `worker/src/router.js`. The former `index-emperor.js` and `index-emperor-seat.js` files are logic-free compatibility re-exports only; they do not route or decorate requests.
 
 ## Current data flow
 
@@ -59,7 +53,7 @@ Later presentation modules may still decorate the rendered timeline:
 - seat-summary normalization;
 - presentation and accessibility decorators.
 
-DOM text must no longer be a business-data input. C5 may consolidate transport/router/cache ownership, but it must preserve the C4 comparison record and selector boundary.
+DOM text must no longer be a business-data input. C5 consolidates transport/router/cache ownership while preserving the C4 comparison record and selector boundary.
 
 ### 4. MCL showtimes
 
@@ -115,6 +109,18 @@ C4 removed the second comparison data model that filters and Smart Picks previou
 
 The renderer still owns card visibility, order, focus/jump and presentation. The store owns values and selection. DOM decorators must not add a competing price, seat, metadata or recommendation truth source.
 
+## C5 transport, router and cache boundary
+
+C5 removes two historical interception layers:
+
+- all Worker-backed browser modules use `HKCinemaApiClient`; the Worker origin and JSON/error handling are no longer repeated across adapters;
+- `provider-compare-main-cache-v3.js` exposes an explicit showtime loader instead of replacing `window.fetch`;
+- Emperor seat-map session discovery subscribes to `ComparisonStore` rather than intercepting Worker responses;
+- the Worker deploys `index.js` and resolves every public endpoint through one route table;
+- every public Worker response is `no-store`, leaving each resource cache with the declared service owner below.
+
+Public URLs, response bodies, C4 session handles/selectors, MCL browser-first transport, provider parsers, official booking rules and seat-map geometry are unchanged.
+
 ## Canonical data rules
 
 1. Provider IDs come from `app/provider-registry.js` and `worker/src/provider-manifest.js`.
@@ -127,25 +133,27 @@ The renderer still owns card visibility, order, focus/jump and presentation. The
 
 ## Cache ownership
 
-The current system uses Worker response caching, Worker Cache API entries, browser memory caches, `localStorage` catalogue fallbacks and short-lived `sessionStorage` ticketing entries. This is operational but overlaps in places.
+C5 makes public Worker responses `no-store`; `Cache-Control` is no longer a second implicit browser/CDN cache. `app/api-client.js` owns the Worker origin, JSON/error contract, cancellation propagation and transport timeout, but intentionally does not cache cinema data.
 
-The cleanup target is one declared cache owner per resource:
+Each public resource has one explicit owner:
 
-| Resource | Fresh target | Stale fallback | Intended owner |
+| Resource | Fresh target | Stale fallback | Owner / implementation |
 |---|---:|---:|---|
-| Current catalogue | 5 minutes | up to 24 hours, visibly stale | catalogue service |
-| Upcoming catalogue | 30 minutes | up to 24 hours, visibly stale | catalogue service |
-| Showtimes | 60–90 seconds | provider-specific, visibly stale | comparison service |
-| Price | 5 minutes | none unless explicitly marked | enrichment service |
-| Seat summary | 30–60 seconds | none unless explicitly marked | enrichment service |
-| Seat map | 15–30 seconds | none | seat-map service |
-| Static shell | content-hashed release | previous installed release | build and Service Worker |
+| Current catalogue | 5 minutes | up to 24 hours, visibly stale | provider adapter `localStorage` fallback |
+| Upcoming catalogue | 30 minutes | up to 24 hours, visibly stale | provider adapter `localStorage` fallback |
+| Showtimes | 60–90 seconds | provider-specific, visibly stale only where declared | `provider-compare-main-cache-v3.js` comparison memory cache |
+| Price | 5 minutes | none unless explicitly marked | `provider-compare-prices.js` enrichment memory cache |
+| Seat summary | 30–90 seconds | none unless explicitly marked | `provider-compare-seats.js` enrichment memory cache |
+| Seat map | 15–30 seconds | none | `seatmap-shared.js` memory cache |
+| Static shell | versioned release | previous installed release | Service Worker only |
+
+CineArt's Worker services retain bounded Cache API entries for expensive upstream snapshots/details. Those entries are internal upstream-service caches; the public response remains `no-store` and no generic router cache is added.
 
 ## Health and observability
 
 The Worker adds `x-request-id` and `server-timing` to responses and emits structured request-completion logs. `/health` is a service/capability declaration; it does not perform upstream network probes.
 
-The health response exposes a numeric `schemaVersion` and Cloudflare deployment metadata when the version metadata binding is available. The historical `phase: "6G"` field remains temporarily for existing validation scripts and is deprecated; new consumers must use `schemaVersion` and provider capabilities.
+The health response exposes `schemaVersion: 2`, declared cache owners and Cloudflare deployment metadata when the version metadata binding is available. The historical `phase: "6G"` field remains temporarily for existing validation scripts and is deprecated; new consumers must use `schemaVersion` and provider capabilities.
 
 Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provider}`. `lastSuccessAt` is best-effort per Worker isolate and is not durable monitoring history.
 
@@ -162,7 +170,7 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 2. C2 — completed: retire dead movie-detail and Classic runtime paths after focused interaction validation.
 3. C3 — completed: create catalogue/domain stores and remove Broadway base-provider ownership.
 4. C4 — completed: move filters, sorting and recommendations from DOM parsing to selectors.
-5. C5 — consolidate Worker clients/router and define one cache owner per resource.
+5. C5 — completed: consolidate Worker clients/router and define one cache owner per resource.
 6. C6 — bundle production assets and generate the Service Worker asset manifest.
 
 Each item is a separate PR checkpoint. Later checkpoints may update this order when current production evidence justifies it, but they must not silently mix multiple architectural migrations.

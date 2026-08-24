@@ -1,6 +1,4 @@
 (() => {
-  const WORKER_API =
-    "https://hk-cinema-api.max-yu-jp.workers.dev";
   const WORKER_TIMEOUT_MS = 8000;
 
   function messageOf(error) {
@@ -30,46 +28,13 @@
       params.set("date", selectedDate);
     }
 
-    const controller = new AbortController();
-    const parentSignal = options?.signal || null;
-    const onParentAbort = () => controller.abort(parentSignal?.reason);
-    const timer = setTimeout(
-      () => controller.abort("timeout"),
-      WORKER_TIMEOUT_MS
-    );
-    if (parentSignal?.aborted) onParentAbort();
-    else parentSignal?.addEventListener?.("abort", onParentAbort, { once: true });
-
-    try {
-      const response = await fetch(
-        `${WORKER_API}/api/mcl/ticketing?${params.toString()}`,
-        {
-          method: "GET",
-          cache: "no-store",
-          signal: controller.signal
-        }
-      );
-
-      let result = null;
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error(`Worker HTTP ${response.status}`);
-      }
-
-      if (
-        !response.ok ||
-        !result?.ok ||
-        !result?.data
-      ) {
-        throw new Error(`Worker HTTP ${response.status}`);
-      }
-
-      return result.data;
-    } finally {
-      clearTimeout(timer);
-      parentSignal?.removeEventListener?.("abort", onParentAbort);
-    }
+    const result = await window.HKCinemaApiClient?.get?.("/api/mcl/ticketing", {
+      query: params,
+      signal: options?.signal || null,
+      timeoutMs: WORKER_TIMEOUT_MS
+    });
+    if (!result?.data) throw new Error("MCL Worker response is invalid");
+    return result.data;
   }
 
   function unsupportedVpnError() {

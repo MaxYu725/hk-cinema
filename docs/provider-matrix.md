@@ -1,6 +1,6 @@
 # Provider matrix
 
-Status: current production contract at cleanup checkpoint C4.
+Status: current production contract at cleanup checkpoint C5.
 
 This matrix describes real production data paths and reliability expectations. A declared capability means that HK Cinema has an implementation for it; it does not guarantee that every upstream movie or showtime supplies the optional value.
 
@@ -29,10 +29,10 @@ The provider-neutral runtime registry is `app/provider-registry.js`. The Worker 
 
 | Route | Data | Cache |
 |---|---|---:|
-| `GET /api/broadway/movies` | Current catalogue | 300 seconds |
-| `GET /api/broadway/upcoming` | Upcoming catalogue | 1,800 seconds |
-| `GET /api/broadway/movies/{movieId}/shows?date=YYYY-MM-DD` | Dates and sessions | 60 seconds |
-| `GET /api/broadway/shows/{showId}/seats` | Seat map and summary | 30 seconds |
+| `GET /api/broadway/movies` | Current catalogue | `no-store`; provider adapter owns fallback |
+| `GET /api/broadway/upcoming` | Upcoming catalogue | `no-store`; provider adapter owns fallback |
+| `GET /api/broadway/movies/{movieId}/shows?date=YYYY-MM-DD` | Dates and sessions | `no-store`; comparison service owns 60-second cache |
+| `GET /api/broadway/shows/{showId}/seats` | Seat map and summary | `no-store`; seat-map service owns 30-second cache |
 
 ### MCL
 
@@ -40,8 +40,8 @@ The normal Hong Kong-network path reads official MCL WebAPI2 in the browser. The
 
 | Route | Data | Cache |
 |---|---|---:|
-| `GET /api/mcl/ticketing?movieSetId={id}&date=YYYY-MM-DD` | Ticketing sessions | 60 seconds only when metadata is complete; otherwise `no-store` |
-| `GET /api/mcl/shows/{sessionId}/seats?cinemaCode={code}` | Seat map | 30 seconds |
+| `GET /api/mcl/ticketing?movieSetId={id}&date=YYYY-MM-DD` | Ticketing sessions | `no-store`; comparison service caches complete metadata only |
+| `GET /api/mcl/shows/{sessionId}/seats?cinemaCode={code}` | Seat map | `no-store`; seat-map/enrichment service owns short cache |
 
 A fast HTTP 200 response with an incompatible MCL payload is the known VPN/proxy failure mode. It must fail with the explicit VPN/proxy message instead of entering a long fallback chain or presenting stale partial sessions.
 
@@ -49,10 +49,10 @@ A fast HTTP 200 response with an incompatible MCL payload is the known VPN/proxy
 
 | Route | Data | Cache |
 |---|---|---:|
-| `GET /api/emperor/movies` | Current catalogue | 300 seconds |
-| `GET /api/emperor/upcoming` | Upcoming catalogue | 1,800 seconds |
-| `GET /api/emperor/movies/{filmUniqueId}/shows?date=YYYY-MM-DD` | Dates and sessions | 60 seconds |
-| `GET /api/emperor/shows/{scheduleId}/seats?...` | Seat map | 30 seconds |
+| `GET /api/emperor/movies` | Current catalogue | `no-store`; provider adapter owns fallback |
+| `GET /api/emperor/upcoming` | Upcoming catalogue | `no-store`; provider adapter owns fallback |
+| `GET /api/emperor/movies/{filmUniqueId}/shows?date=YYYY-MM-DD` | Dates and sessions | `no-store`; comparison service owns 60-second cache |
+| `GET /api/emperor/shows/{scheduleId}/seats?...` | Seat map | `no-store`; seat-map service owns 30-second cache |
 
 ### CineArt
 
@@ -67,9 +67,10 @@ A fast HTTP 200 response with an incompatible MCL payload is the known VPN/proxy
 
 `GET /health` exposes:
 
-- `ok`, `service` and numeric `schemaVersion`;
+- `ok`, `service` and `schemaVersion: 2`;
 - `providers`, generated from the Worker provider manifest;
 - `freshness`, describing declared fallback boundaries;
+- `cacheOwners`, declaring the service owner for each resource class;
 - `deployment.versionId`, `deployment.versionTag` and `deployment.createdAt` when Cloudflare version metadata is available;
 - `time`, generated for the current request;
 - temporary legacy `phase: "6G"` for existing validation scripts.
@@ -102,4 +103,4 @@ Provider probes run independently and are never called by normal homepage/compar
 
 ## Current cleanup boundary
 
-Checkpoint C4 keeps the C3 provider-neutral catalogue path and adds one comparison publication path: provider comparison adapters → `ComparisonStore` → pure filter/sort selectors → timeline and Smart Picks presentation. Stable comparison session IDs address price and seat-summary enrichment; DOM text is not parsed back into business records. C4 does not change catalogue/showtime parsers, MCL transport selection, comparison cancellation, official booking logic or seat-map geometry. Worker router/cache consolidation belongs to C5 as an independent checkpoint described in `docs/architecture.md`.
+Checkpoint C5 keeps the C3 catalogue and C4 comparison boundaries, then adds one Worker client and one Worker route table. Public Worker responses are `no-store`; catalogue, comparison, enrichment, seat-map and shell caches have explicit independent owners. C5 does not change provider parsers, MCL browser-first transport or VPN fast failure, official booking logic, comparison selectors or seat-map geometry. C6 asset bundling remains a separate checkpoint.

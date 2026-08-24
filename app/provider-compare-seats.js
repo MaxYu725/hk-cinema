@@ -1,6 +1,4 @@
 (() => {
-  const API_BASE =
-    "https://hk-cinema-api.max-yu-jp.workers.dev";
   const CACHE_MAX_AGE_MS = 90 * 1000;
   const REQUEST_TIMEOUT_MS = 15000;
   const MAX_CONCURRENT = 2;
@@ -157,38 +155,16 @@
   }
 
   async function fetchSummary(identifiers, controller) {
-    const timer = setTimeout(() => {
-      controller.abort("timeout");
-    }, REQUEST_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/mcl/shows/${encodeURIComponent(identifiers.sessionId)}/seats?cinemaCode=${encodeURIComponent(identifiers.cinemaCode)}&summary=1`,
-        {
-          method: "GET",
-          cache: "no-store",
-          signal: controller.signal
-        }
-      );
-
-      let result = null;
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error(`MCL seat summary HTTP ${response.status}`);
+    const result = await window.HKCinemaApiClient?.get?.(
+      `/api/mcl/shows/${encodeURIComponent(identifiers.sessionId)}/seats`,
+      {
+        query: { cinemaCode: identifiers.cinemaCode, summary: 1 },
+        signal: controller.signal,
+        timeoutMs: REQUEST_TIMEOUT_MS
       }
-
-      if (!response.ok || !result?.ok || !result?.data?.counts) {
-        throw new Error(
-          result?.error?.message ||
-          `MCL seat summary HTTP ${response.status}`
-        );
-      }
-
-      return result.data;
-    } finally {
-      clearTimeout(timer);
-    }
+    );
+    if (!result?.data?.counts) throw new Error("MCL seat summary response is invalid");
+    return result.data;
   }
 
   function currentCards(cards) {

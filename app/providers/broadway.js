@@ -1,19 +1,10 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const CACHE_KEY = "hkcinema:broadway-catalogue:v1";
   const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
   async function fetchEndpoint(path) {
-    const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
-    let result = null;
-    try {
-      result = await response.json();
-    } catch {
-      throw new Error(`Broadway HTTP ${response.status}`);
-    }
-    if (!response.ok || result?.ok !== true || !Array.isArray(result?.data)) {
-      throw new Error(result?.error?.message || `Broadway HTTP ${response.status}`);
-    }
+    const result = await window.HKCinemaApiClient?.get?.(path);
+    if (!result || !Array.isArray(result.data)) throw new Error("Broadway Worker response is invalid");
     return result;
   }
 
@@ -129,7 +120,7 @@
     getCatalogue: refreshCatalogue,
     refreshCatalogue,
     getCachedCatalogue,
-    apiBase: API_BASE,
+    apiBase: window.HKCinemaApiClient?.origin || null,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   });
 })();

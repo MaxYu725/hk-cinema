@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const DEFAULT_TIMEOUT_MS = 12000;
   const PROVIDER_TIMEOUTS = Object.freeze({ mcl: 15000 });
   const sharedCore = window.HKCinemaProviderSharedCore || null;
@@ -295,29 +294,29 @@
   }
 
   async function fetchWorkerShows(provider, sourceId, date, parentSignal) {
-    const query = date ? `?date=${encodeURIComponent(date)}` : "";
     const lifecycle = childController(parentSignal, timeoutForProvider(provider));
     try {
-      const response = await fetch(
-        `${API_BASE}/api/${provider}/movies/${encodeURIComponent(sourceId)}/shows${query}`,
-        { cache: "no-store", signal: lifecycle.controller.signal }
-      );
-      if (response.status === 404) {
-        return { availableDates: [], selectedDate: date, sessions: [], _health: { updatedAt: new Date().toISOString(), source: "network" } };
-      }
-      let result = null;
-      try { result = await response.json(); } catch { throw new Error(`${provider} HTTP ${response.status}`); }
-      if (!response.ok || !result?.ok || !result?.data) {
-        throw new Error(result?.error?.message || `${provider} HTTP ${response.status}`);
-      }
+      const comparisonCache = window.HKCinemaProviderCompareMainCache;
+      const result = comparisonCache?.getWorkerShows
+        ? await comparisonCache.getWorkerShows(provider, sourceId, date, {
+            signal: lifecycle.controller.signal
+          })
+        : await window.HKCinemaApiClient?.get?.(
+            `/api/${provider}/movies/${encodeURIComponent(sourceId)}/shows`,
+            { query: { date }, signal: lifecycle.controller.signal, timeoutMs: 0 }
+          );
+      if (!result?.data) throw new Error("Comparison request service is unavailable");
       return {
         ...result.data,
         _health: {
           updatedAt: result.meta?.updatedAt || new Date().toISOString(),
-          source: result.meta?.cache ? "cache" : "network"
+          source: result.meta?.cache || /cache/i.test(result.meta?.cacheState || "") ? "cache" : "network"
         }
       };
     } catch (error) {
+      if (Number(error?.status) === 404) {
+        return { availableDates: [], selectedDate: date, sessions: [], _health: { updatedAt: new Date().toISOString(), source: "network" } };
+      }
       if (lifecycle.timedOut()) {
         throw new Error(`${labelForProvider(provider)} 場次讀取逾時，請稍後重試。`);
       }

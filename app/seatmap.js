@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const shared = window.HKCinemaSeatMapShared;
   let scheduled = false;
 
@@ -36,20 +35,11 @@
   }
 
   async function fetchSeatMap(showId, signal) {
-    const response = await fetch(`${API_BASE}/api/broadway/shows/${encodeURIComponent(showId)}/seats`, {
-      cache: "no-store",
-      signal,
-      headers: { Accept: "application/json" }
-    });
-    let result;
-    try {
-      result = await response.json();
-    } catch {
-      throw new Error(`Broadway 座位圖 HTTP ${response.status}`);
-    }
-    if (!response.ok || !result?.ok || !result?.data) {
-      throw new Error(result?.error?.message || `Broadway 座位圖 HTTP ${response.status}`);
-    }
+    const result = await window.HKCinemaApiClient?.get?.(
+      `/api/broadway/shows/${encodeURIComponent(showId)}/seats`,
+      { signal }
+    );
+    if (!result?.data) throw new Error("Broadway 座位圖回應無效");
     return result.data;
   }
 

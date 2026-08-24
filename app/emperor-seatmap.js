@@ -1,11 +1,8 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const sessionStore = new Map();
   const triggerSessions = new WeakMap();
   const shared = window.HKCinemaSeatMapShared;
   let scheduled = false;
-
-  const delegatedFetch = window.fetch.bind(window);
 
   function normalize(value) {
     return String(value || "")
@@ -32,34 +29,14 @@
     scheduleEnhance();
   }
 
-  function requestDetails(input, init = {}) {
-    const request = input instanceof Request ? input : null;
-    const rawUrl = request?.url || String(input || "");
-    try {
-      return {
-        url: new URL(rawUrl, window.location.href),
-        method: String(init.method || request?.method || "GET").toUpperCase()
-      };
-    } catch {
-      return null;
-    }
+  function captureStoreSessions() {
+    const sessions = window.HKCinemaComparisonStore?.getState?.().sessions || [];
+    sessionStore.clear();
+    captureShows({ sessions: sessions.filter(session => session?.provider === "emperor") });
   }
 
-  window.fetch = async function emperorSeatMapAwareFetch(input, init = {}) {
-    const details = requestDetails(input, init);
-    const response = await delegatedFetch(input, init);
-    if (
-      details?.method === "GET" &&
-      details.url.origin === API_BASE &&
-      /^\/api\/emperor\/movies\/[^/]+\/shows$/.test(details.url.pathname) &&
-      response.ok
-    ) {
-      response.clone().json().then(result => {
-        if (result?.ok && result?.data) captureShows(result.data);
-      }).catch(() => {});
-    }
-    return response;
-  };
+  window.addEventListener("hkcinema:comparison-store-change", captureStoreSessions);
+  captureStoreSessions();
 
   function activeDateFor() {
     return document.querySelector("[data-provider-compare-date].active")?.dataset?.providerCompareDate || null;
@@ -141,24 +118,11 @@
     if (!scheduleId || !scheduleKey || !cinemaLinkId || !hallId) {
       throw new Error("此場次缺少 Emperor SeatMap 識別資料");
     }
-    const url = new URL(`/api/emperor/shows/${encodeURIComponent(scheduleId)}/seats`, API_BASE);
-    url.searchParams.set("scheduleKey", scheduleKey);
-    url.searchParams.set("cinemaLinkId", cinemaLinkId);
-    url.searchParams.set("hallId", hallId);
-    const response = await fetch(url.toString(), {
-      cache: "no-store",
-      signal,
-      headers: { Accept: "application/json" }
-    });
-    let result;
-    try {
-      result = await response.json();
-    } catch {
-      throw new Error(`Emperor SeatMap HTTP ${response.status}`);
-    }
-    if (!response.ok || !result?.ok || !result?.data) {
-      throw new Error(result?.error?.message || `Emperor SeatMap HTTP ${response.status}`);
-    }
+    const result = await window.HKCinemaApiClient?.get?.(
+      `/api/emperor/shows/${encodeURIComponent(scheduleId)}/seats`,
+      { query: { scheduleKey, cinemaLinkId, hallId }, signal }
+    );
+    if (!result?.data) throw new Error("Emperor SeatMap 回應無效");
     return result.data;
   }
 

@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const shared = window.HKCinemaSeatMapShared;
   let scheduled = false;
 
@@ -42,19 +41,11 @@
   }
 
   async function fetchSeatMap(params, signal) {
-    const response = await fetch(
-      `${API_BASE}/api/mcl/shows/${encodeURIComponent(params.sessionId)}/seats?cinemaCode=${encodeURIComponent(params.cinemaCode)}`,
-      { cache: "no-store", signal, headers: { Accept: "application/json" } }
+    const result = await window.HKCinemaApiClient?.get?.(
+      `/api/mcl/shows/${encodeURIComponent(params.sessionId)}/seats`,
+      { query: { cinemaCode: params.cinemaCode }, signal }
     );
-    let result;
-    try {
-      result = await response.json();
-    } catch {
-      throw new Error(`MCL 座位圖 HTTP ${response.status}`);
-    }
-    if (!response.ok || !result?.ok || !result?.data) {
-      throw new Error(result?.error?.message || `MCL 座位圖 HTTP ${response.status}`);
-    }
+    if (!result?.data) throw new Error("MCL 座位圖回應無效");
     return result.data;
   }
 

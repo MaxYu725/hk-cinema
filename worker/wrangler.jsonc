@@ -1,6 +1,6 @@
 {
   "name": "hk-cinema-api",
-  "main": "src/index-emperor-seat.js",
+  "main": "src/index.js",
   "compatibility_date": "2026-08-06",
   "compatibility_flags": ["nodejs_compat"],
   "version_metadata": {
