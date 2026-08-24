@@ -6,7 +6,7 @@ function escapeRegex(value) {
 
 export function assetReference(index, assetPath) {
   const escaped = escapeRegex(assetPath.replace(/^\.\//, ""));
-  const pattern = new RegExp(`(?:src|href)=["']\\./${escaped}(?:\\?[^"']*)?["']`);
+  const pattern = new RegExp(`(?:src|href)=["']\\./${escaped}["']`);
   return String(index || "").match(pattern)?.[0] || null;
 }
 
@@ -20,14 +20,8 @@ export function hasAsset(index, assetPath) {
   return assetPosition(index, assetPath) >= 0;
 }
 
-export function hasVersionedAsset(index, assetPath) {
-  const reference = assetReference(index, assetPath);
-  return Boolean(reference && /\?v=[^"']+/.test(reference));
-}
-
-export function assertAsset(index, assetPath, { versioned = true } = {}) {
+export function assertAsset(index, assetPath) {
   assert.ok(hasAsset(index, assetPath), `${assetPath} must be loaded`);
-  if (versioned) assert.ok(hasVersionedAsset(index, assetPath), `${assetPath} must carry a cachebuster`);
 }
 
 export function assertAssetOrder(index, ...assetPaths) {

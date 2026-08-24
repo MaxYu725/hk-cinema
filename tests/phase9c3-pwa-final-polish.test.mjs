@@ -66,7 +66,7 @@ test("installed-mode polish protects safe areas and comparison controls", () => 
   assert.match(css, /\.pwa-notice/);
 });
 
-test("document loads Phase 9C3 presentation and immersive runtime with cachebusters", () => {
+test("document loads Phase 9C3 presentation and immersive runtime", () => {
   const html = fs.readFileSync(path.join(app, "index.html"), "utf8");
   assertAsset(html, "phase9c3-pwa-final-polish.css");
   assertAsset(html, "pwa-runtime.js");

@@ -104,7 +104,7 @@ test("M7R2 current provider loaders publish through the neutral catalogue bus", 
   assert.equal(controls.includes("HKCinemaEmperorCatalogue"), false);
 });
 
-test("M7R2 changed runtime assets remain independently cache-busted", async () => {
+test("M7R2 runtime assets remain explicitly loaded in source order", async () => {
   const index = await source("app/index.html");
 
   for (const asset of [

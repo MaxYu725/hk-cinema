@@ -175,7 +175,7 @@ test("M7R3 shared seat-map capability gate stops unsupported provider before loa
   assert.equal(node.dataset.seatmapProvider, undefined);
 });
 
-test("M7R3 shared model and seat-map runtimes remain independently cache-busted", async () => {
+test("M7R3 shared model and seat-map runtimes remain explicitly loaded", async () => {
   const [index, models, seatmap] = await Promise.all([
     source("app/index.html"),
     source("app/view-models.js"),

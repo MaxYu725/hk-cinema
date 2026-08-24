@@ -230,7 +230,7 @@ test("adjacent-date prefetch keeps an AbortController and passes its signal into
   assert.match(prefetch, /type === "open" \|\| type === "close" \|\| type === "date-change" \|\| type === "reload"/);
 });
 
-test("comparison filters stay presentation-only and changed network helpers are cache-busted", async () => {
+test("comparison filters stay presentation-only and network helpers remain explicitly loaded", async () => {
   const [filterUx, index] = await Promise.all([
     source("app/phase9b3-filter-compact.js"),
     source("app/index.html")

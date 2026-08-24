@@ -135,7 +135,7 @@ test("M7P1E coarse snapshot boundary remains available beneath later selected-da
   assert.match(showtimes, /held:\s*null/);
   assert.match(showtimes, /buildCineArtSessionBookingUrl/);
   assert.match(manifest, /cineart/);
-  assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
+  assert.ok(index.indexOf("providers/cineart.js") >= 0);
   assert.match(checkpoint, /M7P1E checkpoint/i);
   assert.match(checkpoint, /coarse-not-sold/);
 });

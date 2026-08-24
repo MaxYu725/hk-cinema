@@ -17,8 +17,6 @@ test("M9E3 curtain assets load after the established Metro motion layers", async
 
   assert.ok(m9dCss >= 0 && curtainCss > m9dCss);
   assert.ok(m9dJs >= 0 && curtainJs > m9dJs);
-  assert.match(html, /m9e3-comparison-curtain\.css\?v=/);
-  assert.match(html, /m9e3-comparison-curtain\.js\?v=/);
 });
 
 test("M9E3 runtime stays presentation-only and scopes observation to comparison content", async () => {

@@ -17,8 +17,6 @@ test("M9D assets extend M9C and load after the established Metro owners", async 
 
   assert.ok(m9cCss >= 0 && m9dCss > m9cCss, "M9D CSS must extend M9C");
   assert.ok(m9cRuntime >= 0 && m9dRuntime > m9cRuntime, "M9D runtime must observe installed Metro owners");
-  assert.match(html, /m9d-micro-interactions\.css\?v=[^"']+/);
-  assert.match(html, /m9d-micro-interactions\.js\?v=[^"']+/);
 });
 
 test("M9D runtime remains presentation-only", async () => {

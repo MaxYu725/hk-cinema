@@ -55,5 +55,4 @@ test("M10T1D asset loads after existing overlay/navigation owners", async () => 
   const backNav = html.indexOf("pwa-back-navigation.js");
 
   assert.ok(compare >= 0 && seatmap >= 0 && backNav > compare && backNav > seatmap);
-  assert.match(html, /pwa-back-navigation\.js\?v=[^"']+/);
 });

@@ -15,7 +15,6 @@ test("M9A loads the motion foundation after Metro presentation styles", async ()
 
   assert.ok(metroSeat >= 0, "Metro seat presentation stylesheet must remain loaded");
   assert.ok(motion > metroSeat, "motion foundation must load after Metro presentation owners");
-  assert.match(html, /motion-foundation\.css\?v=[A-Za-z0-9._-]+/);
 });
 
 test("M9A exposes one bounded timing and easing vocabulary", async () => {
