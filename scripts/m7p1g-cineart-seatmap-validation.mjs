@@ -33,15 +33,43 @@ const sample = discovery.payload?.data?.home?.sampleShow;
 assert.ok(/^\d+$/.test(String(sample?.sourceId || "")), "discovery sample must expose numeric show id");
 assert.ok(/^\d+$/.test(String(sample?.movieSourceId || "")), "discovery sample must expose numeric movie id");
 
-const path = `/api/cineart/shows/${encodeURIComponent(sample.sourceId)}/seats?movieSourceId=${encodeURIComponent(sample.movieSourceId)}`;
-const first = await requestJson(path);
-assert.equal(first.response.ok, true);
+const showtimes = await requestJson(`/api/cineart/movies/${encodeURIComponent(sample.movieSourceId)}/shows`);
+assert.equal(showtimes.response.ok, true);
+assert.equal(showtimes.payload?.ok, true);
+
+const candidates = [sample, ...(showtimes.payload?.data?.sessions || [])];
+const seen = new Set();
+const rejected = [];
+let selected = null;
+let path = null;
+let first = null;
+for (const candidate of candidates.slice(0, 8)) {
+  const showId = String(candidate?.sourceId || "");
+  const movieId = String(candidate?.movieSourceId || sample.movieSourceId || "");
+  if (!/^\d+$/.test(showId) || !/^\d+$/.test(movieId) || seen.has(showId)) continue;
+  seen.add(showId);
+  const candidatePath = `/api/cineart/shows/${encodeURIComponent(showId)}/seats?movieSourceId=${encodeURIComponent(movieId)}`;
+  const attempt = await requestJson(candidatePath);
+  if (attempt.response.ok && attempt.payload?.ok === true) {
+    selected = candidate;
+    path = candidatePath;
+    first = attempt;
+    break;
+  }
+  rejected.push({ showId, code: attempt.payload?.error?.code || `HTTP_${attempt.response.status}` });
+  assert.equal(
+    attempt.payload?.error?.code,
+    "CINEART_SEATMAP_GEOMETRY_MISMATCH",
+    `unexpected seat-map failure for show ${showId}`
+  );
+}
+assert.ok(first, `no complete live CineArt seat map among bounded candidates: ${JSON.stringify(rejected)}`);
 assert.equal(first.payload?.ok, true);
 assert.equal(first.payload?.meta?.phase, "M7P1G");
 assert.equal(first.payload?.meta?.provider, "cineart");
 assert.equal(first.payload?.meta?.mode, "read-only-seatmap-official-geometry");
-assert.equal(String(first.payload?.data?.showId), String(sample.sourceId));
-assert.equal(String(first.payload?.data?.movieSourceId), String(sample.movieSourceId));
+assert.equal(String(first.payload?.data?.showId), String(selected.sourceId));
+assert.equal(String(first.payload?.data?.movieSourceId), String(selected.movieSourceId || sample.movieSourceId));
 assert.equal(first.payload?.data?.layoutMode, "positioned");
 assert.equal(first.payload?.data?.bookingUrl, null);
 assert.equal(first.payload?.data?.source?.geometry, "official-parametric-blocks");
@@ -99,12 +127,13 @@ console.log(JSON.stringify({
     cineartService: health.payload.providers.cineart
   },
   sample: {
-    showId: sample.sourceId,
-    movieId: sample.movieSourceId,
-    cinemaId: sample.cinemaSourceId,
-    houseId: sample.houseSourceId,
-    date: sample.date,
-    time: sample.time
+    showId: selected.sourceId,
+    movieId: selected.movieSourceId || sample.movieSourceId,
+    cinemaId: selected.cinemaSourceId || selected.cinema?.sourceId || null,
+    houseId: selected.houseSourceId || selected.house?.sourceId || null,
+    date: selected.date || sample.date,
+    time: selected.time || sample.time,
+    rejectedCandidates: rejected
   },
   seatMap: {
     cacheState: first.payload.meta.cacheState,

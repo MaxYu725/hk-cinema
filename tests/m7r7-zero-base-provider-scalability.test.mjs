@@ -187,6 +187,7 @@ test("M7R7 comparison loads and renders eight providers without fixed provider-n
     Set,
     String,
     URL,
+    URLSearchParams,
     clearTimeout,
     setTimeout,
     window
@@ -272,6 +273,7 @@ test("M7R7 comparison accepts a future provider transport hook without editing s
     Set,
     String,
     URL,
+    URLSearchParams,
     clearTimeout,
     setTimeout,
     window
@@ -315,6 +317,7 @@ test("M7R7 comparison cache allocates independent buckets for eight providers wi
     Request,
     Response,
     URL,
+    URLSearchParams,
     clearTimeout,
     document,
     setTimeout,

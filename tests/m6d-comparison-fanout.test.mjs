@@ -36,6 +36,7 @@ function mainCacheContext({ nativeFetch, mclGetTicketing = null } = {}) {
       window,
       document,
       URL,
+      URLSearchParams,
       Request,
       Response,
       AbortController,

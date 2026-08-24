@@ -175,7 +175,7 @@ test("M7P1G Worker route is GET-only and keeps the global health phase untouched
   assert.match(router, /\/api\\\/cineart\\\/shows/);
   assert.match(router, /phase:\s*"M7P1G"/);
   assert.match(router, /mode:\s*"read-only-seatmap-official-geometry"/);
-  assert.match(router, /CineArt seat map is read-only/);
+  assert.match(router, /if \(request\.method !== "GET"\) return methodNotAllowed\(route\)/);
   assert.match(manifest, /catalogue-showtimes-detailed-price-strict-seats-seatmap-production-readonly/);
 });
 

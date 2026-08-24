@@ -79,6 +79,7 @@ test("M7R6 comparison cache allocates and prefetches a registered fourth provide
     Request,
     Response,
     URL,
+    URLSearchParams,
     console,
     document: basicDocument(),
     setTimeout,

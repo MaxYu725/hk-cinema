@@ -183,7 +183,7 @@ test('Phase 10R2B routes are no-store, bounded, and separate from normal app loa
   assert.match(probeSource, /controller\.signal\.aborted/);
   assert.match(probeSource, /Promise\.race/);
   assert.match(workerSource, /\/api\/providers\/probe/);
-  assert.match(workerSource, /cache-control": "no-store"/);
+  assert.match(workerSource, /headers\.set\("cache-control", PUBLIC_CACHE_CONTROL\)/);
   assert.match(workerSource, /export async function routeRequest\(request, env = \{\}, ctx = null\)/);
 
   const appRoot = new URL('../app/', import.meta.url);

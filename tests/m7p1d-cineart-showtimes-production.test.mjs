@@ -136,9 +136,9 @@ test("M7P1D public showtime route remains GET-only while later Worker stages may
     source("worker/src/router.js"), source("worker/src/providers/cineart-showtimes.js"),
     source("worker/src/provider-manifest.js"), source("docs/checkpoints/m7p1d-cineart-showtimes-production.md")
   ]);
-  assert.match(router, /const cineArtShowsMatch = url\.pathname\.match/);
+  assert.match(router, /pattern\("cineart-showtimes"/);
   assert.match(router, /cineArtShowtimeService\.getMovie/);
-  assert.match(router, /CineArt showtimes are read-only/);
+  assert.match(router, /if \(request\.method !== "GET"\) return methodNotAllowed\(route\)/);
   assert.match(showtimes, /getCineArtWorkerSnapshot/);
   assert.match(showtimes, /buildCineArtSessionBookingUrl/);
   assert.match(manifest, /catalogue-showtimes/);
