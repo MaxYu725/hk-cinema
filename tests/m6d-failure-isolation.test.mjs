@@ -19,7 +19,8 @@ test("home aggregation preserves provider failures without a base renderer", asy
 
   assert.match(store, /const fallback = Boolean\(value\?\.meta\?\.fallbackSections\?\.\[section\]\);/);
   assert.match(store, /const usable = Boolean\(value\) && \(!error \|\| fallback\);/);
-  assert.match(store, /failed: \(!usable && record\?\.status === "error"\)/);
+  assert.match(store, /const failed = \(!usable && record\?\.status === "error"\)/);
+  assert.match(store, /loading: !usable && !failed/);
   assert.match(domain, /summary = store\?\.summary\?\.\(activeSection\)/);
   assert.match(multi, /model\.summary\.loading > 0/);
   assert.match(multi, /summary\.failed === summary\.total/);
