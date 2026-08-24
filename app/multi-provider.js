@@ -107,12 +107,25 @@
   function renderEmpty(summary) {
     const coming = activeSection === "coming";
     const allFailed = summary.total > 0 && summary.failed === summary.total;
+    const partiallyFailed = summary.failed > 0 && !allFailed;
+    const heading = allFailed
+      ? "暫時無法取得電影資料"
+      : partiallyFailed
+        ? "部分院線暫時無法更新"
+        : coming
+          ? "暫時沒有即將上映電影"
+          : "暫時沒有上映場次";
+    const detail = allFailed
+      ? "各院線目前均未能更新，稍後可再試。"
+      : partiallyFailed
+        ? `部分院線資料暫時無法取得，其餘已連接院線目前沒有找到${coming ? "即將上映電影" : "上映電影"}，結果可能不完整。`
+        : `已連接院線目前沒有找到${coming ? "即將上映電影" : "上映電影"}。`;
     grid.dataset.homeState = allFailed ? "error" : "empty";
     count.textContent = "0 部";
     grid.innerHTML = `
       <div class="empty-state" data-multi-provider-empty-state>
-        <strong>${allFailed ? "暫時無法取得電影資料" : coming ? "暫時沒有即將上映電影" : "暫時沒有上映場次"}</strong>
-        <span>${allFailed ? "各院線目前均未能更新，稍後可再試。" : `已連接院線目前沒有找到${coming ? "即將上映電影" : "上映電影"}。`}</span>
+        <strong>${heading}</strong>
+        <span>${detail}</span>
       </div>
     `;
   }
