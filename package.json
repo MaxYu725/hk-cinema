@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:syntax && npm run test:unit",
+    "build": "node scripts/build-app.mjs",
+    "test": "npm run test:syntax && npm run build && npm run test:unit",
     "test:syntax": "find app worker/src scripts -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n 1 node --check",
     "test:unit": "node --test --test-reporter=spec tests/*.test.mjs",
+    "pretest:e2e": "npm run build",
     "test:e2e": "playwright test --config=playwright.config.mjs"
   },
   "devDependencies": {

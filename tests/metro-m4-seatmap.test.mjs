@@ -56,7 +56,7 @@ test("Metro runtime decorates the shared seat-map without changing provider data
 });
 
 test("M4 seat-map remains compatible with the current controlled shell cache", () => {
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}c5-1`/);
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}\$\{SHELL_MANIFEST\.version\}`/);
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(installBlock);
   assert.doesNotMatch(installBlock, /skipWaiting\(\)/);
