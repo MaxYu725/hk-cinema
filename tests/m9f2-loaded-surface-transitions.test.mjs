@@ -17,8 +17,6 @@ test("M9F2 assets extend M9F1 after all existing surface owners", async () => {
 
   assert.ok(f1Css >= 0 && f2Css > f1Css, "M9F2 CSS must load after M9F1");
   assert.ok(f1Runtime >= 0 && f2Runtime > f1Runtime, "M9F2 runtime must load after all existing owners and M9F1");
-  assert.match(html, /m9f2-loaded-surface-transitions\.css\?v=[^"']+/);
-  assert.match(html, /m9f2-loaded-surface-transitions\.js\?v=[^"']+/);
 });
 
 test("M9F2 remains a passive Metro presentation companion", async () => {

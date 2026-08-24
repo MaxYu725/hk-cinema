@@ -127,8 +127,8 @@ test("M7P1D shared showtime transport remains the network owner after later Cine
   assert.doesNotMatch(adapterSource, /cinearthouse\.com\.hk|MutationObserver|IntersectionObserver/);
   assert.match(compareSource, /comparisonCache\?\.getWorkerShows/);
   assert.match(compareSource, /comparisonAdapter\(provider\)\?\.fetchShows \|\| fetchWorkerShows/);
-  assert.ok(index.indexOf("provider-registry.js?v=") >= 0);
-  assert.ok(index.indexOf("providers/cineart.js?v=") >= 0);
+  assert.ok(index.indexOf("provider-registry.js") >= 0);
+  assert.ok(index.indexOf("providers/cineart.js") >= 0);
 });
 
 test("M7P1D public showtime route remains GET-only while later Worker stages may enrich selected-date detail internally", async () => {

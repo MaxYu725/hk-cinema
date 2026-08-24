@@ -17,8 +17,6 @@ test("M9F1 assets extend the completed M9 stack", async () => {
 
   assert.ok(m9eCss >= 0 && m9fCss > m9eCss, "M9F1 CSS must extend the current Metro motion stack");
   assert.ok(m9eRuntime >= 0 && m9fRuntime > m9eRuntime, "M9F1 runtime must load after established owners and M9E3");
-  assert.match(html, /m9f1-home-content-continuity\.css\?v=[^"']+/);
-  assert.match(html, /m9f1-home-content-continuity\.js\?v=[^"']+/);
 });
 
 test("M9F1 remains a passive home presentation companion", async () => {

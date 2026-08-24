@@ -20,7 +20,7 @@ test("PWA install metadata now matches the Metro shell", () => {
   assert.equal(manifest.start_url, "./");
   assert.equal(manifest.background_color, "#000000");
   assert.equal(manifest.theme_color, "#000000");
-  assert.match(index, /manifest\.json\?v=m5-1/);
+  assert.match(index, /<link rel="manifest" href="\.\/manifest\.json">/);
 });
 
 test("C5 rotates the controlled shell cache without restoring automatic activation", () => {

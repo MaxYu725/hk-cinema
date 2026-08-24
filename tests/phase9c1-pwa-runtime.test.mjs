@@ -16,8 +16,8 @@ test("Phase 9C1 wires an installable fullscreen PWA shell with standalone fallba
   assert.equal(manifest.scope, "./");
   assert.equal(manifest.display, "fullscreen");
   assert.ok(manifest.display_override.includes("standalone"));
-  assert.match(html, /<link rel="manifest" href="\.\/manifest\.json\?v=[a-z0-9-]+">/i);
-  assert.match(html, /pwa-runtime\.js\?v=[a-z0-9-]+/i);
+  assert.match(html, /<link rel="manifest" href="\.\/manifest\.json">/i);
+  assert.match(html, /<script src="\.\/pwa-runtime\.js"><\/script>/i);
   assert.match(runtime, /navigator\.serviceWorker\.register\("\.\/sw\.js"/);
   assert.match(runtime, /updateViaCache:\s*"none"/);
 });

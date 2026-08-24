@@ -17,8 +17,6 @@ test("M9F3 assets extend M9F2 as the final low-risk Metro polish layer", async (
 
   assert.ok(f2Css >= 0 && f3Css > f2Css, "M9F3 CSS must load after M9F2");
   assert.ok(f2Runtime >= 0 && f3Runtime > f2Runtime, "M9F3 runtime must load after established owners and M9F2");
-  assert.match(html, /m9f3-final-low-risk-polish\.css\?v=[^"']+/);
-  assert.match(html, /m9f3-final-low-risk-polish\.js\?v=[^"']+/);
 });
 
 test("M9F3 stays presentation-only and leaves PWA/service-worker ownership untouched", async () => {

@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C6.
+Status: current production architecture at cleanup checkpoint C7.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -8,7 +8,7 @@ This document is the canonical description of the running system. Historical pha
 
 ### GitHub Pages application
 
-`app/index.html` is the ordered frontend source entrypoint. `scripts/build-app.mjs` replaces its local source styles and classic scripts with one content-hashed CSS bundle and one content-hashed JavaScript bundle, versions its manifest/icon references, and emits the explicit production artifact to `dist/`.
+`app/index.html` is the ordered frontend source entrypoint. Its local CSS, JavaScript, web-manifest and icon references are stable unversioned paths. `scripts/build-app.mjs` is the only browser asset-identity owner: it replaces local source styles and classic scripts with one content-hashed CSS bundle and one content-hashed JavaScript bundle, versions manifest/icon references from their content, and emits the explicit production artifact to `dist/`.
 
 The build also generates `dist/asset-manifest.json` and embeds that release's exact shell list in `dist/sw.js`. The Service Worker can cache only URLs declared by that generated list; all cinema catalogue, showtime, price and seat requests stay outside the PWA cache. A failed shell fetch fails the install atomically, and a waiting worker still activates only after the user accepts the reload prompt.
 
@@ -138,6 +138,20 @@ C6 replaces the raw-source Pages upload and install-time asset discovery with on
 
 The build performs concatenation, not semantic minification or module rewriting. This keeps the established classic-script order and browser globals intact while making deployment contents and cache ownership reviewable.
 
+## C7 generated asset identity boundary
+
+C7 removes the 101 historical manual `?v=` values from `app/index.html`. Those values rotated individual source files when Pages uploaded `app/` directly, but became inert duplicate state after C6 began deploying only generated bundles.
+
+The source graph now owns only asset presence and order. The build owns every production identity:
+
+- CSS and JavaScript bundle filenames are derived from bundle content;
+- web-manifest, favicon and install-icon query versions are derived from file content;
+- the Service Worker release and exact shell URLs are derived from the generated artifact;
+- historical tests assert source presence/order/behavior rather than mutable source cachebusters;
+- production tests assert the generated content hashes and shell membership.
+
+Removing or changing a source file therefore rotates its production bundle automatically. Manually adding a `?v=` value to `app/index.html` is no longer a valid cache-rotation mechanism.
+
 ## Canonical data rules
 
 1. Provider IDs come from `app/provider-registry.js` and `worker/src/provider-manifest.js`.
@@ -189,5 +203,6 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 4. C4 — completed: move filters, sorting and recommendations from DOM parsing to selectors.
 5. C5 — completed: consolidate Worker clients/router and define one cache owner per resource.
 6. C6 — completed: bundle production assets and generate the exact Service Worker shell manifest.
+7. C7 — completed: remove manual source cachebusters and make the build the only production asset-identity owner.
 
 Each item is a separate PR checkpoint. Later checkpoints may update this order when current production evidence justifies it, but they must not silently mix multiple architectural migrations.

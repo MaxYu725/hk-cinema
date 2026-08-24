@@ -19,8 +19,6 @@ test("M9C assets load after M9B and the existing Metro runtime", async () => {
   assert.ok(m9bCss >= 0 && m9cCss > m9bCss, "M9C CSS must extend M9B");
   assert.ok(metroRuntime >= 0 && m9bRuntime > metroRuntime, "existing M9B load order must remain intact");
   assert.ok(m9cRuntime > m9bRuntime, "M9C runtime must observe the fully installed Metro owners");
-  assert.match(html, /m9c-navigation-transitions\.css\?v=[^"']+/);
-  assert.match(html, /m9c-navigation-transitions\.js\?v=[^"']+/);
 });
 
 test("M9C runtime is presentation-only and does not take lifecycle ownership", async () => {

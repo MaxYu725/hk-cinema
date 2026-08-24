@@ -15,5 +15,5 @@ test("M8A4 CineArt seat-map presentation contract", async () => {
   assert.ok(rules.includes("content: \"銀幕\""));
   assert.ok(rules.includes("width: 20px !important"));
   assert.ok(rules.includes("height: 20px !important"));
-  assert.ok(index.includes("m6gate-1-m8a4-1"));
+  assert.ok(index.includes("metro-m4-seat-view.css"));
 });

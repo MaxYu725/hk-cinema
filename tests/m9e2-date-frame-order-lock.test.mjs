@@ -14,7 +14,7 @@ test("M9E2 keeps the M9B stylesheet loaded after the motion foundation", async (
   const loading = html.indexOf("m9b-loading-states.css");
   assert.ok(motion >= 0, "motion foundation must remain loaded");
   assert.ok(loading > motion, "M9B frame-order rules must remain after the motion foundation");
-  assert.match(html.slice(loading, loading + 120), /m9b-loading-states\.css\?/);
+  assert.match(html.slice(loading, loading + 120), /m9b-loading-states\.css/);
 });
 
 test("M9E2 locks Metro comparison structure into a stable visual order", async () => {

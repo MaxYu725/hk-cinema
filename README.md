@@ -21,7 +21,7 @@ Capability support does not mean that every upstream record contains every optio
 
 The application has two deployment surfaces:
 
-1. `app/` — frontend source. `npm run build` preserves its declared CSS/JavaScript order, emits one content-hashed bundle of each type, and writes the explicit GitHub Pages artifact to `dist/`.
+1. `app/` — frontend source. Its local asset references are stable unversioned paths; `npm run build` is the only asset-identity owner, preserves declared CSS/JavaScript order, emits one content-hashed bundle of each type, and writes the explicit GitHub Pages artifact to `dist/`.
 2. `worker/` — Cloudflare Worker adapters for provider pages and APIs that should not be fetched directly by the browser.
 
 The production frontend has one Metro runtime. Provider catalogues publish into one canonical store, a provider-neutral domain layer builds movie aggregates before rendering, and movie cards open the unified comparison directly. There is no Broadway base renderer, separate Classic skin or provider-specific movie-detail drawer.
@@ -64,7 +64,7 @@ Generate the production Pages artifact without running tests:
 npm run build
 ```
 
-`dist/asset-manifest.json` records the exact bundles, source order, shell assets and output files. `dist/` is generated and is not committed.
+`dist/asset-manifest.json` records the exact bundles, source order, shell assets and output files. Do not add manual `?v=` values to `app/index.html`; production bundle, manifest and icon versions are generated from content. `dist/` is generated and is not committed.
 
 Run the mobile Chromium smoke suite:
 
