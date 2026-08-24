@@ -109,13 +109,14 @@
     const error = value?.meta?.errors?.[section] || null;
     const fallback = Boolean(value?.meta?.fallbackSections?.[section]);
     const usable = Boolean(value) && (!error || fallback);
+    const failed = (!usable && record?.status === "error") || (Boolean(error) && !fallback);
     return {
       provider: record?.provider || registeredProviderId(providerOrId),
       section,
       movies: usable ? movies : [],
       usable,
-      failed: (!usable && record?.status === "error") || (Boolean(error) && !fallback),
-      loading: !usable && record?.status !== "error",
+      failed,
+      loading: !usable && !failed,
       fallback,
       error,
       record
