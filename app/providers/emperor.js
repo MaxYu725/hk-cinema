@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const CACHE_KEY = "hkcinema:emperor-catalogue:v1";
   const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
   const REQUEST_TIMEOUT_MS = 10000;
@@ -47,33 +46,9 @@
   }
 
   async function fetchEndpoint(path) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(`${API_BASE}${path}`, {
-        cache: "no-store",
-        signal: controller.signal,
-        headers: { Accept: "application/json" }
-      });
-
-      let result = null;
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error(`Emperor HTTP ${response.status}`);
-      }
-
-      if (!response.ok || !result?.ok || !Array.isArray(result?.data)) {
-        throw new Error(
-          result?.error?.message || `Emperor HTTP ${response.status}`
-        );
-      }
-
-      return result;
-    } finally {
-      clearTimeout(timer);
-    }
+    const result = await window.HKCinemaApiClient?.get?.(path, { timeoutMs: REQUEST_TIMEOUT_MS });
+    if (!result || !Array.isArray(result.data)) throw new Error("Emperor Worker response is invalid");
+    return result;
   }
 
   function saveCachedCatalogue(catalogue) {
@@ -194,7 +169,7 @@
     getCatalogue,
     refreshCatalogue,
     getCachedCatalogue,
-    apiBase: API_BASE,
+    apiBase: window.HKCinemaApiClient?.origin || null,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };
 })();

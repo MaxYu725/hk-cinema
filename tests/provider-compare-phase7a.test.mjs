@@ -233,6 +233,7 @@ test("Phase 7A moves to the next valid date after MCL enrichment rejects the sel
       }
     };
   };
+  window.fetch = fetch;
   const context = vm.createContext({
     AbortController,
     clearTimeout,
@@ -247,11 +248,15 @@ test("Phase 7A moves to the next valid date after MCL enrichment rejects the sel
     fetch,
     setTimeout,
     URL,
+    URLSearchParams,
     window
   });
 
   vm.runInContext(await source("app/showtime-metadata.js"), context, {
     filename: "showtime-metadata.js"
+  });
+  vm.runInContext(await source("app/api-client.js"), context, {
+    filename: "api-client.js"
   });
   const criteria = window.HKCinemaShowtimeMetadata.criteriaFromVariant(["日語版"]);
   window.HKCinemaProviderMatches.set("date-refinement", {
@@ -388,7 +393,7 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   assert.match(hybridMcl, /browserGetTicketing\([\s\S]*options/);
   assert.match(hybridMcl, /browserData\?\.metadataComplete !== false/);
   assert.match(hybridMcl, /getWorkerTicketing\([\s\S]*options/);
-  assert.match(hybridMcl, /parentSignal\?\.addEventListener/);
+  assert.match(hybridMcl, /HKCinemaApiClient\?\.get/);
   assert.match(hybridMcl, /options\?\.signal\?\.aborted/);
   assert.match(fixture, /phase7aLanguageFilter/);
   for (const adapter of [browserMcl, workerMcl]) {
@@ -410,5 +415,5 @@ test("Phase 7A comparison contract links MCL general sessions and dynamic facets
   }
   assert.match(browserMcl, /mcl-webapi-ticketing:\$\{movieSetId\}:\$\{date \|\| "default"\}:v5/);
   assert.match(browserMcl, /if \(enrichment\.metadataComplete && !signal\?\.aborted\)/);
-  assert.match(workerIndex, /result\.metadataComplete[\s\S]*public, max-age=60[\s\S]*no-store/);
+  assert.match(workerIndex, /routeRequest/);
 });

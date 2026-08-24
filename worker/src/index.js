@@ -1,340 +1,74 @@
-import {
-  getBroadwayMovies,
-  getBroadwayUpcoming
-} from "./providers/broadway.js";
+import { json, routeRequest } from "./router.js";
 
-import {
-  getBroadwayMovieShows
-} from "./providers/broadway-shows.js";
+function requestId(request) {
+  return request.headers.get("cf-ray") || crypto.randomUUID();
+}
 
-import {
-  getBroadwaySeatMap
-} from "./providers/broadway-seats.js";
-
-import {
-  getMCLTicketing
-} from "./providers/mcl-ticketing.js";
-
-import {
-  getMCLSeatMap
-} from "./providers/mcl-seats.js";
-
-import {
-  providerHealthMap
-} from "./provider-manifest.js";
-
-const HEALTH_SCHEMA_VERSION = 1;
-const LEGACY_HEALTH_PHASE = "6G";
-
-const json = (data, status = 200, extraHeaders = {}) =>
-  new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      ...extraHeaders
-    }
+function logRequest(level, fields) {
+  const message = JSON.stringify({
+    message: "request_complete",
+    ...fields
   });
+  if (level === "error") console.error(message);
+  else if (level === "warn") console.warn(message);
+  else console.log(message);
+}
 
-const finiteNumberOrNull = value => {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
-const textOrNull = value => {
-  const text = typeof value === "string" ? value.trim() : "";
-  return text || null;
-};
-
-const deploymentMetadata = env => ({
-  versionId: textOrNull(env?.CF_VERSION_METADATA?.id),
-  versionTag: textOrNull(env?.CF_VERSION_METADATA?.tag),
-  createdAt: textOrNull(env?.CF_VERSION_METADATA?.timestamp)
-});
+function addTelemetryHeaders(response, id, durationMs) {
+  const decorated = new Response(response.body, response);
+  decorated.headers.set("x-request-id", id);
+  decorated.headers.set("server-timing", `worker;dur=${durationMs}`);
+  decorated.headers.set(
+    "access-control-expose-headers",
+    "x-request-id, server-timing"
+  );
+  return decorated;
+}
 
 export default {
-  async fetch(request, env = {}) {
+  async fetch(request, env = {}, ctx = null) {
+    const startedAt = Date.now();
+    const id = requestId(request);
     const url = new URL(request.url);
-
-    if (url.pathname === "/health") {
-      return json({
-        ok: true,
-        service: "hk-cinema-api",
-        schemaVersion: HEALTH_SCHEMA_VERSION,
-        phase: LEGACY_HEALTH_PHASE,
-        status: "operational",
-        providers: providerHealthMap(),
-        deployment: deploymentMetadata(env),
-        freshness: {
-          catalogueFallbackMaxAgeSeconds: 86400,
-          comparisonFreshSeconds: 900,
-          comparisonStaleSeconds: 7200
-        },
-        time: new Date().toISOString()
-      }, 200, { "cache-control": "no-store" });
-    }
-
-    if (url.pathname === "/api/broadway/movies") {
-      try {
-        const result = await getBroadwayMovies();
-        return json({
-          ok: true,
-          data: result.movies,
-          meta: {
-            provider: "broadway",
-            count: result.movies.length,
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "public, max-age=300" });
-      } catch (error) {
-        return json({
-          ok: false,
-          error: {
-            code: "BROADWAY_PARSE_ERROR",
-            message: error instanceof Error ? error.message : String(error)
-          }
-        }, 502);
-      }
-    }
-
-    if (url.pathname === "/api/broadway/upcoming") {
-      try {
-        const result = await getBroadwayUpcoming();
-        return json({
-          ok: true,
-          data: result.movies,
-          meta: {
-            provider: "broadway",
-            type: "coming-soon",
-            count: result.movies.length,
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "public, max-age=1800" });
-      } catch (error) {
-        return json({
-          ok: false,
-          error: {
-            code: "BROADWAY_UPCOMING_PARSE_ERROR",
-            message: error instanceof Error ? error.message : String(error)
-          }
-        }, 502);
-      }
-    }
-
-    const showMatch = url.pathname.match(
-      /^\/api\/broadway\/movies\/([^/]+)\/shows$/
-    );
-
-    if (showMatch) {
-      const movieId = decodeURIComponent(showMatch[1]);
-      const date = url.searchParams.get("date");
-
-      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_DATE",
-            message: "date must use YYYY-MM-DD"
-          }
-        }, 400);
-      }
-
-      try {
-        const result = await getBroadwayMovieShows(movieId, date);
-
-        if (!result) {
-          return json({
-            ok: false,
-            error: {
-              code: "MOVIE_NOT_FOUND",
-              message: "Broadway movie not found"
-            }
-          }, 404);
+    try {
+      const response = await routeRequest(request, env, ctx);
+      const durationMs = Date.now() - startedAt;
+      logRequest(
+        response.status >= 500 ? "error" : response.status >= 400 ? "warn" : "info",
+        {
+          requestId: id,
+          method: request.method,
+          path: url.pathname,
+          routeOwner: "worker-router",
+          status: response.status,
+          durationMs,
+          colo: request.cf?.colo || null
         }
-
-        return json({
-          ok: true,
-          data: {
-            movie: result.movie,
-            availableDates: result.availableDates,
-            selectedDate: result.selectedDate,
-            sessions: result.sessions
-          },
-          meta: {
-            provider: "broadway",
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "public, max-age=60" });
-      } catch (error) {
-        return json({
+      );
+      return addTelemetryHeaders(response, id, durationMs);
+    } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      logRequest("error", {
+        requestId: id,
+        method: request.method,
+        path: url.pathname,
+        routeOwner: "worker-router",
+        status: 500,
+        durationMs,
+        colo: request.cf?.colo || null,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return addTelemetryHeaders(
+        json({
           ok: false,
           error: {
-            code: "BROADWAY_SHOWS_PARSE_ERROR",
+            code: "UNHANDLED_WORKER_ERROR",
             message: error instanceof Error ? error.message : String(error)
           }
-        }, 502);
-      }
+        }, 500),
+        id,
+        durationMs
+      );
     }
-
-    const seatMatch = url.pathname.match(
-      /^\/api\/broadway\/shows\/([^/]+)\/seats$/
-    );
-
-    if (seatMatch) {
-      const showId = decodeURIComponent(seatMatch[1]);
-
-      try {
-        const result = await getBroadwaySeatMap(showId);
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            provider: "broadway",
-            showId: result.showId,
-            updatedAt: result.updatedAt
-          }
-        }, 200, { "cache-control": "public, max-age=30" });
-      } catch (error) {
-        return json({
-          ok: false,
-          error: {
-            code: "BROADWAY_SEATMAP_PARSE_ERROR",
-            message: error instanceof Error ? error.message : String(error)
-          }
-        }, 502);
-      }
-    }
-
-    const mclSeatMatch = url.pathname.match(
-      /^\/api\/mcl\/shows\/([^/]+)\/seats$/
-    );
-
-    if (mclSeatMatch) {
-      const sessionId = decodeURIComponent(mclSeatMatch[1]);
-      const cinemaCode = url.searchParams.get("cinemaCode");
-      const summaryOnly = url.searchParams.get("summary") === "1";
-
-      if (!cinemaCode || !/^\d{1,4}$/.test(cinemaCode)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_MCL_CINEMA_CODE",
-            message: "cinemaCode must be numeric"
-          }
-        }, 400);
-      }
-
-      try {
-        const result = await getMCLSeatMap(cinemaCode, sessionId);
-        const data = summaryOnly
-          ? {
-              provider: "mcl",
-              cinemaCode: result.cinemaCode,
-              sessionId: result.sessionId,
-              counts: result.counts,
-              layoutVersion: result.layoutVersion,
-              source: {
-                provider: result.source?.provider || "mcl",
-                parser: result.source?.parser || null,
-                updatedAt: result.source?.updatedAt || new Date().toISOString()
-              }
-            }
-          : result;
-
-        return json({
-          ok: true,
-          data,
-          meta: {
-            provider: "mcl",
-            cinemaCode: String(cinemaCode),
-            sessionId: String(sessionId),
-            summaryOnly,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, { "cache-control": "public, max-age=30" });
-      } catch (error) {
-        return json({
-          ok: false,
-          error: {
-            code: "MCL_SEATMAP_ERROR",
-            message: error instanceof Error ? error.message : String(error)
-          }
-        }, 502);
-      }
-    }
-
-    if (url.pathname === "/api/mcl/ticketing") {
-      const movieSetId = url.searchParams.get("movieSetId");
-      const date = url.searchParams.get("date");
-
-      if (!movieSetId || !/^\d+$/.test(movieSetId)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_MCL_MOVIE_ID",
-            message: "movieSetId must be numeric"
-          }
-        }, 400);
-      }
-
-      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return json({
-          ok: false,
-          error: {
-            code: "INVALID_DATE",
-            message: "date must use YYYY-MM-DD"
-          }
-        }, 400);
-      }
-
-      try {
-        const result = await getMCLTicketing(movieSetId, date);
-        return json({
-          ok: true,
-          data: result,
-          meta: {
-            provider: "mcl",
-            movieSetId: String(movieSetId),
-            source: result.source,
-            updatedAt: new Date().toISOString()
-          }
-        }, 200, {
-          "cache-control": result.metadataComplete
-            ? "public, max-age=60"
-            : "no-store"
-        });
-      } catch (error) {
-        const httpStatus = Number(error?.httpStatus) === 504 ? 504 : 502;
-        const upstreamStatus = finiteNumberOrNull(error?.upstreamStatus);
-        const elapsedMs = finiteNumberOrNull(error?.elapsedMs);
-
-        return json({
-          ok: false,
-          error: {
-            code: "MCL_TICKETING_ERROR",
-            category: error?.category || "upstream_error",
-            causeCode: error?.causeCode || "MCL_UPSTREAM_ERROR",
-            message: error instanceof Error ? error.message : String(error),
-            upstreamStatus,
-            elapsedMs
-          }
-        }, httpStatus, { "cache-control": "no-store" });
-      }
-    }
-
-    return json({
-      ok: false,
-      error: {
-        code: "NOT_FOUND",
-        message: "Endpoint not found"
-      }
-    }, 404);
   }
 };

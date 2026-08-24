@@ -25,7 +25,8 @@ test("M7P1A retains the generic provider extension points required by a fresh Ci
   ]);
 
   assert.match(comparison, /HKCinemaProviders\?\.\[provider\]\?\.comparison/);
-  assert.match(comparisonCache, /HKCinemaProviders\?\.\[provider\]\?\.comparisonCache/);
+  assert.match(comparisonCache, /registeredProvider\(provider\)/);
+  assert.match(comparisonCache, /async function getWorkerShows\(/);
   assert.match(viewModels, /HKCinemaProviders\?\.\[providerId\]\?\.seatMapRequest/);
   assert.match(viewModels, /HKCinemaProviders\?\.\[info\.id\]\?\.viewModels/);
 });

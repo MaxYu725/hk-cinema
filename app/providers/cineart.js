@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const CACHE_KEY = "hkcinema:cineart-catalogue:v2";
   const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
   const REQUEST_TIMEOUT_MS = 8000;
@@ -61,45 +60,25 @@
   }
 
   async function refreshCatalogue() {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const result = await window.HKCinemaApiClient?.get?.("/api/cineart/catalogue", {
+      timeoutMs: REQUEST_TIMEOUT_MS
+    });
+    if (!result || !validCatalogue(result.data)) throw new Error("CineArt Worker response is invalid");
 
-    try {
-      const response = await fetch(`${API_BASE}/api/cineart/catalogue`, {
-        method: "GET",
-        cache: "no-store",
-        signal: controller.signal,
-        headers: { Accept: "application/json" }
-      });
-
-      let result = null;
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error(`CineArt HTTP ${response.status}`);
+    const catalogue = {
+      ...result.data,
+      meta: {
+        ...(result.data.meta || {}),
+        provider: "cineart",
+        transport: "worker-next-flight",
+        cacheState: result.meta?.cacheState || result.data.meta?.cacheState || "network",
+        stale: result.meta?.stale === true || result.data.meta?.stale === true,
+        updatedAt: result.meta?.updatedAt || result.data.meta?.updatedAt || new Date().toISOString()
       }
+    };
 
-      if (!response.ok || result?.ok !== true || !validCatalogue(result?.data)) {
-        throw new Error(result?.error?.message || `CineArt HTTP ${response.status}`);
-      }
-
-      const catalogue = {
-        ...result.data,
-        meta: {
-          ...(result.data.meta || {}),
-          provider: "cineart",
-          transport: "worker-next-flight",
-          cacheState: result.meta?.cacheState || result.data.meta?.cacheState || "network",
-          stale: result.meta?.stale === true || result.data.meta?.stale === true,
-          updatedAt: result.meta?.updatedAt || result.data.meta?.updatedAt || new Date().toISOString()
-        }
-      };
-
-      saveCachedCatalogue(catalogue);
-      return catalogue;
-    } finally {
-      clearTimeout(timer);
-    }
+    saveCachedCatalogue(catalogue);
+    return catalogue;
   }
 
   async function getCatalogue() {
@@ -405,7 +384,7 @@
     viewModels: Object.freeze({
       seatMap: seatMapViewModel
     }),
-    apiBase: API_BASE,
+    apiBase: window.HKCinemaApiClient?.origin || null,
     cacheMaxAgeMs: CACHE_MAX_AGE_MS
   };
 

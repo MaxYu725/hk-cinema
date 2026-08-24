@@ -79,6 +79,7 @@ test("M7R6 comparison cache allocates and prefetches a registered fourth provide
     Request,
     Response,
     URL,
+    URLSearchParams,
     console,
     document: basicDocument(),
     setTimeout,
@@ -86,6 +87,9 @@ test("M7R6 comparison cache allocates and prefetches a registered fourth provide
     window
   });
 
+  vm.runInContext(await read("app/api-client.js"), context, {
+    filename: "api-client.js"
+  });
   vm.runInContext(await read("app/provider-compare-main-cache-v3.js"), context, {
     filename: "provider-compare-main-cache-v3.js"
   });
@@ -225,7 +229,7 @@ test("M7R6 shared owners contain no old three-provider universe/event gates", as
   assert.doesNotMatch(prefetch, /broadwayDates|mclDates|emperorDates|broadwayId|mclId|emperorId/);
   assert.doesNotMatch(resilience, /const\s+PROVIDERS\s*=\s*\[\s*\{\s*key:\s*["']broadway/);
   assert.match(cache, /prefetchProvider/);
-  assert.match(cache, /\/api\\\/\(\[\^\/\]\+\)\\\/movies/);
+  assert.match(cache, /`\/api\/\$\{key\}\/movies\/\$\{encodeURIComponent\(id\)\}\/shows`/);
   assert.doesNotMatch(metro, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);
   assert.match(metro, /hkcinema:provider-catalogue/);
   assert.doesNotMatch(`${domain}\n${renderer}`, /hkcinema:mcl-catalogue|hkcinema:emperor-catalogue/);

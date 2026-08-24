@@ -181,8 +181,8 @@ test("M7P1B probe is bounded and identifies the CineArt site without cookies or 
 test("M7P1B checkpoint records Worker-only production boundary before M7P1C", async () => {
   const [checkpoint, workerIndex, topRouter] = await Promise.all([
     source("docs/checkpoints/m7p1b-cineart-worker-adapter.md"),
-    source("worker/src/index.js"),
-    source("worker/src/index-emperor-seat.js")
+    source("worker/src/router.js"),
+    source("worker/src/router.js")
   ]);
 
   assert.match(checkpoint, /browser `app\/provider-registry\.js` remains Broadway\/MCL\/Emperor only/);

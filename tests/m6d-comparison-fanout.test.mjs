@@ -36,6 +36,7 @@ function mainCacheContext({ nativeFetch, mclGetTicketing = null } = {}) {
       window,
       document,
       URL,
+      URLSearchParams,
       Request,
       Response,
       AbortController,
@@ -75,22 +76,21 @@ test("initial Broadway showtime response aliases its resolved date and avoids a 
   };
 
   const { window, context } = mainCacheContext({ nativeFetch });
+  vm.runInContext(await source("app/api-client.js"), context, {
+    filename: "api-client.js"
+  });
   vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
     filename: "provider-compare-main-cache-v3.js"
   });
 
-  const initialUrl = "https://hk-cinema-api.max-yu-jp.workers.dev/api/broadway/movies/1/shows";
-  const dateUrl = `${initialUrl}?date=2026-08-12`;
+  const cache = window.HKCinemaProviderCompareMainCache;
+  const first = await cache.getWorkerShows("broadway", "1");
+  assert.equal(first.data.selectedDate, "2026-08-12");
 
-  const first = await window.fetch(initialUrl, { cache: "no-store" });
-  await first.text();
-  await new Promise(resolve => setTimeout(resolve, 0));
-
-  const second = await window.fetch(dateUrl, { cache: "no-store" });
-  const body = await second.json();
+  const second = await cache.getWorkerShows("broadway", "1", "2026-08-12");
 
   assert.equal(nativeCalls, 1);
-  assert.equal(body.data.selectedDate, "2026-08-12");
+  assert.equal(second.data.selectedDate, "2026-08-12");
 });
 
 test("HTTP 200 Worker application errors are evicted instead of being retained for the showtime TTL", async () => {
@@ -114,22 +114,25 @@ test("HTTP 200 Worker application errors are evicted instead of being retained f
   };
 
   const { window, context } = mainCacheContext({ nativeFetch });
+  vm.runInContext(await source("app/api-client.js"), context, {
+    filename: "api-client.js"
+  });
   vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
     filename: "provider-compare-main-cache-v3.js"
   });
 
-  const url = "https://hk-cinema-api.max-yu-jp.workers.dev/api/emperor/movies/9/shows";
-  const failed = await window.fetch(url, { cache: "no-store" });
-  assert.equal((await failed.json()).ok, false);
-  await new Promise(resolve => setTimeout(resolve, 0));
+  const cache = window.HKCinemaProviderCompareMainCache;
+  await assert.rejects(
+    cache.getWorkerShows("emperor", "9"),
+    error => error?.message === "temporary upstream failure"
+  );
 
-  const recovered = await window.fetch(url, { cache: "no-store" });
-  assert.equal((await recovered.json()).ok, true);
+  const recovered = await cache.getWorkerShows("emperor", "9");
+  assert.equal(recovered.ok, true);
   assert.equal(nativeCalls, 2, "retry after an application error must reach the Worker again");
-  await new Promise(resolve => setTimeout(resolve, 0));
 
-  const cached = await window.fetch(url, { cache: "no-store" });
-  assert.equal((await cached.json()).ok, true);
+  const cached = await cache.getWorkerShows("emperor", "9");
+  assert.equal(cached.ok, true);
   assert.equal(nativeCalls, 2, "successful application payload should still reuse the showtime cache");
 });
 
@@ -148,6 +151,9 @@ test("MCL main comparison cache forwards AbortSignal and aliases complete initia
   };
 
   const { window, context } = mainCacheContext({ mclGetTicketing: original });
+  vm.runInContext(await source("app/api-client.js"), context, {
+    filename: "api-client.js"
+  });
   vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
     filename: "provider-compare-main-cache-v3.js"
   });
@@ -195,6 +201,9 @@ test("incomplete initial MCL metadata is not aliased over the explicit-date retr
   };
 
   const { window, context } = mainCacheContext({ mclGetTicketing: original });
+  vm.runInContext(await source("app/api-client.js"), context, {
+    filename: "api-client.js"
+  });
   vm.runInContext(await source("app/provider-compare-main-cache-v3.js"), context, {
     filename: "provider-compare-main-cache-v3.js"
   });

@@ -175,7 +175,7 @@ test('Phase 10R2D classifies an aborted probe as timeout even when fetch rejects
 test('Phase 10R2B routes are no-store, bounded, and separate from normal app loading', async () => {
   const [probeSource, workerSource] = await Promise.all([
     read('worker/src/provider-probe.js'),
-    read('worker/src/index-emperor-seat.js')
+    read('worker/src/router.js')
   ]);
 
   assert.match(probeSource, /DEFAULT_TIMEOUT_MS = 4500/);
@@ -183,8 +183,8 @@ test('Phase 10R2B routes are no-store, bounded, and separate from normal app loa
   assert.match(probeSource, /controller\.signal\.aborted/);
   assert.match(probeSource, /Promise\.race/);
   assert.match(workerSource, /\/api\/providers\/probe/);
-  assert.match(workerSource, /cache-control": "no-store"/);
-  assert.match(workerSource, /return emperorWorker\.fetch\(request, env, ctx\)/);
+  assert.match(workerSource, /headers\.set\("cache-control", PUBLIC_CACHE_CONTROL\)/);
+  assert.match(workerSource, /export async function routeRequest\(request, env = \{\}, ctx = null\)/);
 
   const appRoot = new URL('../app/', import.meta.url);
   const files = await readdir(appRoot, { recursive: true });

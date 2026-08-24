@@ -57,7 +57,7 @@ test("C3 home success-path provider fan-out remains six bounded catalogue reques
   assert.equal(occurrences(emperorStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
   assert.equal(occurrences(broadwayStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
   assert.equal(occurrences(cineartStatusLoad, /provider\.refreshCatalogue\(\)/g), 1);
-  assert.equal(occurrences(cineartRefresh, /await fetch\(/g), 1);
+  assert.equal(occurrences(cineartRefresh, /HKCinemaApiClient\?\.get\?\.\(/g), 1);
   assert.match(broadwayStatusLoad, /if \(refreshInFlight\)/);
   assert.match(mclStatusLoad, /if \(refreshInFlight\)/);
   assert.match(emperorStatusLoad, /if \(refreshInFlight\)/);

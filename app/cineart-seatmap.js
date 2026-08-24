@@ -1,5 +1,4 @@
 (() => {
-  const API_BASE = "https://hk-cinema-api.max-yu-jp.workers.dev";
   const shared = window.HKCinemaSeatMapShared;
 
   function triggerFromEvent(event) {
@@ -34,16 +33,11 @@
   }
 
   async function fetchSeatMap(showId, movieId, signal) {
-    const query = movieId ? `?movieSourceId=${encodeURIComponent(movieId)}` : "";
-    const response = await fetch(
-      `${API_BASE}/api/cineart/shows/${encodeURIComponent(showId)}/seats${query}`,
-      { cache: "no-store", signal, headers: { Accept: "application/json" } }
+    const result = await window.HKCinemaApiClient?.get?.(
+      `/api/cineart/shows/${encodeURIComponent(showId)}/seats`,
+      { query: { movieSourceId: movieId }, signal }
     );
-    let result = null;
-    try { result = await response.json(); } catch { throw new Error(`CineArt 座位圖 HTTP ${response.status}`); }
-    if (!response.ok || result?.ok !== true || !result?.data) {
-      throw new Error(result?.error?.message || `CineArt 座位圖 HTTP ${response.status}`);
-    }
+    if (!result?.data) throw new Error("CineArt 座位圖回應無效");
     return result.data;
   }
 

@@ -169,13 +169,13 @@ test("M7P1G CineArt launcher is delegated only and uses the shared seat-map owne
 
 test("M7P1G Worker route is GET-only and keeps the global health phase untouched", async () => {
   const [router, manifest] = await Promise.all([
-    source("worker/src/index-emperor-seat.js"),
+    source("worker/src/router.js"),
     source("worker/src/provider-manifest.js")
   ]);
   assert.match(router, /\/api\\\/cineart\\\/shows/);
   assert.match(router, /phase:\s*"M7P1G"/);
   assert.match(router, /mode:\s*"read-only-seatmap-official-geometry"/);
-  assert.match(router, /CineArt seat map is read-only/);
+  assert.match(router, /if \(request\.method !== "GET"\) return methodNotAllowed\(route\)/);
   assert.match(manifest, /catalogue-showtimes-detailed-price-strict-seats-seatmap-production-readonly/);
 });
 

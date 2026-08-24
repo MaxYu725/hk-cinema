@@ -217,6 +217,7 @@ function createHarness({ fixtureOnly = false } = {}) {
       }
     };
   };
+  window.fetch = fetch;
   const context = vm.createContext({
     AbortController,
     Array,
@@ -235,6 +236,7 @@ function createHarness({ fixtureOnly = false } = {}) {
     Set,
     String,
     URL,
+    URLSearchParams,
     clearTimeout,
     console,
     localStorage: {
@@ -297,7 +299,7 @@ test("M7R5 one fourth-provider fixture crosses catalogue, home aggregate, compar
   assert.equal(match.fixture.sourceId, "fixture-movie-1");
   assert.equal(match.broadway, null);
 
-  await load(context, "app/comparison-store.js", "app/provider-compare-v4.js");
+  await load(context, "app/api-client.js", "app/comparison-store.js", "app/provider-compare-v4.js");
   assert.equal(window.HKCinemaProviderCompare.open(aggregate.id), true);
   await settle();
 
@@ -356,7 +358,7 @@ test("M7R5 comparison bootstrap falls back to Provider Registry, never to a bake
   };
   window.HKCinemaProviderMatches = new Map([[match.id, match]]);
 
-  await load(context, "app/comparison-store.js", "app/provider-compare-v4.js");
+  await load(context, "app/api-client.js", "app/comparison-store.js", "app/provider-compare-v4.js");
   assert.equal(window.HKCinemaProviderCompare.open(match.id), true);
   await settle();
 

@@ -88,7 +88,26 @@ test("M7P1C browser adapter continues to keep catalogue refresh on the catalogue
     festival: [],
     meta: { updatedAt: "2026-08-13T00:00:00.000Z" }
   };
-  const window = {};
+  const window = {
+    HKCinemaApiClient: {
+      async get(path, options = {}) {
+        calls.push({
+          url: new URL(path, "https://hk-cinema-api.max-yu-jp.workers.dev").toString(),
+          options: { method: "GET", ...options }
+        });
+        return {
+          ok: true,
+          data: catalogue,
+          meta: {
+            phase: "M7P1C",
+            cacheState: "network",
+            stale: false,
+            updatedAt: "2026-08-13T00:00:00.000Z"
+          }
+        };
+      }
+    }
+  };
   const context = vm.createContext({
     AbortController,
     Date,
@@ -139,7 +158,7 @@ test("M7P1C shared catalogue publication remains observer-free after later CineA
     source("app/index.html"),
     source("app/cineart-status.js"),
     source("app/providers/cineart.js"),
-    source("worker/src/index-emperor-seat.js"),
+    source("worker/src/router.js"),
     source("docs/checkpoints/m7p1c-cineart-catalogue-production.md")
   ]);
 

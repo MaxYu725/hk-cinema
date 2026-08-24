@@ -88,7 +88,7 @@ test("comparison provider guard no longer enumerates three provider CSS classes"
 });
 
 test("provider probe route rejection copy is derived from the registered provider set", async () => {
-  const worker = await source("worker/src/index-emperor-seat.js");
+  const worker = await source("worker/src/router.js");
   assert.match(worker, /SUPPORTED_PROVIDERS\.join/);
   assert.equal(worker.includes("provider must be broadway, mcl or emperor"), false);
 });

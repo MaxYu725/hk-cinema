@@ -103,7 +103,7 @@ test("shared controls and selected-date centering have neutral owners", async ()
 
 test("the orphan Emperor detail route is gone while showtime routing remains", async () => {
   const [worker, matrix, sw] = await Promise.all([
-    read("worker/src/index-emperor.js"),
+    read("worker/src/router.js"),
     read("docs/provider-matrix.md"),
     read("app/sw.js")
   ]);
@@ -111,7 +111,7 @@ test("the orphan Emperor detail route is gone while showtime routing remains", a
   assert.doesNotMatch(worker, /emperor-detail|getEmperorMovieDetail|\/detail\$/);
   assert.match(worker, /\/shows\$/);
   assert.doesNotMatch(matrix, /\/api\/emperor\/movies\/\{filmUniqueId\}\/detail/);
-  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}c4-1`/);
+  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}c5-1`/);
 });
 
 test("the retired Emperor detail URL now falls through to the API 404 contract", async () => {
