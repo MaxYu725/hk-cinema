@@ -116,6 +116,7 @@
     window.dispatchEvent(
       new CustomEvent("hkcinema:compare-seat-summary", {
         detail: {
+          comparisonSessionId: card.dataset.comparisonSessionId || null,
           provider: "mcl",
           available,
           total: Number.isFinite(total) ? total : null,

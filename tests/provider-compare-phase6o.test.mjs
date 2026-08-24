@@ -23,7 +23,8 @@ test("Phase 6O renders the comparison contract once in the current primary rende
   assert.match(renderer, /class="provider-compare-booking"/);
   assert.doesNotMatch(phase6m, /cloneNode|replaceWith|convertLinkedCard|addBookingAction/);
   assert.match(insights, /function renderActiveFilters\(items\)/);
-  assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
+  assert.match(insights, /hkcinema:comparison-store-change/);
+  assert.doesNotMatch(insights, /new MutationObserver/);
   assert.doesNotMatch(insights, /phase6mOwned/);
 
   for (const seatReader of [seats, broadwaySeats, mclSeats]) {

@@ -1,88 +1,40 @@
 (() => {
   const sharedCore = window.HKCinemaProviderSharedCore || null;
   let scheduled = false;
-  let recommendationKey = 0;
   let jumpTimer = null;
   let clockTimer = null;
 
   const clamp = value => Math.min(1, Math.max(0, value));
   const HK_TIME_ZONE = "Asia/Hong_Kong";
 
-  function money(text) {
-    const match = String(text || "").match(/\$\s*([\d.]+)/);
-    const value = match ? Number(match[1]) : NaN;
-    return Number.isFinite(value) ? value : null;
+  function comparisonStore() {
+    return window.HKCinemaComparisonStore || null;
   }
 
-  function minutes(text) {
-    const match = String(text || "").match(/^(\d{1,2}):(\d{2})/);
-    if (!match) return null;
-    const value = Number(match[1]) * 60 + Number(match[2]);
-    return Number.isFinite(value) ? value : null;
+  function comparisonState() {
+    return comparisonStore()?.getState?.() || { selectedDate: null, sessions: [], filters: {} };
   }
 
-  function reliableSeats(card) {
-    const dataAvailable = Number(card.dataset.seatAvailable);
-    const dataTotal = Number(card.dataset.seatTotal);
-    if (
-      Number.isFinite(dataAvailable) &&
-      Number.isFinite(dataTotal) &&
-      dataTotal > 0 &&
-      dataAvailable >= 0 &&
-      dataAvailable <= dataTotal
-    ) {
-      return {
-        available: dataAvailable,
-        total: dataTotal,
-        ratio: dataAvailable / dataTotal
-      };
-    }
-
-    const text = card.querySelector(".provider-compare-seat")?.textContent || "";
-    const match = text.match(/(\d+)\s*\/\s*(\d+)\s*(?:可選|未售)/);
-    if (!match) return null;
-    const available = Number(match[1]);
-    const total = Number(match[2]);
-    if (
-      !Number.isFinite(available) ||
-      !Number.isFinite(total) ||
-      total <= 0 ||
-      available < 0 ||
-      available > total
-    ) return null;
-
-    return { available, total, ratio: available / total };
-  }
-
-  function providerOf(card) {
-    const detected = sharedCore?.providerFromNode?.(card);
-    const explicit = String(card?.dataset?.provider || "").trim().toLowerCase();
-    const key = detected || sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
+  function providerOf(value) {
+    const sessionId = value?.dataset?.comparisonSessionId;
+    const stored = value?.provider ? value : sessionId ? comparisonState().sessions.find(session => session.id === sessionId) : null;
+    const explicit = String(stored?.provider || "").trim().toLowerCase();
+    const key = sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
     return { key, label: sharedCore?.label?.(key) || key || "院線" };
   }
 
-  function ensureRecommendationKey(card) {
-    if (!card.dataset.recommendationKey) {
-      recommendationKey += 1;
-      card.dataset.recommendationKey = `show-${recommendationKey}`;
-    }
-    return card.dataset.recommendationKey;
-  }
-
-  function item(card, index) {
-    const provider = providerOf(card);
-    const time = card.querySelector(".provider-compare-show-time")?.textContent?.trim() || "--:--";
+  function item(value, index = 0) {
+    const sessionId = value?.dataset?.comparisonSessionId || value?.id || value?.comparisonId;
+    const session = value?.provider
+      ? value
+      : comparisonState().sessions.find(stored => stored.id === sessionId);
+    if (!session) return null;
     return {
-      card,
-      key: ensureRecommendationKey(card),
-      index,
-      provider: provider.key,
-      providerLabel: provider.label,
-      time,
-      timeMinutes: minutes(time),
-      cinema: card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "戲院",
-      price: money(card.querySelector(".provider-compare-show-price")?.textContent),
-      seats: reliableSeats(card)
+      ...session,
+      key: session.id,
+      index: session.index ?? index,
+      timeMinutes: session.timeMinutes,
+      cinema: session.canonicalCinema || session.cinemaName || session.cinema || "戲院"
     };
   }
 
@@ -103,7 +55,7 @@
   }
 
   function selectedDate() {
-    return window.HKCinemaProviderCompare?.getState?.()?.selectedDate || null;
+    return comparisonState().selectedDate || window.HKCinemaProviderCompare?.getState?.()?.selectedDate || null;
   }
 
   function recommendationPool(items, now = new Date()) {
@@ -336,9 +288,11 @@
     const section = timeline?.closest(".provider-compare-timeline-section");
     if (!timeline || !section) return;
 
-    const entries = Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"))
-      .filter(card => !card.hidden)
-      .map(item);
+    const snapshot = comparisonState();
+    const entries = (comparisonStore()?.selectSessions?.({
+      sessions: snapshot.sessions,
+      filters: snapshot.filters
+    }) || snapshot.sessions).map(item).filter(Boolean);
     const model = buildRecommendations(entries);
 
     if (!model.picks.length) {
@@ -348,7 +302,12 @@
     }
 
     clearRecommendationMarks(timeline);
-    model.picks.find(pick => pick.key === "balanced")?.entry?.card?.classList.add("is-balanced-pick");
+    const balancedId = model.picks.find(pick => pick.key === "balanced")?.entry?.id;
+    if (balancedId) {
+      Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"))
+        .find(card => card.dataset.comparisonSessionId === balancedId)
+        ?.classList.add("is-balanced-pick");
+    }
 
     const missingCount = 4 - model.picks.length;
     const note = missingCount
@@ -386,7 +345,7 @@
     const timeline = document.querySelector("#providerCompareContent .provider-compare-timeline");
     if (!timeline || !key) return;
     const target = Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"))
-      .find(card => card.dataset.recommendationKey === key);
+      .find(card => card.dataset.comparisonSessionId === key);
     if (!target || target.hidden) return;
 
     timeline.querySelectorAll(".is-recommendation-jump").forEach(card => card.classList.remove("is-recommendation-jump"));
@@ -403,29 +362,7 @@
   }
 
   function install() {
-    const content = document.querySelector("#providerCompareContent");
-    if (!content) {
-      requestAnimationFrame(install);
-      return;
-    }
-
-    const observer = new MutationObserver(records => {
-      const relevant = records.some(record => {
-        const node = record.target.nodeType === 1 ? record.target : record.target.parentElement;
-        return !node?.closest?.("[data-provider-recommendations], [data-phase8b-recommendation-toggle]");
-      });
-      if (relevant) schedule();
-    });
-
-    observer.observe(content, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["hidden", "data-provider", "data-seat-available", "data-seat-total"]
-    });
-
-    window.addEventListener("hkcinema:compare-seat-summary", schedule);
+    window.addEventListener("hkcinema:comparison-store-change", schedule);
     window.addEventListener("hkcinema:provider-compare-lifecycle", schedule);
     document.addEventListener("click", event => {
       const recommendation = event.target.closest("[data-recommendation-target]");
@@ -439,7 +376,7 @@
   }
 
   window.HKCinemaSmartPicks2 = Object.freeze({
-    version: "8d2-m7r4-1",
+    version: "c4-1",
     buildRecommendations,
     balanced,
     cheapest,
@@ -448,6 +385,9 @@
     hongKongClock,
     providerOf,
     itemForCard: item,
+    selectForState(snapshot = comparisonState()) {
+      return comparisonStore()?.selectSessions?.({ sessions: snapshot.sessions, filters: snapshot.filters }) || snapshot.sessions || [];
+    },
     refresh: schedule
   });
 

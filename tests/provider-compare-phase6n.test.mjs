@@ -26,7 +26,7 @@ test("Phase 6N seat-trigger regression remains closed through the current native
   assert.match(emperorSeats, /refresh: scheduleEnhance/);
 });
 
-test("Phase 6N observer-loop regression remains closed without ownership markers", async () => {
+test("Phase 6N observer-loop regression remains closed through explicit store revisions", async () => {
   const [phase6m, insights] = await Promise.all([
     source("app/provider-compare-phase6m.js"),
     source("app/provider-compare-insights-v4.js")
@@ -34,7 +34,7 @@ test("Phase 6N observer-loop regression remains closed without ownership markers
 
   assert.doesNotMatch(phase6m, /phase6mOwned/);
   assert.match(phase6m, /shortcut\.textContent !== label/);
-  assert.match(insights, /function mutationTouchesTimeline\(record\)/);
-  assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
+  assert.match(insights, /hkcinema:comparison-store-change/);
+  assert.doesNotMatch(insights, /new MutationObserver/);
   assert.doesNotMatch(insights, /isPhase6MOwnedMutation|data-phase6m-owned/);
 });

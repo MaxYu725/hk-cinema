@@ -32,8 +32,19 @@
   });
 
   const uiState = { ...DEFAULT_FILTERS, expanded: false };
-  let observer = null;
   let applying = false;
+
+  function comparisonStore() {
+    return window.HKCinemaComparisonStore || null;
+  }
+
+  function comparisonState() {
+    return comparisonStore()?.getState?.() || {
+      selectedDate: null,
+      sessions: [],
+      filters: { ...DEFAULT_FILTERS }
+    };
+  }
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -58,24 +69,8 @@
     return sharedCore?.registeredProviderId?.(raw) || "all";
   }
 
-  function parseMoney(value) {
-    const match = String(value || "").match(/\$\s*([\d.]+)/);
-    if (!match) return null;
-    const number = Number(match[1]);
-    return Number.isFinite(number) ? number : null;
-  }
-
-  function timeValue(value) {
-    const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
-    return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
-  }
-
   function metadataCore() {
     return window.HKCinemaShowtimeMetadata || null;
-  }
-
-  function metadataValues(card, key) {
-    return String(card?.dataset?.[key] || "unknown").split(",").map(value => value.trim()).filter(Boolean);
   }
 
   function metadataLabel(kind, key) {
@@ -83,24 +78,10 @@
     return metadataCore()?.labels?.[kind]?.[key] || key;
   }
 
-  function parseSeats(card) {
-    const available = Number(card?.dataset?.seatAvailable);
-    const total = Number(card?.dataset?.seatTotal);
-    if (Number.isFinite(available) && Number.isFinite(total) && total > 0 && available >= 0 && available <= total) {
-      return { available, total, ratio: available / total };
-    }
-    const text = card.querySelector(".provider-compare-seat")?.textContent?.trim() || "";
-    const match = text.match(/^(\d+)\s*\/\s*(\d+)\s*(?:個)?(?:可選|未售)/);
-    if (!match) return null;
-    const parsedAvailable = Number(match[1]);
-    const parsedTotal = Number(match[2]);
-    if (!Number.isFinite(parsedAvailable) || !Number.isFinite(parsedTotal) || parsedTotal <= 0 || parsedAvailable < 0 || parsedAvailable > parsedTotal) return null;
-    return { available: parsedAvailable, total: parsedTotal, ratio: parsedAvailable / parsedTotal };
-  }
-
   function detectProvider(card) {
-    const detected = sharedCore?.providerFromNode?.(card);
-    if (detected) return detected;
+    const sessionId = card?.dataset?.comparisonSessionId;
+    const session = comparisonState().sessions.find(item => item.id === sessionId);
+    if (session?.provider) return session.provider;
     const explicit = String(card?.dataset?.provider || "").trim().toLowerCase();
     return sharedCore?.registeredProviderId?.(explicit) || explicit || "unknown";
   }
@@ -113,50 +94,10 @@
     ));
   }
 
-  function cinemaKey(provider, cinemaMeta, cinema) {
-    const registry = window.HKCinemaCinemaRegistry;
-    const canonical = cinemaMeta?.canonical || cinema || "未知戲院";
-    const normalized = registry?.normalize?.(canonical) || String(canonical).normalize("NFKC").toLowerCase().trim();
-    return `${provider}:${normalized}`;
-  }
-
   function parseCard(card, index) {
-    const provider = detectProvider(card);
-    const label = providerLabel(provider);
-    const time = card.querySelector(".provider-compare-show-time")?.textContent?.trim() || "--:--";
-    const cinema = card.querySelector(".provider-compare-show-topline strong")?.textContent?.trim() || "戲院";
-    const price = parseMoney(card.querySelector(".provider-compare-show-price")?.textContent);
-    const seats = parseSeats(card);
-    const registry = window.HKCinemaCinemaRegistry;
-    const cinemaMeta = registry?.resolve?.(provider, cinema) || { provider, canonical: cinema, region: "unknown", district: null };
-    const key = cinemaKey(provider, cinemaMeta, cinema);
-
-    card.dataset.cinemaRegion = cinemaMeta.region || "unknown";
-    card.dataset.cinemaKey = key;
-    if (cinemaMeta.district) card.dataset.cinemaDistrict = cinemaMeta.district;
-    else delete card.dataset.cinemaDistrict;
-
-    return {
-      card,
-      index,
-      provider,
-      providerLabel: label,
-      time,
-      timeValue: timeValue(time),
-      cinema,
-      cinemaMeta,
-      cinemaKey: key,
-      canonicalCinema: cinemaMeta.canonical || cinema,
-      region: cinemaMeta.region || "unknown",
-      district: cinemaMeta.district || null,
-      price,
-      languages: metadataValues(card, "showLanguage"),
-      subtitles: metadataValues(card, "showSubtitle"),
-      formats: metadataValues(card, "showFormat"),
-      seats,
-      seatAvailable: seats?.available ?? null,
-      seatRatio: seats?.ratio ?? null
-    };
+    const sessionId = card?.dataset?.comparisonSessionId;
+    const session = comparisonState().sessions.find(item => item.id === sessionId);
+    return session ? { ...session, card, index: session.index ?? index } : null;
   }
 
   function hongKongNow() {
@@ -177,24 +118,11 @@
   }
 
   function selectedDate() {
-    return window.HKCinemaProviderCompare?.getState?.()?.selectedDate || null;
+    return comparisonState().selectedDate;
   }
 
   function next2hAvailable() {
     return selectedDate() === hongKongNow().date;
-  }
-
-  function matchesPeriod(item) {
-    if (!Number.isFinite(item.timeValue)) return false;
-    if (uiState.period === "morning") return item.timeValue < 12 * 60;
-    if (uiState.period === "afternoon") return item.timeValue >= 12 * 60 && item.timeValue < 18 * 60;
-    if (uiState.period === "evening") return item.timeValue >= 18 * 60;
-    if (uiState.period === "next2h") {
-      if (!next2hAvailable()) return false;
-      const now = hongKongNow().minutes;
-      return item.timeValue >= now && item.timeValue <= now + 120;
-    }
-    return true;
   }
 
   function priceLimit() {
@@ -202,32 +130,13 @@
     return match ? Number(match[1]) : null;
   }
 
-  function matchesPrice(item) {
-    const limit = priceLimit();
-    if (!Number.isFinite(limit)) return true;
-    return Number.isFinite(item.price) && item.price <= limit;
-  }
-
-  function matchesSeats(item) {
-    if (uiState.seats === "known") return Boolean(item.seats);
-    if (uiState.seats === "available") return Boolean(item.seats && item.seats.available > 0);
-    if (uiState.seats === "roomy") return Boolean(item.seats && item.seats.available > 0 && item.seats.ratio >= 0.5);
-    return true;
-  }
-
   function matchesFilters(item, ignore = new Set()) {
-    return (
-      (ignore.has("provider") || uiState.provider === "all" || item.provider === uiState.provider) &&
-      (ignore.has("language") || uiState.language === "all" || item.languages.includes(uiState.language)) &&
-      (ignore.has("subtitle") || uiState.subtitle === "all" || item.subtitles.includes(uiState.subtitle)) &&
-      (ignore.has("format") || uiState.format === "all" || item.formats.includes(uiState.format)) &&
-      (ignore.has("region") || uiState.region === "all" || item.region === uiState.region) &&
-      (ignore.has("district") || uiState.district === "all" || item.district === uiState.district) &&
-      (ignore.has("cinema") || uiState.cinema === "all" || item.cinemaKey === uiState.cinema) &&
-      (ignore.has("period") || matchesPeriod(item)) &&
-      (ignore.has("price") || matchesPrice(item)) &&
-      (ignore.has("seats") || matchesSeats(item))
-    );
+    return comparisonStore()?.matchesSession?.(
+      item,
+      uiState,
+      { selectedDate: selectedDate(), clock: hongKongNow() },
+      ignore
+    ) ?? true;
   }
 
   function metadataOptions(items, kind) {
@@ -494,27 +403,24 @@
   }
 
   function applyFilterAndSort(timeline, items) {
-    const ordered = items.slice().sort((a, b) => {
-      if (uiState.sort === "price") {
-        const ap = Number.isFinite(a.price) ? a.price : Number.MAX_SAFE_INTEGER;
-        const bp = Number.isFinite(b.price) ? b.price : Number.MAX_SAFE_INTEGER;
-        return ap - bp || a.timeValue - b.timeValue || a.index - b.index;
-      }
-      if (uiState.sort === "seats") {
-        const ah = Number.isFinite(a.seatRatio);
-        const bh = Number.isFinite(b.seatRatio);
-        if (ah !== bh) return ah ? -1 : 1;
-        if (ah && bh) return b.seatRatio - a.seatRatio || b.seatAvailable - a.seatAvailable || a.timeValue - b.timeValue || a.index - b.index;
-      }
-      return a.timeValue - b.timeValue || a.index - b.index;
-    });
-
+    const store = comparisonStore();
+    const ordered = store?.selectSessions?.({
+      sessions: items,
+      filters: { ...DEFAULT_FILTERS, sort: uiState.sort }
+    }) || items.slice();
+    const selectedIds = new Set((store?.selectSessions?.({ sessions: items, filters: uiState }) || ordered).map(item => item.id));
+    const cards = new Map(Array.from(timeline.querySelectorAll(":scope > .provider-compare-show")).map(card => [
+      card.dataset.comparisonSessionId,
+      card
+    ]));
     for (const item of ordered) {
-      item.card.hidden = !matchesFilters(item);
-      timeline.appendChild(item.card);
+      const card = cards.get(item.id);
+      if (!card) continue;
+      card.hidden = !selectedIds.has(item.id);
+      timeline.appendChild(card);
     }
 
-    const visibleItems = ordered.filter(item => !item.card.hidden);
+    const visibleItems = ordered.filter(item => selectedIds.has(item.id));
     const section = timeline.closest(".provider-compare-timeline-section");
     let result = section?.querySelector("[data-insight-result]");
     if (!result && section) {
@@ -538,10 +444,11 @@
     if (!timeline || !section) return;
 
     applying = true;
-    observer?.disconnect();
     try {
-      const cards = Array.from(timeline.querySelectorAll(":scope > .provider-compare-show"));
-      const items = cards.map(parseCard);
+      const snapshot = comparisonState();
+      Object.assign(uiState, snapshot.filters || DEFAULT_FILTERS);
+      const items = snapshot.sessions || [];
+      const before = JSON.stringify(Object.fromEntries(Object.keys(DEFAULT_FILTERS).map(key => [key, uiState[key]])));
       ensureProviderSelection(items);
       ensureMetadataSelections(items);
       ensureDistrictSelection(items);
@@ -549,6 +456,8 @@
       ensureSeatSelection(items);
       ensureCinemaSelection(items);
       if (uiState.period === "next2h" && !next2hAvailable()) uiState.period = "all";
+      const nextFilters = Object.fromEntries(Object.keys(DEFAULT_FILTERS).map(key => [key, uiState[key]]));
+      if (JSON.stringify(nextFilters) !== before) comparisonStore()?.setFilters?.(nextFilters, "filters-normalized");
       section.querySelector("[data-provider-insights]")?.remove();
       section.querySelector("[data-insight-result]")?.remove();
       const heading = section.querySelector(".provider-compare-section-heading");
@@ -556,59 +465,33 @@
       applyFilterAndSort(timeline, items);
     } finally {
       applying = false;
-      if (content && observer) {
-        observer.observe(content, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-          attributes: true,
-          attributeFilter: ["data-provider", "data-seat-available", "data-seat-total"]
-        });
-      }
     }
   }
 
-  function mutationTouchesTimeline(record) {
-    const target = record.target?.nodeType === Node.ELEMENT_NODE ? record.target : record.target?.parentElement;
-    if (record.type === "attributes" || record.type === "characterData") return Boolean(target?.closest?.(".provider-compare-show"));
-    if (record.type !== "childList") return false;
-    if (target?.matches?.(".provider-compare-timeline") || target?.closest?.(".provider-compare-timeline")) return true;
-    return [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.ELEMENT_NODE && (
-      node.matches?.(".provider-compare-timeline, .provider-compare-show") || node.querySelector?.(".provider-compare-timeline, .provider-compare-show")
-    ));
-  }
-
-  function installObserver() {
-    const content = document.querySelector("#providerCompareContent");
-    if (!content) {
-      requestAnimationFrame(installObserver);
-      return;
-    }
-    observer = new MutationObserver(records => {
-      if (applying || !records.some(mutationTouchesTimeline)) return;
-      queueMicrotask(enhance);
-    });
-    observer.observe(content, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["data-provider", "data-seat-available", "data-seat-total"]
-    });
+  function install() {
+    window.addEventListener("hkcinema:comparison-store-change", () => queueMicrotask(enhance));
     enhance();
+  }
+
+  function commitFilters(patch, reason = "filters") {
+    const filters = comparisonStore()?.setFilters?.(patch, reason) || { ...uiState, ...patch };
+    Object.assign(uiState, filters);
+    enhance();
+    return filters;
   }
 
   function clearFilter(key) {
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_FILTERS, key)) return;
     uiState[key] = DEFAULT_FILTERS[key];
     if (["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats"].includes(key)) uiState.cinema = "all";
+    commitFilters(Object.fromEntries(Object.keys(DEFAULT_FILTERS).map(filterKey => [filterKey, uiState[filterKey]])), "filter-cleared");
   }
 
   window.HKCinemaProviderCompareFilters = {
-    version: "8c1-m7r4-1",
+    version: "c4-1",
     setCinema(value) {
       uiState.cinema = String(value || "all");
-      enhance();
+      commitFilters({ cinema: uiState.cinema });
       return uiState.cinema;
     },
     setFilter(key, value) {
@@ -617,18 +500,28 @@
         ? normalizeProviderFilter(value)
         : String(value || DEFAULT_FILTERS[key]);
       if (["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats"].includes(key)) uiState.cinema = "all";
-      enhance();
+      commitFilters({ [key]: uiState[key], cinema: uiState.cinema });
       return uiState[key];
+    },
+    setFilters(filters) {
+      const next = { ...uiState, ...(filters || {}) };
+      if (Object.prototype.hasOwnProperty.call(next, "provider")) next.provider = normalizeProviderFilter(next.provider);
+      commitFilters(Object.fromEntries(Object.keys(DEFAULT_FILTERS).map(key => [key, next[key] ?? DEFAULT_FILTERS[key]])));
+      return { ...uiState };
     },
     reset() {
       Object.assign(uiState, DEFAULT_FILTERS);
+      comparisonStore()?.resetFilters?.();
       enhance();
     },
     getState() { return { ...uiState }; },
     refresh() { enhance(); },
     providerForCard: detectProvider,
     providerOptionsFor: providerOptions,
-    parseCardForTest: parseCard
+    parseCardForTest: parseCard,
+    selectForTest(items, filters = uiState) {
+      return comparisonStore()?.selectSessions?.({ sessions: items, filters }) || [];
+    }
   };
 
   document.addEventListener("click", event => {
@@ -637,7 +530,6 @@
       event.preventDefault();
       event.stopPropagation();
       clearFilter(clearButton.dataset.insightClearFilter);
-      enhance();
       return;
     }
     const filterToggle = event.target.closest("[data-provider-filter-toggle]");
@@ -669,7 +561,7 @@
       const nextValue = button.dataset[datasetKey] || DEFAULT_FILTERS[kind];
       uiState[kind] = kind === "provider" ? normalizeProviderFilter(nextValue) : nextValue;
       if (["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats"].includes(kind)) uiState.cinema = "all";
-      enhance();
+      commitFilters({ [kind]: uiState[kind], cinema: uiState.cinema });
       return;
     }
   }, true);
@@ -681,6 +573,6 @@
     window.HKCinemaProviderCompareFilters.setCinema(cinemaSelect.value || "all");
   }, true);
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installObserver, { once: true });
-  else installObserver();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+  else install();
 })();

@@ -23,9 +23,6 @@
 
   let restoring = false;
   let restoredForOpen = false;
-  let overlayObserver = null;
-  let contentObserver = null;
-  let restoreToken = 0;
 
   function filtersApi() {
     return window.HKCinemaProviderCompareFilters || null;
@@ -69,58 +66,32 @@
     catch { /* restricted storage */ }
   }
 
-  function controlsReady() {
-    const content = document.querySelector("#providerCompareContent");
-    return Boolean(content?.querySelector("[data-insight-provider]") && content?.querySelector("[data-insight-sort]") && filtersApi()?.setFilter);
-  }
-
   function restoreSavedFilters() {
-    const overlay = document.querySelector("#providerCompareOverlay");
-    if (!overlay || overlay.hidden || restoredForOpen) return;
-    const token = ++restoreToken;
-    let attempts = 0;
-
-    const tryRestore = () => {
-      if (token !== restoreToken) return;
-      const currentOverlay = document.querySelector("#providerCompareOverlay");
-      if (!currentOverlay || currentOverlay.hidden) return;
-      if (!controlsReady()) {
-        attempts += 1;
-        if (attempts < 90) requestAnimationFrame(tryRestore);
-        return;
-      }
-
-      restoring = true;
-      try {
-        const saved = readSaved();
-        for (const key of ["provider", "language", "subtitle", "format", "region", "district", "period", "price", "seats", "sort"]) {
-          filtersApi()?.setFilter?.(key, saved[key]);
+    restoring = true;
+    try {
+      const saved = readSaved();
+      if (filtersApi()?.setFilters) filtersApi().setFilters(saved);
+      else {
+        for (const [key, value] of Object.entries(saved)) {
+          if (key === "cinema") filtersApi()?.setCinema?.(value);
+          else filtersApi()?.setFilter?.(key, value);
         }
-        filtersApi()?.setCinema?.(saved.cinema);
-      } finally {
-        restoring = false;
-        restoredForOpen = true;
-        writeSaved(filtersApi()?.getState?.());
       }
-    };
-    requestAnimationFrame(tryRestore);
+      restoredForOpen = true;
+    } finally {
+      restoring = false;
+    }
+    writeSaved(filtersApi()?.getState?.());
   }
 
   function resetFilters(button) {
     restoring = true;
     try {
-      if (filtersApi()?.reset) filtersApi().reset();
-      else {
-        for (const [key, value] of Object.entries(DEFAULTS)) {
-          if (key === "cinema") filtersApi()?.setCinema?.(value);
-          else filtersApi()?.setFilter?.(key, value);
-        }
-      }
-    } finally {
-      restoring = false;
+      filtersApi()?.reset?.();
       restoredForOpen = true;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULTS)); } catch { /* ignore */ }
-    }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULTS));
+    } catch { /* restricted storage */ }
+    finally { restoring = false; }
 
     if (button) {
       const original = button.textContent;
@@ -134,37 +105,6 @@
     }
   }
 
-  function observeContent(overlay) {
-    contentObserver?.disconnect();
-    const content = overlay.querySelector("#providerCompareContent");
-    if (!content) return;
-    contentObserver = new MutationObserver(() => {
-      if (!restoredForOpen || restoring) return;
-      queueMicrotask(() => writeSaved());
-    });
-    contentObserver.observe(content, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "hidden", "data-provider", "data-seat-available", "data-seat-total"]
-    });
-  }
-
-  function attachOverlay(overlay) {
-    observeContent(overlay);
-    overlayObserver?.disconnect();
-    overlayObserver = new MutationObserver(() => {
-      if (overlay.hidden) {
-        restoreToken += 1;
-        restoredForOpen = false;
-        return;
-      }
-      restoreSavedFilters();
-    });
-    overlayObserver.observe(overlay, { attributes: true, attributeFilter: ["hidden"] });
-    if (!overlay.hidden) restoreSavedFilters();
-  }
-
   document.addEventListener("click", event => {
     const button = event.target.closest?.("[data-provider-compare-reset]");
     if (!button) return;
@@ -173,27 +113,25 @@
     resetFilters(button);
   }, true);
 
-  function install() {
-    const existing = document.querySelector("#providerCompareOverlay");
-    if (existing) {
-      attachOverlay(existing);
-      return;
-    }
-    const bodyObserver = new MutationObserver(() => {
-      const overlay = document.querySelector("#providerCompareOverlay");
-      if (!overlay) return;
-      bodyObserver.disconnect();
-      attachOverlay(overlay);
-    });
-    bodyObserver.observe(document.body, { childList: true, subtree: false });
-  }
-
-  window.HKCinemaProviderComparePreferences = Object.freeze({
-    version: "5e1-m7r4-1",
-    sanitize,
-    readSaved
+  window.addEventListener("hkcinema:provider-compare-open", () => {
+    restoredForOpen = false;
+    restoreSavedFilters();
   });
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
-  else install();
+  window.addEventListener("hkcinema:comparison-store-change", event => {
+    if (event.detail?.matchId === null) {
+      restoredForOpen = false;
+      return;
+    }
+    if (!restoring && restoredForOpen && String(event.detail?.reason || "").startsWith("filter")) {
+      queueMicrotask(() => writeSaved());
+    }
+  });
+
+  window.HKCinemaProviderComparePreferences = Object.freeze({
+    version: "c4-1",
+    sanitize,
+    readSaved,
+    restore: restoreSavedFilters
+  });
 })();

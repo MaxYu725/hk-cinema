@@ -4,6 +4,10 @@
   const PROVIDER_TIMEOUTS = Object.freeze({ mcl: 15000 });
   const sharedCore = window.HKCinemaProviderSharedCore || null;
 
+  function comparisonStore() {
+    return window.HKCinemaComparisonStore || null;
+  }
+
   function registryProviders() {
     return (window.HKCinemaProviderRegistry?.providers || []).map(descriptor => ({
       key: descriptor.id,
@@ -225,6 +229,7 @@
     state.loadingInitial = false;
     state.loadingDate = false;
     state.selectedDate = null;
+    comparisonStore()?.publish?.({ matchId: null, selectedDate: null, sessions: [] });
   }
 
   function formatDate(dateString) {
@@ -433,9 +438,17 @@
     const metadata = sessionMetadata(session);
     const providerLabel = labelForProvider(provider);
     const fallbackCinema = `${providerLabel} 戲院`;
+    const sourceId = String(session?.sourceId || session?.id || "") || null;
+    const fallbackId = [
+      provider,
+      session?._phase8cMovieSourceId || "movie",
+      state.selectedDate || session?.date || "date",
+      session?.time || "--:--",
+      session?.cinema?.name?.zh || session?.cinema?.name?.en || session?.cinema?.name || fallbackCinema
+    ].map(value => String(value).normalize("NFKC").trim()).join(":");
     return {
-      id: `${provider}:${session?.sourceId || session?.id || Math.random()}`,
-      sourceId: String(session?.sourceId || session?.id || "") || null,
+      id: sourceId ? `${provider}:${sourceId}` : fallbackId,
+      sourceId,
       provider,
       providerLabel,
       movieSourceId: session?._phase8cMovieSourceId || null,
@@ -539,7 +552,14 @@
       if (!state.data[key] || !state.availableDates[key].includes(state.selectedDate)) continue;
       items.push(...filteredRawSessions(key, state.data[key].sessions).map(session => normalizeSession(key, session)));
     }
-    return items.sort((a, b) => timeValue(a.time) - timeValue(b.time) || a.provider.localeCompare(b.provider));
+    const seen = new Map();
+    return items
+      .sort((a, b) => timeValue(a.time) - timeValue(b.time) || a.provider.localeCompare(b.provider))
+      .map(item => {
+        const count = seen.get(item.id) || 0;
+        seen.set(item.id, count + 1);
+        return count ? { ...item, id: `${item.id}:${count}` } : item;
+      });
   }
 
   function providerErrorHtml() {
@@ -594,6 +614,7 @@
       Boolean(item.sourceId) &&
       window.HKCinemaProviderRegistry?.hasCapability?.("cineart", "seatMap");
     const cardAttrs = [
+      `data-comparison-session-id="${escapeHtml(item.id)}"`,
       Number.isFinite(item.seatAvailable) ? `data-seat-available="${item.seatAvailable}"` : "",
       Number.isFinite(item.seatTotal) ? `data-seat-total="${item.seatTotal}"` : "",
       item.sourceId ? `data-showtime-id="${escapeHtml(item.sourceId)}"` : "",
@@ -635,13 +656,12 @@
     `;
   }
 
-  function renderTimeline() {
+  function renderTimeline(sessions = timelineSessions()) {
     const labels = providerLabels();
     if (state.loadingDate) {
       return `<section class="provider-compare-section"><div class="provider-compare-loading"><strong>正在整理同日場次</strong><span>正在合併 ${escapeHtml(labels.join("、"))} 的所有版本場次...</span></div></section>`;
     }
     if (!state.selectedDate) return "";
-    const sessions = timelineSessions();
     const counts = activeProviders().map(provider => `${provider.label} ${sessions.filter(session => session.provider === provider.key).length} 場`);
     return `
       <section class="provider-compare-section provider-compare-timeline-section">
@@ -680,9 +700,10 @@
     const aggregate = aggregateForMatch(match);
     const poster = posterForMatch(match, aggregate);
     const labels = providerLabels(match);
+    const sessions = state.loadingInitial || state.loadingDate || !state.selectedDate ? [] : timelineSessions();
     const body = state.loadingInitial
       ? `<section class="provider-compare-section"><div class="provider-compare-loading"><strong>正在建立電影比較</strong><span>正在同時取得 ${escapeHtml(labels.join("、"))} 所有版本的可售日期...</span></div></section>`
-      : `${providerErrorHtml()}${renderTimeline()}`;
+      : `${providerErrorHtml()}${renderTimeline(sessions)}`;
 
     content.innerHTML = `
       <div class="provider-compare-hero">
@@ -698,6 +719,11 @@
       </div>
       ${body}
     `;
+    comparisonStore()?.publish?.({
+      matchId: match.id,
+      selectedDate: state.selectedDate,
+      sessions
+    });
     overlay.hidden = false;
     document.body.classList.add("provider-compare-open");
   }
@@ -811,6 +837,7 @@
         sourceIds: Object.fromEntries(PROVIDERS.map(provider => [provider.key, providerSourceIds(provider.key)])),
         errors: { ...state.errors },
         freshness: Object.fromEntries(Object.entries(state.freshness).map(([key, value]) => [key, value ? { ...value } : null])),
+        sessions: comparisonStore()?.getState?.().sessions || [],
         request: { token: requestToken, active: Boolean(activeRequestController && !activeRequestController.signal.aborted) }
       };
     }

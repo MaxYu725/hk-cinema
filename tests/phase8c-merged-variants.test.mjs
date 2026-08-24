@@ -6,6 +6,7 @@ import { assertAsset } from './index-assets.mjs';
 
 const compare = await readFile(new URL('../app/provider-compare-v4.js', import.meta.url), 'utf8');
 const filters = await readFile(new URL('../app/provider-compare-insights-v4.js', import.meta.url), 'utf8');
+const comparisonStore = await readFile(new URL('../app/comparison-store.js', import.meta.url), 'utf8');
 const prefs = await readFile(new URL('../app/provider-compare-preferences-v2.js', import.meta.url), 'utf8');
 const metadataSource = await readFile(new URL('../app/showtime-metadata.js', import.meta.url), 'utf8');
 const phase8a = await readFile(new URL('../app/phase8a-movie-navigation.js', import.meta.url), 'utf8');
@@ -14,6 +15,7 @@ const index = await readFile(new URL('../app/index.html', import.meta.url), 'utf
 
 test('Phase 8C loads the aggregate comparison engine and rich filters', () => {
   for (const asset of [
+    'comparison-store.js',
     'provider-compare-v4.js',
     'provider-compare-insights-v4.js',
     'provider-compare-preferences-v2.js',
@@ -73,7 +75,8 @@ test('Phase 8C exposes richer filters without guessing unknown data', () => {
   assert.match(filters, /放映方式/);
   assert.match(filters, /未來 2 小時/);
   assert.match(filters, /座位較充裕/);
-  assert.match(filters, /item\.seats\.ratio >= 0\.5/);
+  assert.match(comparisonStore, /session\.seats\.ratio >= 0\.5/);
+  assert.match(filters, /HKCinemaComparisonStore/);
   assert.match(filters, /未知資料不會推測/);
 });
 
