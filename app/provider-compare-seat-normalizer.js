@@ -93,6 +93,7 @@
       window.dispatchEvent(
         new CustomEvent("hkcinema:compare-seat-summary-normalized", {
           detail: {
+            comparisonSessionId: card.dataset.comparisonSessionId || null,
             provider: "mcl",
             available,
             total: Number.isFinite(total) ? total : null,

@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C3.
+Status: current production architecture at cleanup checkpoint C4.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -45,19 +45,21 @@ There is no base provider. A Broadway-only, MCL-only, Emperor-only or CineArt-on
 
 ### 3. Showtime comparison
 
-`app/provider-compare-v4.js` requests each matched provider independently, normalizes the selected-date sessions and renders a unified timeline. It already owns the closest representation of a comparison domain model.
+`app/provider-compare-v4.js` requests each matched provider independently and normalizes the selected-date sessions. It publishes those sessions to `app/comparison-store.js` before selector consumers run, then renders a unified timeline whose `data-comparison-session-id` values are interaction handles only.
 
 Movie cards open this surface directly. Movie facts, provider availability, dates, showtimes, price/seat enrichment, official booking links and seat-map launch points all live in the comparison flow; the old provider-specific movie-detail drawer and its duplicate showtime requests were removed at C2.
 
-Several later modules currently parse that rendered timeline again:
+`ComparisonStore` is the comparison snapshot and filter-state owner. Its selectors operate on canonical session records for provider, metadata, region, district, cinema, period, price and reliable-seat filtering plus time/price/seat sorting. Rich Filters and Smart Picks subscribe to explicit store revisions; neither reads rendered time, cinema, price or seat text as business data. Saved preferences persist explicit filter changes instead of observing DOM mutations.
 
-- rich filters and sorting;
+Price and seat-summary enrichment still locate their presentation node by the stable session handle, but their result events address the same comparison record explicitly. The store patches that record and publishes a revision before filters and recommendations recompute.
+
+Later presentation modules may still decorate the rendered timeline:
+
 - price and seat-summary enrichment;
 - seat-summary normalization;
-- Smart Picks recommendations;
 - presentation and accessibility decorators.
 
-The cleanup target is one `ComparisonStore`, pure selectors for filtering/sorting/recommendations, and one renderer. DOM text must no longer be a business-data input.
+DOM text is not a business-data input. C5 may consolidate transport/router/cache ownership, but it must preserve the C4 comparison record and selector boundary.
 
 ### 4. MCL showtimes
 
@@ -99,6 +101,19 @@ C3 then replaced the Broadway-first home pipeline:
 - replaced DOM re-aggregation with one neutral renderer and removed the refresh/decorating observer.
 
 Catalogue/showtime parsers, comparison cancellation and stale-response guards, MCL transport selection, filters, Smart Picks, seat summaries, four provider seat maps, official booking and Android/PWA back behavior are unchanged. Historical checkpoint documents still describe their original implementations but are not runtime contracts.
+
+## C4 comparison boundary
+
+C4 removed the second comparison data model that filters and Smart Picks previously reconstructed from timeline markup:
+
+- added `ComparisonStore` as the canonical selected-date session snapshot and filter owner;
+- assigned every rendered showtime a stable `comparisonSessionId` interaction handle;
+- moved filter matching and sorting to pure selectors over canonical records;
+- made Smart Picks consume the filtered selector output while retaining its evidence-based recommendation rules;
+- addressed price and seat-summary updates to one session record instead of triggering DOM re-parsing;
+- replaced filter, recommendation and preference MutationObservers with explicit store change events.
+
+The renderer still owns card visibility, order, focus/jump and presentation. The store owns values and selection. DOM decorators must not add a competing price, seat, metadata or recommendation truth source.
 
 ## Canonical data rules
 
@@ -146,7 +161,7 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 1. C1 — completed: establish current-truth documentation, deployment metadata and remove repository-only legacy comparison files.
 2. C2 — completed: retire dead movie-detail and Classic runtime paths after focused interaction validation.
 3. C3 — completed: create catalogue/domain stores and remove Broadway base-provider ownership.
-4. C4 — move filters, sorting and recommendations from DOM parsing to selectors.
+4. C4 — completed: move filters, sorting and recommendations from DOM parsing to selectors.
 5. C5 — consolidate Worker clients/router and define one cache owner per resource.
 6. C6 — bundle production assets and generate the Service Worker asset manifest.
 

@@ -1,10 +1,12 @@
 # HK Cinema 共用展示契約
 
-Version: 1（current through cleanup C3）
+Version: 1（current through cleanup C4）
 
 `app/view-models.js` 是場次及座位來源正規化與共用 UI 之間的展示契約。Broadway、MCL、Emperor、CineArt 及日後註冊的 provider 原始欄位先經 provider adapter 轉換；共用 renderer 不應直接讀取院線原始 JSON。
 
 C3 的首頁 catalogue 契約另由 `app/catalogue-store.js` 及 `app/catalogue-domain.js` 擁有。前者保存 provider snapshot／狀態，後者輸出 `MovieAggregate`、provider match 及 variant group；`multi-provider.js` 只 render domain 輸出，不從 DOM 重建業務資料。
+
+C4 的場次比較契約由 `app/comparison-store.js` 擁有。`provider-compare-v4.js` 發布 selected-date session；filters、sorting 及 Smart Picks 只讀 store record／selector 結果，不從已 render 的文字重建價格、座位、時間或戲院。
 
 ## 公開 API
 
@@ -12,11 +14,27 @@ C3 的首頁 catalogue 契約另由 `app/catalogue-store.js` 及 `app/catalogue-
 window.HKCinemaViewModels.movie(providerId, movie, detail?)
 window.HKCinemaViewModels.showtime(providerId, session)
 window.HKCinemaViewModels.seatMap(providerId, seatMap, showtime?)
+window.HKCinemaComparisonStore.getState()
+window.HKCinemaComparisonStore.selectSessions(options?)
 ```
 
 Provider ID 由 `provider-registry.js` 決定，目前為 `broadway`、`mcl`、`emperor`、`cineart`；共用程式不得以固定三院線清單作 fallback。輸出分別以 `kind` 標示 `movie-detail`、`showtime`、`seat-map`，並帶有 `schemaVersion: 1`。
 
 `movie-detail` normalizer 仍是可重用資料契約，但 C2 起 production 已沒有 provider-specific 電影詳情 drawer；首頁直接以 `MovieAggregate` 開啟統一場次比較。
+
+## ComparisonSession record
+
+`ComparisonStore.getState()` 固定回傳 `matchId`、`selectedDate`、`sessions`、`filters` 及單調遞增的 `revision`。每個 session 至少包含：
+
+- 識別：`id`／`comparisonId`、`provider`、`sourceId`、`movieSourceId`
+- 展示：`providerLabel`、`time`、`cinemaName`、`secondary`、`bookingUrl`
+- selector 值：`timeMinutes`、`cinemaKey`、`canonicalCinema`、`region`、`district`
+- metadata：`languages`、`subtitles`、`formats`
+- 可選證據：`price`、`seats.available`、`seats.total`、`seats.ratio`
+
+`data-comparison-session-id` 只用來把 renderer／enrichment／跳轉操作連回 record，不可用 DOM 文字補回 record 欄位。缺少可靠總座位數時 `seats` 為 `null`；缺少價格時 `price` 為 `null`，兩者均不可轉成 0。
+
+Store filter keys 固定為 `provider`、`language`、`subtitle`、`format`、`region`、`district`、`cinema`、`period`、`price`、`seats`、`sort`。`selectSessions()` 不修改來源 records；它回傳依目前 filter 篩選及排序的拷貝。價格／座位 enrichment 必須以 `comparisonSessionId` 明確 patch 一筆 record，再發出 store revision。
 
 ## MovieDetailViewModel
 

@@ -62,7 +62,8 @@ test("Phase 6M keeps active filters visible and recoverable from zero results", 
   assert.match(insights, /data-insight-price/);
   assert.match(insights, /data-insight-seats/);
   assert.match(insights, /data-insight-sort/);
-  assert.match(insights, /records\.some\(mutationTouchesTimeline\)/);
+  assert.match(insights, /hkcinema:comparison-store-change/);
+  assert.doesNotMatch(insights, /new MutationObserver/);
   assert.match(preferences, /hkcinema:provider-compare-filters:v2/);
 });
 

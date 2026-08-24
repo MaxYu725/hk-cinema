@@ -31,9 +31,18 @@ function documentStub() {
 }
 
 async function loadSharedContext() {
+  const listeners = new Map();
   const window = {
     HKCinemaProviderRegistry: registryWithFixture(),
-    addEventListener() {},
+    addEventListener(type, handler) {
+      const entries = listeners.get(type) || [];
+      entries.push(handler);
+      listeners.set(type, entries);
+    },
+    dispatchEvent(event) {
+      for (const handler of listeners.get(event.type) || []) handler(event);
+      return true;
+    },
     setTimeout,
     clearTimeout
   };
@@ -41,6 +50,9 @@ async function loadSharedContext() {
   const context = vm.createContext({
     Array,
     CSS: { escape: value => String(value) },
+    CustomEvent: class CustomEvent {
+      constructor(type, init = {}) { this.type = type; this.detail = init.detail; }
+    },
     Date,
     Intl,
     Map,
@@ -70,6 +82,7 @@ async function loadSharedContext() {
 
 function comparisonCard(provider = "fixture") {
   const dataset = {
+    comparisonSessionId: `${provider}:fixture-session-1`,
     provider,
     showLanguage: "english",
     showSubtitle: "chinese",
@@ -109,6 +122,22 @@ test("M7R4 comparison filters preserve a fourth provider identity and registry o
       };
     }
   };
+  vm.runInContext(await source("app/comparison-store.js"), context, {
+    filename: "comparison-store.js"
+  });
+  context.window.HKCinemaComparisonStore.publish({
+    matchId: "fixture-movie",
+    selectedDate: "2026-08-15",
+    sessions: [{
+      id: "fixture:fixture-session-1",
+      provider: "fixture",
+      providerLabel: "Fixture Cinema",
+      time: "18:30",
+      cinemaName: "Fixture Harbour Cinema",
+      price: 98,
+      metadata: { languages: ["english"], subtitles: ["chinese"], formats: ["2d"] }
+    }]
+  });
   vm.runInContext(await source("app/provider-compare-insights-v4.js"), context, {
     filename: "provider-compare-insights-v4.js"
   });
@@ -151,6 +180,22 @@ test("M7R4 Smart Picks uses registry identity instead of Broadway fallback", asy
   context.window.HKCinemaProviderCompare = {
     getState() { return { selectedDate: "2026-08-15" }; }
   };
+  vm.runInContext(await source("app/comparison-store.js"), context, {
+    filename: "comparison-store.js"
+  });
+  context.window.HKCinemaComparisonStore.publish({
+    matchId: "fixture-movie",
+    selectedDate: "2026-08-15",
+    sessions: [{
+      id: "fixture:fixture-session-1",
+      provider: "fixture",
+      providerLabel: "Fixture Cinema",
+      time: "18:30",
+      cinemaName: "Fixture Harbour Cinema",
+      price: 98,
+      metadata: { languages: ["english"], subtitles: ["chinese"], formats: ["2d"] }
+    }]
+  });
   vm.runInContext(await source("app/provider-compare-recommendations-v4.js"), context, {
     filename: "provider-compare-recommendations-v4.js"
   });

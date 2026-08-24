@@ -121,6 +121,7 @@
 
     window.dispatchEvent(new CustomEvent("hkcinema:compare-price", {
       detail: {
+        comparisonSessionId: card.dataset.comparisonSessionId || null,
         provider: "mcl",
         adult: prices.adult,
         student: Number.isFinite(prices.student) ? prices.student : null,
