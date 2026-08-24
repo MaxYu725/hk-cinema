@@ -1,6 +1,6 @@
 # HK Cinema current architecture
 
-Status: current production architecture at cleanup checkpoint C5.
+Status: current production architecture at cleanup checkpoint C6.
 
 This document is the canonical description of the running system. Historical phase and checkpoint documents explain how individual features were introduced, but they do not override this file or `docs/provider-matrix.md`.
 
@@ -8,7 +8,9 @@ This document is the canonical description of the running system. Historical pha
 
 ### GitHub Pages application
 
-`app/index.html` is the production entrypoint. It loads a static PWA implemented with browser scripts and CSS. The Service Worker caches same-origin static assets only; all cinema catalogue, showtime, price and seat requests stay outside the PWA cache.
+`app/index.html` is the ordered frontend source entrypoint. `scripts/build-app.mjs` replaces its local source styles and classic scripts with one content-hashed CSS bundle and one content-hashed JavaScript bundle, versions its manifest/icon references, and emits the explicit production artifact to `dist/`.
+
+The build also generates `dist/asset-manifest.json` and embeds that release's exact shell list in `dist/sw.js`. The Service Worker can cache only URLs declared by that generated list; all cinema catalogue, showtime, price and seat requests stay outside the PWA cache. A failed shell fetch fails the install atomically, and a waiting worker still activates only after the user accepts the reload prompt.
 
 Metro is the only production interface. The retired `skin=classic` query no longer changes runtime or presentation.
 
@@ -53,7 +55,7 @@ Later presentation modules may still decorate the rendered timeline:
 - seat-summary normalization;
 - presentation and accessibility decorators.
 
-DOM text must no longer be a business-data input. C5 consolidates transport/router/cache ownership while preserving the C4 comparison record and selector boundary.
+DOM text must no longer be a business-data input. C5 consolidates transport/router/cache ownership while preserving the C4 comparison record and selector boundary. C6 changes production packaging and static-shell ownership only; it does not change these data contracts.
 
 ### 4. MCL showtimes
 
@@ -121,6 +123,21 @@ C5 removes two historical interception layers:
 
 Public URLs, response bodies, C4 session handles/selectors, MCL browser-first transport, provider parsers, official booking rules and seat-map geometry are unchanged.
 
+## C6 production bundle and shell boundary
+
+C6 replaces the raw-source Pages upload and install-time asset discovery with one deterministic production boundary:
+
+- `app/index.html` remains the readable, ordered source of CSS and classic-script execution;
+- `npm run build` emits exactly one content-hashed CSS bundle and one content-hashed JavaScript bundle in that source order;
+- public icon and web-manifest references carry content hashes;
+- `dist/asset-manifest.json` records bundle sources, exact shell URLs and exact output files;
+- `dist/sw.js` receives the release version and shell list at build time instead of fetching and parsing HTML during installation;
+- shell precaching is atomic, and runtime static caching accepts only declared shell URLs;
+- navigation stays network-first with an installed-shell fallback, but arbitrary navigation URLs are not added to the shell cache;
+- `dist/` is clean generated output and raw CSS/JavaScript source modules are not deployed individually.
+
+The build performs concatenation, not semantic minification or module rewriting. This keeps the established classic-script order and browser globals intact while making deployment contents and cache ownership reviewable.
+
 ## Canonical data rules
 
 1. Provider IDs come from `app/provider-registry.js` and `worker/src/provider-manifest.js`.
@@ -145,7 +162,7 @@ Each public resource has one explicit owner:
 | Price | 5 minutes | none unless explicitly marked | `provider-compare-prices.js` enrichment memory cache |
 | Seat summary | 30–90 seconds | none unless explicitly marked | `provider-compare-seats.js` enrichment memory cache |
 | Seat map | 15–30 seconds | none | `seatmap-shared.js` memory cache |
-| Static shell | versioned release | previous installed release | Service Worker only |
+| Static shell | content-hashed C6 release | previous installed release | generated shell manifest + Service Worker |
 
 CineArt's Worker services retain bounded Cache API entries for expensive upstream snapshots/details. Those entries are internal upstream-service caches; the public response remains `no-store` and no generic router cache is added.
 
@@ -159,7 +176,7 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 
 ## Deployment boundaries
 
-- GitHub Pages deployment watches `app/**`, tests and frontend configuration.
+- GitHub Pages deployment watches `app/**`, `scripts/build-app.mjs`, tests and frontend configuration. It builds and uploads only `dist/`; raw `app/` files are not the deployment artifact.
 - Cloudflare Git integration separately builds the Worker.
 - A frontend PR can pass Pages checks without proving that a new Worker version is deployed.
 - Live provider validation is evidence for a deployed candidate or production Worker; non-Hong-Kong MCL network failure alone is not evidence of a parser regression.
@@ -171,6 +188,6 @@ Live health belongs to `/api/providers/probe` and `/api/providers/probe/{provide
 3. C3 — completed: create catalogue/domain stores and remove Broadway base-provider ownership.
 4. C4 — completed: move filters, sorting and recommendations from DOM parsing to selectors.
 5. C5 — completed: consolidate Worker clients/router and define one cache owner per resource.
-6. C6 — bundle production assets and generate the Service Worker asset manifest.
+6. C6 — completed: bundle production assets and generate the exact Service Worker shell manifest.
 
 Each item is a separate PR checkpoint. Later checkpoints may update this order when current production evidence justifies it, but they must not silently mix multiple architectural migrations.

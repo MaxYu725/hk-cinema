@@ -11,7 +11,7 @@ test("Service Worker waits for explicit update acceptance", () => {
   const sw = fs.readFileSync(path.join(app, "sw.js"), "utf8");
   const installBlock = sw.match(/self\.addEventListener\("install"[\s\S]*?\n\}\);/)?.[0] || "";
 
-  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}[a-z0-9-]+`/i);
+  assert.match(sw, /CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}\$\{SHELL_MANIFEST\.version\}`/);
   assert.doesNotMatch(installBlock, /skipWaiting\(/);
   assert.match(sw, /event\.data\?\.type === "SKIP_WAITING"/);
   assert.match(sw, /self\.skipWaiting\(\)/);

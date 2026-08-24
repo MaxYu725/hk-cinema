@@ -27,7 +27,8 @@ test("Phase 9C1 service worker only caches same-origin static shell assets", () 
   assert.match(worker, /request\.mode === "navigate"/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /staleWhileRevalidate/);
-  assert.match(worker, /\["script", "style", "font", "image", "manifest"\]/);
+  assert.match(worker, /SHELL_MANIFEST\.assets/);
+  assert.match(worker, /SHELL_ASSET_URLS\.has\(url\.href\)/);
   assert.doesNotMatch(worker, /hk-cinema-api\.max-yu-jp\.workers\.dev/);
 });
 

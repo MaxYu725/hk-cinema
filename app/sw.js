@@ -1,48 +1,47 @@
 const CACHE_PREFIX = "hk-cinema-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}c5-1`;
+const SHELL_MANIFEST = /* c6-shell-manifest:start */ Object.freeze({
+  version: "development",
+  assets: Object.freeze(["./", "./index.html", "./manifest.json"])
+}) /* c6-shell-manifest:end */;
+const CACHE_NAME = `${CACHE_PREFIX}${SHELL_MANIFEST.version}`;
 const SCOPE_URL = new URL(self.registration.scope);
 const INDEX_URL = new URL("./index.html", self.registration.scope).href;
 const ROOT_URL = new URL("./", self.registration.scope).href;
+const SHELL_ASSETS = Object.freeze(SHELL_MANIFEST.assets.map(asset =>
+  new URL(asset, self.registration.scope).href
+));
+const SHELL_ASSET_URLS = new Set(SHELL_ASSETS);
 
-function isSameOriginStatic(request) {
+function isDeclaredShellAsset(request) {
   if (request.method !== "GET") return false;
   const url = new URL(request.url);
+  url.hash = "";
   if (url.origin !== self.location.origin) return false;
   if (!url.pathname.startsWith(SCOPE_URL.pathname)) return false;
-  return ["script", "style", "font", "image", "manifest"].includes(request.destination);
-}
-
-async function discoverShellAssets() {
-  const response = await fetch(INDEX_URL, { cache: "no-store" });
-  if (!response.ok) throw new Error(`index HTTP ${response.status}`);
-  const html = await response.clone().text();
-  const assets = new Set([ROOT_URL, INDEX_URL, new URL("./manifest.json", self.registration.scope).href]);
-  const pattern = /(?:src|href)=["'](\.\/[^"'#]+)["']/g;
-  for (const match of html.matchAll(pattern)) {
-    const url = new URL(match[1], self.registration.scope);
-    if (url.origin === self.location.origin && url.pathname.startsWith(SCOPE_URL.pathname)) assets.add(url.href);
-  }
-  return { response, assets: [...assets] };
+  return SHELL_ASSET_URLS.has(url.href);
 }
 
 async function precacheShell() {
-  const cache = await caches.open(CACHE_NAME);
-  const { response, assets } = await discoverShellAssets();
-  await cache.put(INDEX_URL, response.clone());
-  await cache.put(ROOT_URL, response.clone());
-  await Promise.allSettled(assets.map(async url => {
-    if (url === INDEX_URL || url === ROOT_URL) return;
-    const asset = await fetch(url, { cache: "no-store" });
-    if (asset.ok) await cache.put(url, asset);
+  const snapshots = await Promise.all(SHELL_ASSETS.map(async url => {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`shell asset HTTP ${response.status}: ${url}`);
+    return { url, response };
   }));
+
+  await caches.delete(CACHE_NAME);
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    await Promise.all(snapshots.map(({ url, response }) => cache.put(url, response)));
+  } catch (error) {
+    await caches.delete(CACHE_NAME);
+    throw error;
+  }
 }
 
 async function networkFirstNavigation(request) {
   const cache = await caches.open(CACHE_NAME);
   try {
-    const response = await fetch(request, { cache: "no-store" });
-    if (response.ok) await cache.put(request, response.clone());
-    return response;
+    return await fetch(request, { cache: "no-store" });
   } catch (error) {
     return (await cache.match(request, { ignoreSearch: true })) ||
       (await cache.match(INDEX_URL)) ||
@@ -100,5 +99,5 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (isSameOriginStatic(request)) event.respondWith(staleWhileRevalidate(request));
+  if (isDeclaredShellAsset(request)) event.respondWith(staleWhileRevalidate(request));
 });

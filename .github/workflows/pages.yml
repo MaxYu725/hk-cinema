@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "app/**"
+      - "scripts/build-app.mjs"
       - "tests/**"
       - "package.json"
       - "playwright.config.mjs"
@@ -16,6 +17,7 @@ on:
       - main
     paths:
       - "app/**"
+      - "scripts/build-app.mjs"
       - "tests/**"
       - "package.json"
       - "playwright.config.mjs"
@@ -81,13 +83,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build production app
+        run: npm run build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload app
+      - name: Upload production bundle
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "./app"
+          path: "./dist"
 
       - name: Deploy
         id: deployment

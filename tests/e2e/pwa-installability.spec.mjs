@@ -14,13 +14,14 @@ test("PWA manifest exposes loadable install icons", async ({ page, request }) =>
   ];
 
   for (const [src, sizes, purpose] of expected) {
-    const icon = manifest.icons?.find((item) => item.src === src);
+    const icon = manifest.icons?.find((item) => item.src?.split("?")[0] === src);
     expect(icon).toBeTruthy();
+    expect(icon.src).toMatch(new RegExp(`^${src.replaceAll(".", "\\.")}\\?v=[a-f0-9]{12}$`));
     expect(icon.sizes).toBe(sizes);
     expect(icon.type).toBe("image/png");
     expect(icon.purpose).toContain(purpose);
 
-    const response = await request.get(src);
+    const response = await request.get(icon.src);
     expect(response.ok()).toBeTruthy();
     expect(response.headers()["content-type"]).toContain("image/png");
   }
@@ -31,7 +32,9 @@ test("PWA manifest exposes loadable install icons", async ({ page, request }) =>
   const links = await page.locator('link[rel="apple-touch-icon"]').evaluateAll((nodes) =>
     nodes.map((node) => ({ href: node.getAttribute("href"), sizes: node.getAttribute("sizes") })),
   );
-  expect(links).toContainEqual({ href: "./icons/apple-touch-icon.png", sizes: "180x180" });
+  expect(links).toHaveLength(1);
+  expect(links[0].href).toMatch(/^\.\/icons\/apple-touch-icon\.png\?v=[a-f0-9]{12}$/);
+  expect(links[0].sizes).toBe("180x180");
 });
 
 test("maskable icon keeps the brand glyph inside the central safe zone", async ({ page }) => {

@@ -21,7 +21,7 @@ Capability support does not mean that every upstream record contains every optio
 
 The application has two deployment surfaces:
 
-1. `app/` — static HTML, CSS and JavaScript deployed to GitHub Pages.
+1. `app/` — frontend source. `npm run build` preserves its declared CSS/JavaScript order, emits one content-hashed bundle of each type, and writes the explicit GitHub Pages artifact to `dist/`.
 2. `worker/` — Cloudflare Worker adapters for provider pages and APIs that should not be fetched directly by the browser.
 
 The production frontend has one Metro runtime. Provider catalogues publish into one canonical store, a provider-neutral domain layer builds movie aggregates before rendering, and movie cards open the unified comparison directly. There is no Broadway base renderer, separate Classic skin or provider-specific movie-detail drawer.
@@ -58,18 +58,26 @@ npm install --no-audit --no-fund
 npm test
 ```
 
+Generate the production Pages artifact without running tests:
+
+```bash
+npm run build
+```
+
+`dist/asset-manifest.json` records the exact bundles, source order, shell assets and output files. `dist/` is generated and is not committed.
+
 Run the mobile Chromium smoke suite:
 
 ```bash
 npm run test:e2e
 ```
 
-The Playwright configuration starts a local static server for `app/` at `http://127.0.0.1:4173`.
+The Playwright configuration rebuilds and serves `dist/` at `http://127.0.0.1:4173`, so browser smoke exercises the same artifact shape as production.
 
 ## Deployment
 
-- Changes under `app/` are tested and deployed through `.github/workflows/pages.yml` after merge to `main`.
-- The Worker is deployed separately by the Cloudflare Git integration using `worker/wrangler.jsonc` and `worker/src/index-emperor-seat.js`.
+- Changes under `app/` are tested through `.github/workflows/pages.yml`; after merge to `main`, that workflow builds and uploads only `dist/`.
+- The Worker is deployed separately by the Cloudflare Git integration using `worker/wrangler.jsonc` and `worker/src/index.js`.
 - Pull requests are checkpoints. Keep each cleanup PR independently reviewable and do not combine unrelated provider, UI and Worker refactors.
 
 ## Authoritative documentation

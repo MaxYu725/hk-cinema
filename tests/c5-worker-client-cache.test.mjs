@@ -163,7 +163,7 @@ test("C5 public Worker responses are no-store while service caches remain explic
 
 test("C5 rotates the controlled shell cache without claiming live cinema requests", async () => {
   const sw = await read("app/sw.js");
-  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}c5-1`/);
+  assert.match(sw, /CACHE_NAME = `\$\{CACHE_PREFIX\}\$\{SHELL_MANIFEST\.version\}`/);
   assert.match(sw, /Cinema APIs, MCL, Worker and all other live data stay outside the PWA cache/);
   assert.doesNotMatch(sw, /hk-cinema-api\.max-yu-jp\.workers\.dev/);
 });
