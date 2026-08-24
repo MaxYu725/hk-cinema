@@ -59,7 +59,7 @@ Later presentation modules may still decorate the rendered timeline:
 - seat-summary normalization;
 - presentation and accessibility decorators.
 
-DOM text is not a business-data input. C5 may consolidate transport/router/cache ownership, but it must preserve the C4 comparison record and selector boundary.
+DOM text must no longer be a business-data input. C5 may consolidate transport/router/cache ownership, but it must preserve the C4 comparison record and selector boundary.
 
 ### 4. MCL showtimes
 
